@@ -7,15 +7,24 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; }
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; background: var(--bg); color: #1e293b; padding: 10px; padding-bottom: 50px; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; background: var(--bg); color: #1e293b; padding: 10px; padding-bottom: 50px; }
         
         /* Fixed/Sticky Controls for Mobile */
-        .controls { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 10px; z-index: 100; border: 1px solid #e2e8f0; }
+        .controls { background: var(--card); padding: 12px 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 10px; z-index: 100; border: 1px solid #e2e8f0; }
         
-        .status { font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        /* Header Row with Status and Buttons */
+        .controls-header { display: flex; justify-content: space-between; align-items: center; }
+        .status-text { font-size: 0.85rem; font-weight: 600; color: #64748b; }
+        .header-actions { display: flex; gap: 8px; }
         
-        .filter-section { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #e2e8f0; pt: 12px; margin-top: 10px; padding-top: 12px; }
+        .btn-toggle { background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; color: #475569; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-toggle.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
+
+        .filter-section { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #e2e8f0; pt: 12px; margin-top: 12px; animation: slideDown 0.2s ease-out; }
         
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
         .search-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 8px; }
         .filter-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.85rem; }
         input[type="range"] { flex: 1; }
@@ -30,18 +39,40 @@
         .tag { font-size: 0.7rem; padding: 5px 12px; border-radius: 20px; border: 1px solid #cbd5e1; cursor: pointer; white-space: nowrap; background: white; transition: all 0.2s; }
         .tag.active { background: var(--primary); color: white; border-color: var(--primary); }
         
-        .item { display: flex; gap: 12px; margin-bottom: 16px; background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .thumb { width: 75px; height: 75px; object-fit: cover; background: #e2e8f0; border-radius: 6px; flex-shrink: 0; }
-        .content { flex: 1; min-width: 0; } /* min-width 0 prevents flex overflow */
+        /* Item Styles - Shared */
+        .item { background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid transparent; }
+        .item:hover { border-color: #e2e8f0; }
+        
+        .thumb { background: #e2e8f0; border-radius: 6px; flex-shrink: 0; object-fit: cover; }
+        .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
         .title { font-weight: 700; text-decoration: none; color: #0f172a; display: block; line-height: 1.3; font-size: 1.05rem; margin-bottom: 6px; word-wrap: break-word; }
         .title:visited { color: #64748b; }
-        .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; flex-grow: 1; }
+        .read-more { color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-left: 5px; white-space: nowrap; }
+        .read-more:hover { text-decoration: underline; }
 
-        @media (max-width: 600px) {
-            .item { gap: 10px; padding: 10px; }
-            .thumb { width: 65px; height: 65px; }
+        /* LIST VIEW (Default) */
+        .feed-container.list { display: flex; flex-direction: column; gap: 16px; }
+        .feed-container.list .item { display: flex; gap: 12px; }
+        .feed-container.list .thumb { width: 75px; height: 75px; }
+
+        /* GRID VIEW (Card Style) */
+        .feed-container.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .feed-container.grid .item { display: flex; flex-direction: column; /*height: 100%;*/ }
+        .feed-container.grid .thumb { width: 100%; height: 160px; margin-bottom: 10px; }
+
+        @media (max-width: 640px) {
+            .feed-container.list .item { gap: 10px; padding: 10px; }
+            .feed-container.list .thumb { width: 65px; height: 65px; }
             .title { font-size: 0.95rem; }
+            
+            /* Responsive Grid: Single column on small mobile, avoid the cramped 2-card row */
+            .feed-container.grid { 
+                grid-template-columns: 1fr; 
+                gap: 12px;
+            }
+            .feed-container.grid .thumb { height: 180px; }
         }
     </style>
 </head>
@@ -49,12 +80,23 @@
 
 <div id="app">
     <div class="controls">
-        <div class="status">
-            <span>{{ loadedCount }}/{{ rssLinks.length }} Sources</span>
-            <span>Showing {{ filteredEntries.length }}</span>
+        <!-- Header Row -->
+        <div class="controls-header">
+            <div class="status-text">
+                [READER] • Sources {{ loadedCount }}/{{ rssLinks.length }}  • Showing {{ filteredEntries.length }}
+            </div>
+            <div class="header-actions">
+                <button class="btn-toggle" @click="toggleView">
+                    {{ viewMode === 'list' ? '⊞ Grid' : '≣ List' }}
+                </button>
+                <button class="btn-toggle" :class="{ active: controlsExpanded }" @click="controlsExpanded = !controlsExpanded">
+                    {{ controlsExpanded ? 'Less' : 'More Controls' }}
+                </button>
+            </div>
         </div>
 
-        <div class="filter-section">
+        <!-- Collapsible Section -->
+        <div class="filter-section" v-if="controlsExpanded">
             <div class="filter-group">
                 <label>Past <strong>{{ daysFilter }}</strong> days</label>
                 <input type="range" v-model="daysFilter" min="1" max="60">
@@ -82,13 +124,23 @@
         </div>
     </div>
 
-    <!-- Feed List -->
-    <div v-for="item in filteredEntries" :key="item.link + item.date.getTime()" class="item">
-        <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" @error="item.image = null">
-        <div class="content">
-            <div class="meta">{{ item.source }} • {{ formatDate(item.date) }}</div>
-            <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
-            <div class="blurb">{{ item.blurb }}</div>
+    <!-- Feed Container -->
+    <div class="feed-container" :class="viewMode">
+        <div v-for="item in filteredEntries" :key="item.link + item.date.getTime()" class="item">
+            <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" @error="item.image = null">
+            <div class="content">
+                <div class="meta">{{ item.source }} • {{ formatDate(item.date) }}</div>
+                <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
+                <div class="blurb">
+                    <span v-if="!item.expanded">
+                        {{ item.blurb.length > 160 ? item.blurb.substring(0, 160) + '...' : item.blurb }}
+                    </span>
+                    <span v-else>{{ item.blurb }}</span>
+                    <span v-if="item.blurb.length > 160" @click="item.expanded = !item.expanded" class="read-more">
+                        {{ item.expanded ? 'See less' : 'See more' }}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -197,6 +249,10 @@ createApp({
         const allEntries = ref([]);
         const loadedCount = ref(0);
         
+        // UI State
+        const controlsExpanded = ref(false);
+        const viewMode = ref('grid'); // 'list' or 'grid'
+
         // Filters
         const daysFilter = ref(14);
         const sourceSearch = ref("");
@@ -214,10 +270,12 @@ createApp({
             );
         });
 
-        // Initialize selected sources once when first batch of data arrives
+        // Ensure new sources are selected by default as they arrive
         watch(uniqueSources, (newVal, oldVal) => {
-            if (oldVal.length === 0 && newVal.length > 0) {
-                selectedSources.value = [...newVal];
+            const prev = oldVal || [];
+            const newSources = newVal.filter(s => !prev.includes(s));
+            if (newSources.length > 0) {
+                selectedSources.value.push(...newSources);
             }
         });
 
@@ -232,6 +290,10 @@ createApp({
             else selectedSources.value = [];
         };
 
+        const toggleView = () => {
+            viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';
+        };
+
         const fetchFeed = async (url) => {
             let responseText = "";
             let fetchSuccess = false;
@@ -244,7 +306,7 @@ createApp({
                     fetchSuccess = true;
                 }
             } catch (directError) {
-                // Silently move to fallback if direct fetch fails (likely CORS)
+                // Silently move to fallback
             }
 
             // Step 2: Fallback to Proxy
@@ -296,8 +358,9 @@ createApp({
                 if (title && link) {
                     allEntries.value.push({
                         title, link: link.trim(), date, source,
-                        blurb: (new DOMParser().parseFromString(rawB, 'text/html').body.textContent || "").substring(0, 160).trim() + "...",
-                        image: img
+                        blurb: (new DOMParser().parseFromString(rawB, 'text/html').body.textContent || "").trim(),
+                        image: img,
+                        expanded: false 
                     });
                 }
             });
@@ -328,7 +391,8 @@ createApp({
         return { 
             rssLinks, filteredEntries, loadedCount, 
             formatDate, daysFilter, sourceSearch, searchedSources, 
-            selectedSources, toggleSource, selectAllSources, uniqueSources
+            selectedSources, toggleSource, selectAllSources, uniqueSources,
+            controlsExpanded, viewMode, toggleView
         };
     }
 }).mount('#app');

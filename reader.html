@@ -132,13 +132,19 @@
                 <div class="meta">{{ item.source }} • {{ formatDate(item.date) }}</div>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb">
-                    <span v-if="!item.expanded">
-                        {{ item.blurb.length > 160 ? item.blurb.substring(0, 160) + '...' : item.blurb }}
+                    <span>
+                        {{ item.blurb.length > (item.currentLimit || 160) 
+                            ? item.blurb.substring(0, item.currentLimit || 160) + '...' 
+                            : item.blurb }}
                     </span>
-                    <span v-else>{{ item.blurb }}</span>
-                    <span v-if="item.blurb.length > 160" @click="item.expanded = !item.expanded" class="read-more">
-                        {{ item.expanded ? 'See less' : 'See more' }}
-                    </span>
+                    
+                    <span v-if="item.blurb.length > (item.currentLimit || 160)" 
+                          @click="changeLimit(item, 160, 500)" 
+                          class="read-more">more</span>
+
+                    <span v-if="(item.currentLimit || 160) > 160" 
+                          @click="changeLimit(item, 160, -500)" 
+                          class="read-more">less</span>
                 </div>
             </div>
         </div>
@@ -357,10 +363,13 @@ createApp({
 
                 if (title && link) {
                     allEntries.value.push({
-                        title, link: link.trim(), date, source,
+                        title, 
+                        link: link.trim(), 
+                        date, 
+                        source,
                         blurb: (new DOMParser().parseFromString(rawB, 'text/html').body.textContent || "").trim(),
                         image: img,
-                        expanded: false 
+                        currentLimit: 160 
                     });
                 }
             });
@@ -387,12 +396,18 @@ createApp({
         };
 
         onMounted(() => rssLinks.forEach(fetchFeed));
+
+        const changeLimit = (item, low, delta) => {
+            let newLimit = (item.currentLimit || low) + delta;
+            
+            item.currentLimit = Math.max(low, newLimit);
+        };
         
         return { 
             rssLinks, filteredEntries, loadedCount, 
             formatDate, daysFilter, sourceSearch, searchedSources, 
             selectedSources, toggleSource, selectAllSources, uniqueSources,
-            controlsExpanded, viewMode, toggleView
+            controlsExpanded, viewMode, toggleView, changeLimit
         };
     }
 }).mount('#app');

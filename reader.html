@@ -6,72 +6,83 @@
     <title>RSS Reader</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --star: #f59e0b; }
         body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; background: var(--bg); color: #1e293b; padding: 10px; padding-bottom: 50px; }
         
         /* Fixed/Sticky Controls for Mobile */
-        .controls { background: var(--card); padding: 12px 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 10px; z-index: 100; border: 1px solid #e2e8f0; }
+        .controls { background: var(--card); padding: 12px 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 10px; z-index: 100; border: 1px solid #e2e8f0; overflow: hidden; }
         
+        /* Progress Bar */
+        .progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: #e2e8f0; }
+        .progress-bar { height: 100%; background: var(--primary); transition: width 0.3s ease; }
+
         /* Header Row with Status and Buttons */
         .controls-header { display: flex; justify-content: space-between; align-items: center; }
         .status-text { font-size: 0.85rem; font-weight: 600; color: #64748b; }
+        
         .header-actions { display: flex; gap: 8px; }
         
         .btn-toggle { background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; color: #475569; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
         .btn-toggle:hover { border-color: var(--primary); color: var(--primary); }
         .btn-toggle.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
+        .btn-toggle.starred-active { background: #fffbeb; color: var(--star); border-color: var(--star); }
 
-        .filter-section { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #e2e8f0; pt: 12px; margin-top: 12px; animation: slideDown 0.2s ease-out; }
+        .filter-section { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 12px; animation: slideDown 0.2s ease-out; }
         
         @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
         .search-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 8px; }
         .filter-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.85rem; }
         input[type="range"] { flex: 1; }
+        
+        .btn-all { padding: 4px 8px; font-size: 0.7rem; text-transform: uppercase; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-weight: bold; color: #64748b; }
+        .btn-all.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
         .source-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .bulk-actions { font-size: 0.75rem; color: var(--primary); font-weight: bold; cursor: pointer; display: flex; gap: 10px; }
         
-        .source-scroll { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+        .source-scroll { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
         .source-scroll::-webkit-scrollbar { height: 4px; }
         .source-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        .tag { font-size: 0.7rem; padding: 5px 12px; border-radius: 20px; border: 1px solid #cbd5e1; cursor: pointer; white-space: nowrap; background: white; transition: all 0.2s; }
-        .tag.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .tag { font-size: 0.75rem; padding: 6px 14px; border-radius: 12px; border: 1px solid #cbd5e1; cursor: pointer; white-space: nowrap; background: white; transition: all 0.2s; display: flex; flex-direction: column; align-items: flex-start; min-width: fit-content; position: relative; }
+        .tag .tag-main { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .tag .count { opacity: 0.6; font-weight: normal; font-size: 0.7rem; }
+        .tag .sub-url { font-size: 0.6rem; opacity: 0.5; margin-top: 1px; font-weight: normal; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Item Styles - Shared */
+        .tag.active { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+        .tag.starred-source { border-left: 4px solid var(--star); }
+        
+        .star-icon { color: #cbd5e1; transition: color 0.2s; font-size: 1rem; }
+        .star-icon.is-starred { color: var(--star); }
+        .tag:hover .star-icon { color: var(--star); opacity: 0.7; }
+
+        /* Item Styles */
         .item { background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid transparent; }
         .item:hover { border-color: #e2e8f0; }
         
         .thumb { background: #e2e8f0; border-radius: 6px; flex-shrink: 0; object-fit: cover; }
         .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-        .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
+        .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
         .title { font-weight: 700; text-decoration: none; color: #0f172a; display: block; line-height: 1.3; font-size: 1.05rem; margin-bottom: 6px; word-wrap: break-word; }
         .title:visited { color: #64748b; }
         .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; flex-grow: 1; }
         .read-more { color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-left: 5px; white-space: nowrap; }
         .read-more:hover { text-decoration: underline; }
 
-        /* LIST VIEW (Default) */
         .feed-container.list { display: flex; flex-direction: column; gap: 16px; }
         .feed-container.list .item { display: flex; gap: 12px; }
         .feed-container.list .thumb { width: 75px; height: 75px; }
 
-        /* GRID VIEW (Card Style) */
         .feed-container.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-        .feed-container.grid .item { display: flex; flex-direction: column; /*height: 100%;*/ }
+        .feed-container.grid .item { display: flex; flex-direction: column; }
         .feed-container.grid .thumb { width: 100%; height: 160px; margin-bottom: 10px; }
 
         @media (max-width: 640px) {
             .feed-container.list .item { gap: 10px; padding: 10px; }
             .feed-container.list .thumb { width: 65px; height: 65px; }
             .title { font-size: 0.95rem; }
-            
-            /* Responsive Grid: Single column on small mobile, avoid the cramped 2-card row */
-            .feed-container.grid { 
-                grid-template-columns: 1fr; 
-                gap: 12px;
-            }
+            .feed-container.grid { grid-template-columns: 1fr; gap: 12px; }
             .feed-container.grid .thumb { height: 180px; }
         }
     </style>
@@ -80,17 +91,26 @@
 
 <div id="app">
     <div class="controls">
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar" :style="{ width: loadProgress + '%' }"></div>
+        </div>
+
         <!-- Header Row -->
         <div class="controls-header">
             <div class="status-text">
-                [READER] • Sources {{ loadedCount }}/{{ rssLinks.length }}  • Showing {{ filteredEntries.length }}
+                [READER] • 
+                Showing [{{ filteredEntries.length }} / {{ allEntries.length }}]
             </div>
             <div class="header-actions">
+                <button class="btn-toggle" :class="{ 'starred-active': filterStarredOnly }" @click="filterStarredOnly = !filterStarredOnly">
+                    {{ filterStarredOnly ? '★ Starred Only' : '☆ All Sources' }}
+                </button>
                 <button class="btn-toggle" @click="toggleView">
                     {{ viewMode === 'list' ? '⊞ Grid' : '≣ List' }}
                 </button>
                 <button class="btn-toggle" :class="{ active: controlsExpanded }" @click="controlsExpanded = !controlsExpanded">
-                    {{ controlsExpanded ? 'Less' : 'More Controls' }}
+                    {{ controlsExpanded ? 'Less' : 'More' }}
                 </button>
             </div>
         </div>
@@ -98,14 +118,20 @@
         <!-- Collapsible Section -->
         <div class="filter-section" v-if="controlsExpanded">
             <div class="filter-group">
-                <label>Past <strong>{{ daysFilter }}</strong> days</label>
-                <input type="range" v-model="daysFilter" min="1" max="60">
+                <label v-if="!showAllTime">Past <strong>{{ daysFilter }}</strong> days</label>
+                <label v-else>Showing <strong>All Time</strong></label>
+                
+                <input type="range" v-model="daysFilter" min="1" max="60" :disabled="showAllTime" :style="{ opacity: showAllTime ? 0.3 : 1 }">
+                
+                <button class="btn-all" :class="{ active: showAllTime }" @click="showAllTime = !showAllTime">
+                    Show All
+                </button>
             </div>
 
             <div>
                 <input type="text" v-model="sourceSearch" placeholder="Search sources..." class="search-input">
                 <div class="source-header">
-                    <span style="font-size: 0.75rem; color: #64748b;">Toggle Sources:</span>
+                    <span style="font-size: 0.75rem; color: #64748b;">Sources:</span>
                     <div class="bulk-actions">
                         <span @click="selectAllSources(true)">All</span>
                         <span @click="selectAllSources(false)">None</span>
@@ -113,11 +139,19 @@
                 </div>
                 <div class="source-scroll">
                     <div v-for="source in searchedSources" 
-                         :key="source" 
+                         :key="source.name" 
                          class="tag" 
-                         :class="{ active: selectedSources.includes(source) }"
-                         @click="toggleSource(source)">
-                        {{ source }}
+                         :class="{ active: selectedSources.includes(source.name), 'starred-source': starredSources.has(source.name) }"
+                         @click="toggleSource(source.name)">
+                        <div class="tag-main">
+                            <span class="star-icon" :class="{ 'is-starred': starredSources.has(source.name) }" @click.stop="toggleStar(source.name)">
+                                {{ starredSources.has(source.name) ? '★' : '☆' }}
+                            </span>
+                            {{ source.name }} <span class="count">({{ source.count }})</span>
+                        </div>
+                        <div v-if="source.isExtracted" class="sub-url">
+                            {{ source.url }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -129,7 +163,10 @@
         <div v-for="item in filteredEntries" :key="item.link + item.date.getTime()" class="item">
             <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" @error="item.image = null">
             <div class="content">
-                <div class="meta">{{ item.source }} • {{ formatDate(item.date) }}</div>
+                <div class="meta">
+                    <span v-if="starredSources.has(item.source)" style="color: var(--star)">★</span>
+                    {{ item.source }} • {{ formatDate(item.date) }}
+                </div>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb">
                     <span>
@@ -152,147 +189,202 @@
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted, watch } = Vue;
+const { createApp, ref, computed, onMounted, watch, reactive } = Vue;
 
 createApp({
     setup() {
         const rssLinks = [
-            "http://antirez.com/rss",
-            "http://www.aaronsw.com/2002/feeds/pgessays.rss",
-            "https://anildash.com/feed.xml",
-            "https://aresluna.org/main.rss",
-            "https://beej.us/blog/rss.xml",
-            "https://bernsteinbear.com/feed.xml",
-            "https://berthub.eu/articles/index.xml",
-            "https://blog.jim-nielsen.com/feed.xml",
-            "https://blog.miguelgrinberg.com/feed",
-            "https://blog.pixelmelt.dev/rss/",
-            "https://bogdanthegeek.github.io/blog/index.xml",
-            "https://borretti.me/feed.xml",
-            "https://brutecat.com/rss.xml",
-            "https://buttondown.com/hillelwayne/rss",
-            "https://chadnauseam.com/rss.xml",
-            "https://computer.rip/rss.xml",
-            "https://danielchasehooper.com/feed.xml",
-            "https://danieldelaney.net/feed",
-            "https://danielwirtz.com/rss.xml",
-            "https://daringfireball.net/feeds/main",
-            "https://devblogs.microsoft.com/oldnewthing/feed",
-            "https://dfarq.homeip.net/feed/",
-            "https://dynomight.net/feed.xml",
-            "https://eli.thegreenplace.net/feeds/all.atom.xml",
-            "https://entropicthoughts.com/feed.xml",
-            "https://ericmigi.com/rss.xml",
-            "https://evanhahn.com/feed.xml",
-            "https://fabiensanglard.net/rss.xml",
-            "https://feed.tedium.co/",
-            "https://garymarcus.substack.com/feed",
-            "https://geohot.github.io/blog/feed.xml",
-            "https://gilesthomas.com/feed/rss.xml",
-            "https://grantslatton.com/rss.xml",
-            "https://gwern.substack.com/feed",
-            "https://herman.bearblog.dev/feed/",
-            "https://hey.paris/index.xml",
-            "https://hugotunius.se/feed.xml",
-            "https://idiallo.com/feed.rss",
-            "https://it-notes.dragas.net/feed/",
-            "https://jayd.ml/feed.xml",
-            "https://joanwestenberg.com/rss",
-            "https://jyn.dev/atom.xml",
-            "https://keygen.sh/blog/feed.xml",
-            "https://krebsonsecurity.com/feed/",
-            "https://lcamtuf.substack.com/feed",
-            "https://lucumr.pocoo.org/feed.atom",
-            "https://martinalderson.com/feed.xml",
-            "https://matklad.github.io/feed.xml",
-            "https://matuggan.com/rss/",
-            "https://maurycyz.com/index.xml",
-            "https://micahflee.com/feed/",
-            "https://michael.stapelberg.ch/feed.xml",
-            "https://minimaxir.com/index.xml",
-            "https://mitchellh.com/feed.xml",
-            "https://mjg59.dreamwidth.org/data/rss",
-            "https://nesbitt.io/feed.xml",
-            "https://oldvcr.blogspot.com/feeds/posts/default",
-            "https://overreacted.io/rss.xml",
-            "https://philiplaine.com/index.xml",
-            "https://pluralistic.net/feed/",
-            "https://rachelbythebay.com/w/atom.xml",
-            "https://rakhim.exotext.com/rss.xml",
-            "https://refactoringenglish.com/index.xml",
-            "https://shkspr.mobi/blog/feed/",
-            "https://simone.org/feed/",
-            "https://simonwillison.net/atom/everything/",
-            "https://skyfall.dev/rss.xml",
-            "https://steveblank.com/feed/",
-            "https://susam.net/feed.xml",
-            "https://terriblesoftware.org/feed/",
-            "https://timsh.org/rss/",
-            "https://tomrenner.com/index.xml",
-            "https://utcc.utoronto.ca/~cks/space/blog/?atom",
-            "https://worksonmymachine.substack.com/feed",
-            "https://www.abortretry.fail/feed",
-            "https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/feed.xml",
-            "https://www.construction-physics.com/feed",
-            "https://www.downtowndougbrown.com/feed/",
-            "https://www.dwarkeshpatel.com/feed",
-            "https://www.experimental-history.com/feed",
-            "https://www.filfre.net/feed/",
-            "https://www.geoffreylitt.com/feed.xml",
-            "https://www.jeffgeerling.com/blog.xml",
-            "https://www.johndcook.com/blog/feed/",
-            "https://www.righto.com/feeds/posts/default",
-            "https://www.seangoedecke.com/rss.xml",
-            "https://www.tedunangst.com/flak/rss",
-            "https://www.theatlantic.com/feed/author/derek-thompson/",
-            "https://www.troyhunt.com/rss/",
-            "https://www.wheresyoured.at/rss/",
-            "https://xania.org/feed",
-            "https://xeiaso.net/blog.rss"
+            { url: "https://hnrss.org/frontpage", name: "HN Frontpage", starred: true},
+            { url: "https://hnrss.org/newest", name: "HN newest"},
+            { url: "http://lesserwrong.com/feed.xml" , name: "Less Wrong", starred: true},
+            { url: "http://antirez.com/rss", name: "Antirez" },
+            { url: "http://www.aaronsw.com/2002/feeds/pgessays.rss", name: "Paul Graham" , starred: true},
+            { url: "https://gwern.substack.com/feed" ,name: "gwern", starred: true},
+            { url: "http://www.offconvex.org/feed.xml", name: "Off The Convex Path", starred: true},
+            { url: "https://vickiboykis.com/index.xml", name: "Vicki Boykis", starred: true},
+            { url: "https://herman.bearblog.dev/feed/" },
+            { url: "https://anildash.com/feed.xml" },
+            { url: "https://aresluna.org/main.rss" },
+            { url: "https://beej.us/blog/rss.xml" },
+            { url: "https://bernsteinbear.com/feed.xml" },
+            { url: "https://berthub.eu/articles/index.xml" },
+            { url: "https://blog.jim-nielsen.com/feed.xml" },
+            { url: "https://blog.miguelgrinberg.com/feed" },
+            { url: "https://blog.pixelmelt.dev/rss/" },
+            { url: "https://bogdanthegeek.github.io/blog/index.xml" },
+            { url: "https://borretti.me/feed.xml" },
+            { url: "https://brutecat.com/rss.xml" },
+            { url: "https://buttondown.com/hillelwayne/rss" },
+            { url: "https://chadnauseam.com/rss.xml" },
+            { url: "https://computer.rip/rss.xml" },
+            { url: "https://danielchasehooper.com/feed.xml" },
+            { url: "https://danieldelaney.net/feed" },
+            { url: "https://danielwirtz.com/rss.xml" },
+            { url: "https://daringfireball.net/feeds/main" },
+            { url: "https://devblogs.microsoft.com/oldnewthing/feed" },
+            { url: "https://dfarq.homeip.net/feed/" },
+            { url: "https://dynomight.net/feed.xml" },
+            { url: "https://eli.thegreenplace.net/feeds/all.atom.xml" },
+            { url: "https://entropicthoughts.com/feed.xml" },
+            { url: "https://ericmigi.com/rss.xml" },
+            { url: "https://evanhahn.com/feed.xml" },
+            { url: "https://fabiensanglard.net/rss.xml" },
+            { url: "https://feed.tedium.co/" },
+            { url: "https://garymarcus.substack.com/feed" },
+            { url: "https://geohot.github.io/blog/feed.xml" },
+            { url: "https://gilesthomas.com/feed/rss.xml" },
+            { url: "https://grantslatton.com/rss.xml" },
+            { url: "https://hey.paris/index.xml" },
+            { url: "https://hugotunius.se/feed.xml" },
+            { url: "https://idiallo.com/feed.rss" },
+            { url: "https://it-notes.dragas.net/feed/" },
+            { url: "https://jayd.ml/feed.xml" },
+            { url: "https://joanwestenberg.com/rss" },
+            { url: "https://jyn.dev/atom.xml" },
+            { url: "https://keygen.sh/blog/feed.xml" },
+            { url: "https://krebsonsecurity.com/feed/" },
+            { url: "https://lcamtuf.substack.com/feed" },
+            { url: "https://lucumr.pocoo.org/feed.atom" },
+            { url: "https://martinalderson.com/feed.xml" },
+            { url: "https://matklad.github.io/feed.xml" },
+            { url: "https://matuggan.com/rss/" },
+            { url: "https://maurycyz.com/index.xml" },
+            { url: "https://micahflee.com/feed/" },
+            { url: "https://michael.stapelberg.ch/feed.xml" },
+            { url: "https://minimaxir.com/index.xml" },
+            { url: "https://mitchellh.com/feed.xml" },
+            { url: "https://mjg59.dreamwidth.org/data/rss" },
+            { url: "https://nesbitt.io/feed.xml" },
+            { url: "https://oldvcr.blogspot.com/feeds/posts/default" },
+            { url: "https://overreacted.io/rss.xml" },
+            { url: "https://philiplaine.com/index.xml" },
+            { url: "https://pluralistic.net/feed/" },
+            { url: "https://rachelbythebay.com/w/atom.xml" },
+            { url: "https://rakhim.exotext.com/rss.xml" },
+            { url: "https://refactoringenglish.com/index.xml" },
+            { url: "https://shkspr.mobi/blog/feed/" },
+            { url: "https://simone.org/feed/", name: "Simone" },
+            { url: "https://simonwillison.net/atom/everything/", name: "Simon Willison" },
+            { url: "https://skyfall.dev/rss.xml" },
+            { url: "https://steveblank.com/feed/" },
+            { url: "https://susam.net/feed.xml" },
+            { url: "https://terriblesoftware.org/feed/" },
+            { url: "https://timsh.org/rss/" },
+            { url: "https://tomrenner.com/index.xml" },
+            { url: "https://utcc.utoronto.ca/~cks/space/blog/?atom" },
+            { url: "https://worksonmymachine.substack.com/feed" },
+            { url: "https://www.abortretry.fail/feed" },
+            { url: "https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/feed.xml" },
+            { url: "https://www.construction-physics.com/feed" },
+            { url: "https://www.downtowndougbrown.com/feed/" },
+            { url: "https://www.dwarkeshpatel.com/feed" },
+            { url: "https://www.experimental-history.com/feed" },
+            { url: "https://www.filfre.net/feed/" },
+            { url: "https://www.geoffreylitt.com/feed.xml" },
+            { url: "https://www.jeffgeerling.com/blog.xml" },
+            { url: "https://www.johndcook.com/blog/feed/" },
+            { url: "https://www.righto.com/feeds/posts/default" },
+            { url: "https://www.seangoedecke.com/rss.xml" },
+            { url: "https://www.tedunangst.com/flak/rss" },
+            { url: "https://www.theatlantic.com/feed/author/derek-thompson/" },
+            { url: "https://www.troyhunt.com/rss/" },
+            { url: "https://www.wheresyoured.at/rss/" },
+            { url: "https://xania.org/feed" },
+            { url: "https://xeiaso.net/blog.rss" }
         ];
 
         const proxyPrefix = "https://api.allorigins.win/raw?url=";
         const allEntries = ref([]);
         const loadedCount = ref(0);
+        const pendingCount = ref(0);
+        const failedCount = ref(0);
         
-        // UI State
         const controlsExpanded = ref(false);
-        const viewMode = ref('grid'); // 'list' or 'grid'
-
-        // Filters
-        const daysFilter = ref(7);
+        const viewMode = ref('grid');
+        const daysFilter = ref(14);
+        const showAllTime = ref(false);
         const sourceSearch = ref("");
         const selectedSources = ref([]);
+        
+        // Starred Feature State
+        const starredSources = reactive(new Set());
+        const filterStarredOnly = ref(false);
+
+        const loadProgress = computed(() => {
+            if (rssLinks.length === 0) return 0;
+            return ((loadedCount.value + failedCount.value) / rssLinks.length) * 100;
+        });
+
+        const filteredEntries = computed(() => {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - daysFilter.value);
+
+            return allEntries.value
+                .filter(e => {
+                    const isWithinDate = showAllTime.value || (!isNaN(e.date) && e.date >= cutoff);
+                    const isSelectedSource = selectedSources.value.includes(e.source);
+                    const isStarredCondition = !filterStarredOnly.value || starredSources.has(e.source);
+                    return isWithinDate && isSelectedSource && isStarredCondition;
+                })
+                .sort((a, b) => b.date - a.date);
+        });
 
         const uniqueSources = computed(() => {
-            const sources = [...new Set(allEntries.value.map(e => e.source))];
-            return sources.sort();
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - daysFilter.value);
+
+            const counts = allEntries.value.reduce((acc, e) => {
+                const isWithinDate = showAllTime.value || (!isNaN(e.date) && e.date >= cutoff);
+                if (!isWithinDate) return acc;
+
+                if (!acc[e.source]) {
+                    acc[e.source] = { count: 0, url: e.originUrl, isExtracted: e.isExtracted };
+                }
+                acc[e.source].count++;
+                return acc;
+            }, {});
+            
+            return Object.keys(counts).sort().map(name => ({
+                name,
+                count: counts[name].count,
+                url: counts[name].url,
+                isExtracted: counts[name].isExtracted
+            }));
         });
 
         const searchedSources = computed(() => {
-            if (!sourceSearch.value) return uniqueSources.value;
-            return uniqueSources.value.filter(s => 
-                s.toLowerCase().includes(sourceSearch.value.toLowerCase())
-            );
+            let sources = uniqueSources.value;
+            if (sourceSearch.value) {
+                const search = sourceSearch.value.toLowerCase();
+                sources = sources.filter(s => s.name.toLowerCase().includes(search));
+            }
+            return sources;
         });
 
-        // Ensure new sources are selected by default as they arrive
         watch(uniqueSources, (newVal, oldVal) => {
-            const prev = oldVal || [];
-            const newSources = newVal.filter(s => !prev.includes(s));
-            if (newSources.length > 0) {
-                selectedSources.value.push(...newSources);
+            const prevNames = (oldVal || []).map(s => s.name);
+            const newItems = newVal.filter(s => !prevNames.includes(s.name));
+            if (newItems.length > 0) {
+                selectedSources.value.push(...newItems.map(s => s.name));
             }
         });
 
-        const toggleSource = (source) => {
-            const index = selectedSources.value.indexOf(source);
+        const toggleSource = (sourceName) => {
+            const index = selectedSources.value.indexOf(sourceName);
             if (index > -1) selectedSources.value.splice(index, 1);
-            else selectedSources.value.push(source);
+            else selectedSources.value.push(sourceName);
+        };
+
+        const toggleStar = (sourceName) => {
+            if (starredSources.has(sourceName)) {
+                starredSources.delete(sourceName);
+            } else {
+                starredSources.add(sourceName);
+            }
         };
 
         const selectAllSources = (bool) => {
-            if (bool) selectedSources.value = [...uniqueSources.value];
+            if (bool) selectedSources.value = uniqueSources.value.map(s => s.name);
             else selectedSources.value = [];
         };
 
@@ -300,54 +392,68 @@ createApp({
             viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';
         };
 
-        const fetchFeed = async (url) => {
+        const fetchFeed = async (feedObj) => {
+            const url = feedObj.url;
+            pendingCount.value++;
             let responseText = "";
             let fetchSuccess = false;
 
-            // Step 1: Try Direct Fetch (Fastest, Privacy-Friendly)
             try {
-                const res = await fetch(url, { mode: 'cors' });
-                if (res.ok) {
+                const res = await fetch(url, { mode: 'cors' }).catch(() => null);
+                if (res && res.ok) {
                     responseText = await res.text();
                     fetchSuccess = true;
                 }
-            } catch (directError) {
-                // Silently move to fallback
-            }
-
-            // Step 2: Fallback to Proxy
-            if (!fetchSuccess) {
-                try {
-                    const res = await fetch(proxyPrefix + encodeURIComponent(url));
-                    if (res.ok) {
-                        responseText = await res.text();
+                
+                if (!fetchSuccess) {
+                    const proxyRes = await fetch(proxyPrefix + encodeURIComponent(url));
+                    if (proxyRes.ok) {
+                        responseText = await proxyRes.text();
                         fetchSuccess = true;
                     }
-                } catch (proxyError) {
-                    console.warn("Total failure for:", url);
                 }
-            }
 
-            if (fetchSuccess && responseText) {
-                parseFeed(responseText);
+                if (fetchSuccess && responseText) {
+                    const actualName = parseFeed(responseText, feedObj.name, url);
+                    // If feed has 'starred: true' in definition, add it to set
+                    if (feedObj.starred && actualName) {
+                        starredSources.add(actualName);
+                    }
+                    loadedCount.value++;
+                } else {
+                    failedCount.value++;
+                }
+            } catch (e) {
+                failedCount.value++;
+                console.warn("Failed to load:", url);
+            } finally {
+                pendingCount.value--;
             }
-            
-            loadedCount.value++;
         };
 
-        const parseFeed = (text) => {
+        const parseFeed = (text, customName, originalUrl) => {
             const xml = new DOMParser().parseFromString(text, "text/xml");
             
-            // Extract Source Name
-            let source = xml.querySelector("channel > title, feed > title")?.textContent || "Source";
-            source = source.split(' - ')[0].split(': ')[0].trim();
+            let source = customName;
+            let isExtracted = !customName;
+            
+            if (!source) {
+                source = xml.querySelector("channel > title, feed > title")?.textContent || "Source";
+                source = source.split(' - ')[0].split(': ')[0].trim();
+            }
+
+            let cleanUrl = "";
+            try {
+                cleanUrl = new URL(originalUrl).hostname.replace('www.', '');
+            } catch(e) { cleanUrl = originalUrl; }
             
             xml.querySelectorAll("item, entry").forEach(el => {
                 const title = el.querySelector("title")?.textContent;
                 let link = el.querySelector("link")?.textContent || el.querySelector("link")?.getAttribute("href");
                 
                 if (!link || link.trim() === "") {
-                     link = el.querySelector("link")?.innerHTML;
+                    const linkEl = el.querySelector("link");
+                    link = linkEl ? (linkEl.getAttribute("href") || linkEl.textContent) : "";
                 }
 
                 const dateStr = el.querySelector("pubDate, published, updated")?.textContent;
@@ -367,47 +473,36 @@ createApp({
                         link: link.trim(), 
                         date, 
                         source,
+                        originUrl: cleanUrl,
+                        isExtracted: isExtracted,
                         blurb: (new DOMParser().parseFromString(rawB, 'text/html').body.textContent || "").trim(),
                         image: img,
                         currentLimit: 160 
                     });
                 }
             });
+            return source;
         };
-
-        const filteredEntries = computed(() => {
-            const now = new Date();
-            const cutoff = new Date();
-            cutoff.setDate(now.getDate() - daysFilter.value);
-
-            return allEntries.value
-                .filter(e => {
-                    const isWithinDate = !isNaN(e.date) && e.date >= cutoff;
-                    const isSelectedSource = selectedSources.value.includes(e.source);
-                    return isWithinDate && isSelectedSource;
-                })
-                .sort((a, b) => b.date - a.date);
-        });
 
         const formatDate = (d) => {
             const now = new Date();
+            if (isNaN(d.getTime())) return 'Unknown Date';
             if (d.toDateString() === now.toDateString()) return 'Today';
             return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         };
 
-        onMounted(() => rssLinks.forEach(fetchFeed));
-
         const changeLimit = (item, low, delta) => {
-            let newLimit = (item.currentLimit || low) + delta;
-            
-            item.currentLimit = Math.max(low, newLimit);
+            item.currentLimit = Math.max(low, (item.currentLimit || low) + delta);
         };
+
+        onMounted(() => rssLinks.forEach(fetchFeed));
         
         return { 
-            rssLinks, filteredEntries, loadedCount, 
-            formatDate, daysFilter, sourceSearch, searchedSources, 
+            rssLinks, allEntries, filteredEntries, loadedCount, pendingCount, failedCount, loadProgress,
+            formatDate, daysFilter, showAllTime, sourceSearch, searchedSources, 
             selectedSources, toggleSource, selectAllSources, uniqueSources,
-            controlsExpanded, viewMode, toggleView, changeLimit
+            controlsExpanded, viewMode, toggleView, changeLimit,
+            starredSources, toggleStar, filterStarredOnly
         };
     }
 }).mount('#app');

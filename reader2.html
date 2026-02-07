@@ -94,7 +94,7 @@
 .tag.selected .tag-sub, .tag.selected .count { opacity: 0.9; }
 
 
-.debug-grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 20px; }
+.debug-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 
 
         /* Layout Modes */
@@ -230,14 +230,12 @@
         </div>
     </div>
     <div class="bulk-actions">
-        <span class='txt-btn ph' style="padding-left: 0;">Filter days:</span>
+        <span class='txt-btn ph' style="padding-left: 0;">Days:</span>
         <span :class="['txt-btn', { 'selected': dateMode === '1' }]"  @click="setDatePreset(3)">1</span>
         <span :class="['txt-btn', { 'selected': dateMode === '3' }]"  @click="setDatePreset(3)">3</span>
         <span :class="['txt-btn', { 'selected': dateMode === '7' }]"  @click="setDatePreset(7)">7</span>
-        <span :class="['txt-btn', { 'selected': dateMode === '10' }]" @click="setDatePreset(10)">10</span>
         <span :class="['txt-btn', { 'selected': dateMode === '30' }]" @click="setDatePreset(30)">30</span>
         <span :class="['txt-btn', { 'selected': dateMode === 'custom' }]" @click="setDatePreset('custom')">custom</span>
-        <span class='txt-btn ph'>days</span>
     </div>
 
     <div v-if="dateMode === 'custom'" class="flex items-center gap-2">
@@ -248,15 +246,13 @@
 
     <div class="source-header">
         <div class="bulk-actions">
-            <span class='txt-btn ph' style="padding-left: 0;">Filter source:</span>
+            <span class='txt-btn ph' style="padding-left: 0;">Show:</span>
             <span :class="['txt-btn', { 'selected': selectionMode === 'all' }]" @click="update_source_selection('all')">all</span>
             <span :class="['txt-btn', { 'selected': selectionMode === 'star' }]" @click="update_source_selection('star')">star</span>
             <span :class="['txt-btn', { 'selected': selectionMode === 'none' }]" @click="update_source_selection('none')">none</span>
         </div>
         <div class="bulk-actions">
-            <span class='txt-btn ph' >Status:</span>
-            <span class='txt-btn ph stone'> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }}</span>
-            <span class='txt-btn ph stone'> {{displayedItems}}/{{totalItems}}</span>
+            <span style="font-size: xx-small;color:#475569"> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }} {{displayedItems}}/{{totalItems}}</span>
 
         </div>
     </div>
@@ -344,7 +340,7 @@ createApp({
         const viewMode = ref('list');
         const seenLinks = new Set();
         const filters = reactive({ start: '', end: '', selectedSources: new Set(FEED_CONFIG.map(f => f.url)) });
-        const selectionMode = ref('all');
+        const selectionMode = ref('star');
         const dateMode = ref('3');
 
         const sourceStates = reactive(FEED_CONFIG.map(config => ({

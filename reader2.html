@@ -11,7 +11,7 @@
         :root {
             --bg: #f8fafc; --card-bg: #ffffff; --border: #e2e8f0;
             --text: #1e293b;  --accent: #2563eb;
-            
+
             --blue: #007bff;
             --green: #28a745;
             --red: #dc3545;
@@ -28,35 +28,35 @@
         .flex { display: flex; } .flex-wrap { flex-wrap: wrap; }
         .gap-2 { gap: 8px; } .gap-4 { gap: 16px; } .items-center { align-items: center; }
         .container { max-width: 900px; margin: 0 auto; }
-        
+
 /* Base Tag Logic */
-.tag { 
+.tag {
   --accent: var(--green);
-  font-size: 0.75rem; 
-  padding: 6px 14px; 
-  border-radius: 12px; 
-  cursor: pointer; 
-  white-space: nowrap; 
-  border-width: 2px;  
-  transition: all 0.2s ease-in-out; 
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-width: 2px;
+  transition: all 0.2s ease-in-out;
   display: inline-flex;
-  flex-direction: column; 
-  align-items: center; 
-  gap: 2px; 
-  height: auto; 
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  height: auto;
 }
 
-.tag, .tag.not_selected { 
-  background: var(--white); 
+.tag, .tag.not_selected {
+  background: var(--white);
   border-style: dashed;
   border-color: var(--gray);
-  color: var(--black);  
+  color: var(--black);
 }
-.tag.selected { 
-  background: var(--white); 
+.tag.selected {
+  background: var(--white);
   border-style: solid;
-  border-color: var(--accent); 
-  color: var(--accent); 
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .tag:hover { filter: brightness(92%); transform: translateY(-1px); }
@@ -68,8 +68,8 @@
 .tag.muted   { --accent: var(--gray); border-style: dashed; }
 .tag.stone { --accent: var(--black); }
 
-.tag .star-icon { 
-  color: var(--gray); 
+.tag .star-icon {
+  color: var(--gray);
   transition: color 0.2s;
 }
 
@@ -101,7 +101,7 @@
         .feed-container { display: flex; flex-direction: column; gap: 16px; }
         .view-card { flex-direction: row; flex-wrap: wrap; }
         .view-card .item-node { width: 100%; border: 1px solid var(--border); border-radius: 8px; background: white; overflow: hidden; }
-        
+
         .view-list .item-node { border-bottom: 1px solid var(--border); padding: 8px 0; background: transparent; }
         .view-list .card-img { width: 80px; height: 80px; }
 
@@ -109,10 +109,10 @@
 
         .item { background: var(--white); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid transparent; }
         .item:hover { border-color: #e2e8f0; }
-.thumb { 
-    background: #f1f5f9; 
-    border-radius: 6px; 
-    flex-shrink: 0; 
+.thumb {
+    background: #f1f5f9;
+    border-radius: 6px;
+    flex-shrink: 0;
     object-fit: cover;
     aspect-ratio: 1 / 1; /* For list view */
     border: 1px solid var(--border);
@@ -132,18 +132,18 @@
 
         .feed-container.card {  display: flex; flex-direction: column; gap: 16px;}
         .feed-container.card .item { display: flex; flex-direction: column;}
-.feed-container.card .thumb { 
-    aspect-ratio: 16 / 9; 
-    width: 100%; 
-    height: auto; 
-}   
-  
+.feed-container.card .thumb {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    height: auto;
+}
+
 
 
         .cursor-pointer {cursor: pointer; }
 
 
-.txt-btn { --accent: var(--blue); color:var(--accent); cursor: pointer; font-weight: bold; display: inline-block; padding: 2px 5px; border-radius: 3px;}  
+.txt-btn { --accent: var(--blue); color:var(--accent); cursor: pointer; font-weight: bold; display: inline-block; padding: 2px 5px; border-radius: 3px;}
 .txt-btn:hover {text-decoration: underline var(--accent) solid 2px;}
 .txt-btn.selected  {text-decoration: underline var(--accent) solid 2px;}
 .txt-btn.not-selected  {--accent: var(--gray); }
@@ -210,7 +210,14 @@
 .status{
     font-size: x-small;
 }
-
+img.source-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+.star-icon {
+    color: var(--yellow);
+}
     </style>
 
 </head>
@@ -218,7 +225,7 @@
 
 <div id="app" class="container">
 
-<div class="controls">        
+<div class="controls">
     <div style="display: flex;justify-content: space-between;">
         <div style="display: flex; flex-direction: column; align-items: center;">
             <span class="logo">READ</span>
@@ -256,21 +263,26 @@
 
         </div>
     </div>
-     
+
 
     <div class="source-scroll">
-        <div v-for="source in sourceStates" 
+        <div v-for="source in sourceStates"
              :key="source.url"
              @click="toggleSource(source.url)"
              :class="['tag', `${source.status}`, { selected: filters.selectedSources.has(source.url), star: source.starred }]">
-            
+
             <div class="tag-main">
                 <span v-if="source.starred" class="star-icon">★</span>
                 <span>{{ source.displayName }}</span>
                 <span class="count">({{ source.count }})</span>
+                <span class="txt-btn"
+                    style="font-size: 0.7rem; margin-left: 4px;"
+                    @click.stop="refreshSource(source)">↻</span>
             </div>
-            
-            <div class="tag-sub">{{ source.url }}</div>
+
+            <div class="tag-sub">
+                {{ source.url }}
+            </div>
         </div>
     </div>
 </div>
@@ -282,6 +294,8 @@
             <div class="content">
                 <div class="meta">
                     <span v-if="item.sourceStarred" class="star-icon">★</span>
+                    <span v-if="item.sourceStarred">•</span>
+                    <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
                     {{ item.sourceName }} • {{ formatDate(item.date) }}
                 </div>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
@@ -300,13 +314,13 @@
             debug
         </summary>
         <div class="debug-grid">
-            <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">              
+            <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">
               <template v-for="sel in ['selected', 'not selected']" :key="sel">
                 <template v-for="hasStar in [true, false]" :key="hasStar">
-                  <div 
-                    v-for="hasCount in [true, false]" 
+                  <div
+                    v-for="hasCount in [true, false]"
                     :key="hasCount"
-                    class="tag" 
+                    class="tag"
                     :class="[state, { 'selected': sel === 'selected', 'star': hasStar }]"
                   >
                     <div class="tag-main">
@@ -345,7 +359,7 @@ createApp({
 
         const sourceStates = reactive(FEED_CONFIG.map(config => ({
             url: config.url,
-            displayName: config.name || 'Fetching...',
+            displayName: config.name || 'fetching...',
             count: 0,
             status: 'waiting',
             starred: config.starred || false
@@ -368,14 +382,14 @@ createApp({
         const sortedArticles = computed(() => [...articles.value].sort((a, b) => {
             // First, compare dates by day
             const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
-            
+
             // If it's the same day, prioritize starred (true comes before false)
             if (dateDiff === 0) {
                 return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
             }
-            
+
             return dateDiff;
-        })); 
+        }));
 
 
         const toggleSource = (url) => {
@@ -397,42 +411,53 @@ createApp({
             });
         };
 
+        const fetchSource = async (state) => {
+            state.status = 'waiting'; // Reset status to show loading
+            try {
+                const bundle = await RSSEngine.process({
+                    url: state.url,
+                    name: state.displayName,
+                    starred: state.starred
+                });
+                if (bundle.status === 'success') {
+                    const original = FEED_CONFIG.find(f => f.url === state.url);
+                    state.displayName = original.name ? original.name : `(${bundle.metadata.title})`;
+                    bundle.items.forEach(item => {
+                        if (!seenLinks.has(item.link)) {
+                            seenLinks.add(item.link);
+                            articles.value.push({
+                                ...item,
+                                display: true,
+                                snippet_length: 160,
+                                snippet: item.snippet,
+                                sourceName: state.displayName
+                            });
+                        }
+                    });
+                    state.count = bundle.items.length;
+                    state.status = 'success';
+                    updateVisibility();
+                } else { state.status = 'error'; }
+            } catch (err) { state.status = 'error'; }
+        };
+
+        const refreshSource = (state) => {
+            articles.value = articles.value.filter(a => a.sourceId !== state.url);
+            fetchSource(state);
+        };
 
         const fetchAll = () => {
-            sourceStates.forEach(async (state) => {
-                try {
-                    const bundle = await RSSEngine.process({ url: state.url, name: state.displayName, starred: state.starred });
-                    if (bundle.status === 'success') {
-                        const original = FEED_CONFIG.find(f => f.url === state.url);
-                        state.displayName = original.name ? original.name : `(${bundle.metadata.title})`;
-                        bundle.items.forEach(item => {
-                            if (!seenLinks.has(item.link)) {
-                                seenLinks.add(item.link);
-                                articles.value.push({ 
-                                    ...item, 
-                                    display: true, 
-                                    snippet_length: 160, 
-                                    snippet: item.snippet,
-                                    sourceName: state.displayName 
-                                });
-                            }
-                        });
-                        state.count = bundle.items.length;
-                        state.status = 'success';
-                        updateVisibility();
-                    } else { state.status = 'error'; }
-                } catch (err) { state.status = 'error'; }
-            });
+            sourceStates.forEach(state => fetchSource(state));
         };
 
         const setDatePreset = (days) => {
             dateMode.value = days;
             if (days === 'custom') return;
-            
+
             const end = new Date();
             const start = new Date();
             start.setDate(end.getDate() - parseInt(days));
-            
+
             filters.end = end.toISOString().split('T')[0];
             filters.start = start.toISOString().split('T')[0];
         };
@@ -450,7 +475,7 @@ createApp({
         const articlesCount = computed(() => {
             const counts = articles.value.reduce((acc, item) => {
                 // Extracts YYYY-MM
-                const m = item.date.toISOString().slice(0, 7); 
+                const m = item.date.toISOString().slice(0, 7);
                 acc[m] = (acc[m] || 0) + 1;
                 return acc;
             }, {});
@@ -465,8 +490,16 @@ createApp({
             fetchAll();
         });
 
-        return { articles, sortedArticles, sourceStates, filters, viewMode, toggleSource, update_source_selection, formatDate,selectionMode,dateMode, setDatePreset, totalItems,
-    displayedItems, statusCounts, articlesCount };
+        const getFavicon = (url) => {
+            try {
+                const hostname = new URL(url).hostname;
+                return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        return { articles, sortedArticles, sourceStates, filters, viewMode, toggleSource, update_source_selection, formatDate,selectionMode,dateMode, setDatePreset, totalItems, displayedItems, statusCounts, articlesCount, refreshSource, getFavicon };
     }
 }).mount('#app');
 </script>

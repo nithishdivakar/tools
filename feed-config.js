@@ -51,7 +51,6 @@ const FEED_CONFIG = [
             { url: "https://evanhahn.com/feed.xml" },
             { url: "https://fabiensanglard.net/rss.xml" },
             { url: "https://feed.tedium.co/" },
-            { url: "https://garymarcus.substack.com/feed" },
             { url: "https://geohot.github.io/blog/feed.xml" },
             { url: "https://gilesthomas.com/feed/rss.xml" },
             { url: "https://grantslatton.com/rss.xml" },
@@ -112,7 +111,7 @@ const FEED_CONFIG = [
             { url: "https://www.wheresyoured.at/rss/" },
             { url: "https://xania.org/feed" },
             { url: "https://xeiaso.net/blog.rss" }
-    
+
 ];
 
 // Export for different environments

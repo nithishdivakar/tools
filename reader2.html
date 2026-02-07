@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Reader - Advanced Filters</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="feed-config.js"></script>
+    <script src="rss-engine.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc; --card-bg: #ffffff; --border: #e2e8f0;
+            --text: #1e293b;  --accent: #2563eb;
+            
+            --blue: #007bff;
+            --green: #28a745;
+            --red: #dc3545;
+            --yellow: #ffc107;
+            --white: #fff;
+            --black: #000;
+            --gray: #6c757d;
+            --light-gray: #f8f9fa;
+
+        }
+
+
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text-black); margin: 0; padding: 20px; }
+        .flex { display: flex; } .flex-wrap { flex-wrap: wrap; }
+        .gap-2 { gap: 8px; } .gap-4 { gap: 16px; } .items-center { align-items: center; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+/* Base Tag Logic */
+.tag { 
+  --accent: var(--green);
+  font-size: 0.75rem; 
+  padding: 6px 14px; 
+  border-radius: 12px; 
+  cursor: pointer; 
+  white-space: nowrap; 
+  border-width: 2px;  
+  transition: all 0.2s ease-in-out; 
+  display: inline-flex;
+  flex-direction: column; 
+  align-items: center; 
+  gap: 2px; 
+  height: auto; 
+}
+
+.tag, .tag.not_selected { 
+  background: var(--white); 
+  border-style: dashed;
+  border-color: var(--gray);
+  color: var(--black);  
+}
+.tag.selected { 
+  background: var(--white); 
+  border-style: solid;
+  border-color: var(--accent); 
+  color: var(--accent); 
+}
+
+.tag:hover { filter: brightness(92%); transform: translateY(-1px); }
+
+/*.tag.success { --accent: var(--green); }*/
+.tag.success { --accent: var(--blue); }
+.tag.error   { --accent: var(--red); }
+.tag.waiting { --accent: var(--yellow); }
+.tag.muted   { --accent: var(--gray); border-style: dashed; }
+.tag.stone { --accent: var(--black); }
+
+.tag .star-icon { 
+  color: var(--gray); 
+  transition: color 0.2s;
+}
+
+.tag.star:not(.selected) .star-icon { color: var(--yellow); }
+
+.tag.star.selected .star-icon { color: var(--yellow); }
+.tag.star.selected.waiting .star-icon { color: var(--white); }
+
+.tag .tag-main{  display: flex;align-items: center; gap: 6px;    font-weight: 600; }
+.tag .tag-sub {
+    font-size: 0.6rem;
+    opacity: 0.5;
+    margin-top: 1px;
+    font-weight: normal;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+.tag-sub, .count { font-size: 0.65rem; font-weight: 400; opacity: 0.7; color: inherit; }
+.tag.selected .tag-sub, .tag.selected .count { opacity: 0.9; }
+
+
+.debug-grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 20px; }
+
+
+        /* Layout Modes */
+        .feed-container { display: flex; flex-direction: column; gap: 16px; }
+        .view-card { flex-direction: row; flex-wrap: wrap; }
+        .view-card .item-node { width: 100%; border: 1px solid var(--border); border-radius: 8px; background: white; overflow: hidden; }
+        
+        .view-list .item-node { border-bottom: 1px solid var(--border); padding: 8px 0; background: transparent; }
+        .view-list .card-img { width: 80px; height: 80px; }
+
+
+
+        .item { background: var(--white); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid transparent; }
+        .item:hover { border-color: #e2e8f0; }
+.thumb { 
+    background: #f1f5f9; 
+    border-radius: 6px; 
+    flex-shrink: 0; 
+    object-fit: cover;
+    aspect-ratio: 1 / 1; /* For list view */
+    border: 1px solid var(--border);
+}
+
+     .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+        .title { font-weight: 700; text-decoration: none; color: #0f172a; display: block; line-height: 1.3; font-size: 1.05rem; margin-bottom: 6px; word-wrap: break-word; }
+        .title:visited { color: #64748b; }
+        .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; flex-grow: 1; ord-wrap: break-word;word-break: break-all;}
+        .read-more { color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-left: 5px; white-space: nowrap; }
+        .read-more:hover { text-decoration: underline; }
+
+        .feed-container.list { display: flex; flex-direction: column; gap: 16px; }
+        .feed-container.list .item { display: flex; gap: 12px; }
+        .feed-container.list .thumb { width: 75px; height: 75px; }
+
+        .feed-container.card {  display: flex; flex-direction: column; gap: 16px;}
+        .feed-container.card .item { display: flex; flex-direction: column;}
+.feed-container.card .thumb { 
+    aspect-ratio: 16 / 9; 
+    width: 100%; 
+    height: auto; 
+}   
+  
+
+
+        .cursor-pointer {cursor: pointer; }
+
+
+.txt-btn { --accent: var(--blue); color:var(--accent); cursor: pointer; font-weight: bold; display: inline-block; padding: 2px 5px; border-radius: 3px;}  
+.txt-btn:hover {text-decoration: underline var(--accent) solid 2px;}
+.txt-btn.selected  {text-decoration: underline var(--accent) solid 2px;}
+.txt-btn.not-selected  {--accent: var(--gray); }
+.txt-btn.ph  {--accent: var(--gray); }
+.txt-btn.ph:hover {text-decoration: none;}
+
+
+
+.txt-btn.success { --accent: var(--blue); }
+.txt-btn.error   { --accent: var(--red); }
+.txt-btn.waiting { --accent: var(--yellow); }
+.txt-btn.muted   { --accent: var(--gray); border-style: dashed; }
+.txt-btn.stone { --accent: var(--black); }
+
+.blurb .txt-btn {
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0 4px;
+}
+
+.source-scroll{
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 8px;
+    padding-top: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.bulk-actions {
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    gap: 0px;
+}
+
+.source-header {
+        display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0px;
+}
+
+.controls {
+
+    background: var(--white);
+    padding: 12px 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 10px;
+    z-index: 100;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 4px;
+}
+.status{
+    font-size: x-small;
+}
+
+    </style>
+
+</head>
+<body>
+
+<div id="app" class="container">
+
+<div class="controls">        
+    <div style="display: flex;justify-content: space-between;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <span class="logo">READ</span>
+        </div>
+
+        <div class="bulk-actions">
+            <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">䷀ LIST</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">〓 CARD</span>
+        </div>
+    </div>
+    <div class="bulk-actions">
+        <span class='txt-btn ph' style="padding-left: 0;">Filter days:</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '1' }]"  @click="setDatePreset(3)">1</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '3' }]"  @click="setDatePreset(3)">3</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '7' }]"  @click="setDatePreset(7)">7</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '10' }]" @click="setDatePreset(10)">10</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '30' }]" @click="setDatePreset(30)">30</span>
+        <span :class="['txt-btn', { 'selected': dateMode === 'custom' }]" @click="setDatePreset('custom')">custom</span>
+        <span class='txt-btn ph'>days</span>
+    </div>
+
+    <div v-if="dateMode === 'custom'" class="flex items-center gap-2">
+        <input type="date" v-model="filters.start" class="pill">
+        <span>to</span>
+        <input type="date" v-model="filters.end" class="pill">
+    </div>
+
+    <div class="source-header">
+        <div class="bulk-actions">
+            <span class='txt-btn ph' style="padding-left: 0;">Filter source:</span>
+            <span :class="['txt-btn', { 'selected': selectionMode === 'all' }]" @click="update_source_selection('all')">all</span>
+            <span :class="['txt-btn', { 'selected': selectionMode === 'star' }]" @click="update_source_selection('star')">star</span>
+            <span :class="['txt-btn', { 'selected': selectionMode === 'none' }]" @click="update_source_selection('none')">none</span>
+        </div>
+        <div class="bulk-actions">
+            <span class='txt-btn ph' >Status:</span>
+            <span class='txt-btn ph stone'> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }}</span>
+            <span class='txt-btn ph stone'> {{displayedItems}}/{{totalItems}}</span>
+
+        </div>
+    </div>
+     
+
+    <div class="source-scroll">
+        <div v-for="source in sourceStates" 
+             :key="source.url"
+             @click="toggleSource(source.url)"
+             :class="['tag', `${source.status}`, { selected: filters.selectedSources.has(source.url), star: source.starred }]">
+            
+            <div class="tag-main">
+                <span v-if="source.starred" class="star-icon">★</span>
+                <span>{{ source.displayName }}</span>
+                <span class="count">({{ source.count }})</span>
+            </div>
+            
+            <div class="tag-sub">{{ source.url }}</div>
+        </div>
+    </div>
+</div>
+
+
+<div :class="['feed-container', viewMode === 'card' ? 'card' : 'list']">
+    <div v-for="item in sortedArticles" :key="item.link" v-show="item.display" class="item">
+            <img v-if="item.image" :src="item.image" class="thumb" onerror="this.style.display='none'">
+            <div class="content">
+                <div class="meta">
+                    <span v-if="item.sourceStarred" class="star-icon">★</span>
+                    {{ item.sourceName }} • {{ formatDate(item.date) }}
+                </div>
+                <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
+                <div class="blurb" style="margin-top: 4px;">
+                    {{item.snippet.substring(0, item.snippet_length)}} <span v-if="item.snippet_length < item.snippet.length">...</span>
+                    <!-- [{{item.snippet_length}}|{{item.snippet.length}}] -->
+                    <span class="txt-btn" v-if="item.snippet_length < item.snippet.length" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);"> more </span>
+                    <span class="txt-btn" v-if="item.snippet_length > 160" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);"> less </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+    <details style="margin-top: 30px;">
+        <summary>
+            debug
+        </summary>
+        <div class="debug-grid">
+            <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">              
+              <template v-for="sel in ['selected', 'not selected']" :key="sel">
+                <template v-for="hasStar in [true, false]" :key="hasStar">
+                  <div 
+                    v-for="hasCount in [true, false]" 
+                    :key="hasCount"
+                    class="tag" 
+                    :class="[state, { 'selected': sel === 'selected', 'star': hasStar }]"
+                  >
+                    <div class="tag-main">
+                      <span v-if="hasStar" class="star-icon">★</span>
+                      <span>{{ state }}</span>
+                      <span v-if="hasCount" class="count">(2)</span>
+                    </div>
+                    <div class="tag-sub">
+                      {{ sel }} {{ hasStar ? '+ star' : '' }} {{ hasCount ? '+ count' : '' }}
+                    </div>
+                  </div>
+                </template>
+              </template>
+            </template>
+            <br>
+            <code style="font-size:xx-small;">
+                <template v-for="entry in articlesCount" :key="entry.month">
+                    {{ entry.month }}:{{ entry.count }} |
+                </template>
+            </code>
+        </div>
+    </details>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, reactive, watch } = Vue;
+
+createApp({
+    setup() {
+        const articles = ref([]);
+        const viewMode = ref('list');
+        const seenLinks = new Set();
+        const filters = reactive({ start: '', end: '', selectedSources: new Set(FEED_CONFIG.map(f => f.url)) });
+        const selectionMode = ref('all');
+        const dateMode = ref('3');
+
+        const sourceStates = reactive(FEED_CONFIG.map(config => ({
+            url: config.url,
+            displayName: config.name || 'Fetching...',
+            count: 0,
+            status: 'waiting',
+            starred: config.starred || false
+        })));
+
+        const updateVisibility = () => {
+            articles.value.forEach(item => {
+                const itemDate = new Date(item.date).toISOString().split('T')[0];
+                const withinStart = !filters.start || itemDate >= filters.start;
+                const withinEnd = !filters.end || itemDate <= filters.end;
+                const sourceActive = filters.selectedSources.has(item.sourceId);
+                item.display = withinStart && withinEnd && sourceActive;
+            });
+        };
+
+        watch(filters, updateVisibility, { deep: true });
+
+        // const sortedArticles = computed(() => [...articles.value].sort((a, b) => b.date - a.date));
+
+        const sortedArticles = computed(() => [...articles.value].sort((a, b) => {
+            // First, compare dates by day
+            const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
+            
+            // If it's the same day, prioritize starred (true comes before false)
+            if (dateDiff === 0) {
+                return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
+            }
+            
+            return dateDiff;
+        })); 
+
+
+        const toggleSource = (url) => {
+            selectionMode.value = 'custom';
+            filters.selectedSources.has(url) ? filters.selectedSources.delete(url) : filters.selectedSources.add(url);
+        };
+
+        const update_source_selection = (type) => {
+            // modes: none all star
+            selectionMode.value = type;
+            filters.selectedSources.clear();
+
+            if (type === 'none') return;
+
+            sourceStates.forEach(s => {
+                if (type === 'all' || (type === 'star' && s.starred)) {
+                    filters.selectedSources.add(s.url);
+                }
+            });
+        };
+
+
+        const fetchAll = () => {
+            sourceStates.forEach(async (state) => {
+                try {
+                    const bundle = await RSSEngine.process({ url: state.url, name: state.displayName, starred: state.starred });
+                    if (bundle.status === 'success') {
+                        const original = FEED_CONFIG.find(f => f.url === state.url);
+                        state.displayName = original.name ? original.name : `(${bundle.metadata.title})`;
+                        bundle.items.forEach(item => {
+                            if (!seenLinks.has(item.link)) {
+                                seenLinks.add(item.link);
+                                articles.value.push({ 
+                                    ...item, 
+                                    display: true, 
+                                    snippet_length: 160, 
+                                    snippet: item.snippet,
+                                    sourceName: state.displayName 
+                                });
+                            }
+                        });
+                        state.count = bundle.items.length;
+                        state.status = 'success';
+                        updateVisibility();
+                    } else { state.status = 'error'; }
+                } catch (err) { state.status = 'error'; }
+            });
+        };
+
+        const setDatePreset = (days) => {
+            dateMode.value = days;
+            if (days === 'custom') return;
+            
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - parseInt(days));
+            
+            filters.end = end.toISOString().split('T')[0];
+            filters.start = start.toISOString().split('T')[0];
+        };
+        const statusCounts = computed(() => {
+            const counts = { waiting: 0, success: 0, error: 0 };
+            sourceStates.forEach(s => {
+                if (counts.hasOwnProperty(s.status)) {
+                    counts[s.status]++;
+                }
+            });
+            return counts;
+        });
+        const totalItems = computed(() => articles.value.length);
+        const displayedItems = computed(() => articles.value.filter(item => item.display).length);
+        const articlesCount = computed(() => {
+            const counts = articles.value.reduce((acc, item) => {
+                // Extracts YYYY-MM
+                const m = item.date.toISOString().slice(0, 7); 
+                acc[m] = (acc[m] || 0) + 1;
+                return acc;
+            }, {});
+
+            return Object.entries(counts)
+                .map(([month, count]) => ({ month, count }))
+                .sort((a, b) => b.month.localeCompare(a.month)); // Sort newest month first
+        });
+        const formatDate = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        onMounted(() => {
+            setDatePreset('1');
+            fetchAll();
+        });
+
+        return { articles, sortedArticles, sourceStates, filters, viewMode, toggleSource, update_source_selection, formatDate,selectionMode,dateMode, setDatePreset, totalItems,
+    displayedItems, statusCounts, articlesCount };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

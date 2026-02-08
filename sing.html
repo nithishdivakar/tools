@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocal Scale Trainer</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 2rem; }
+        .container { max-width: 600px; margin: 0 auto; border: 1px solid #444; padding: 20px; border-radius: 8px; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        button { padding: 10px 20px; cursor: pointer; background: #444; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #666; }
+        button.active { background: #27ae60; }
+        .note-display { font-size: 3rem; text-align: center; margin: 20px 0; color: #27ae60; font-weight: bold; min-height: 4rem; }
+        .status { font-size: 0.8rem; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="app" class="container">
+    <h2>Vocal Scale Trainer</h2>
+    
+    <div v-if="!audioStarted">
+        <button @click="initAudio" style="width: 100%; height: 60px; font-size: 1.2rem; background: #2980b9;">
+            Initialize Audio Engine
+        </button>
+    </div>
+
+    <div v-else>
+        <div class="controls">
+            <button @click="toggleScale" :class="{ active: isPlaying }">
+                {{ isPlaying ? 'Stop' : 'Play Major Scale (C4)' }}
+            </button>
+            <div style="margin-top: 10px;">
+                Tempo: <input type="range" v-model="bpm" min="60" max="200"> {{ bpm }} BPM
+            </div>
+        </div>
+
+        <div class="note-display">
+            {{ currentNoteName || '---' }}
+        </div>
+        
+        <p class="status">Mode: Up & Down (C4 - C5 - C4)</p>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, computed } = Vue;
+
+createApp({
+    setup() {
+        const audioCtx = ref(null);
+        const audioStarted = ref(false);
+        const isPlaying = ref(false);
+        const currentNoteName = ref('');
+        const bpm = ref(120);
+        let sequenceTimeout = null;
+
+        // Frequencies for C Major Scale (C4 to C5)
+        const majorScale = [
+            { name: 'C4', freq: 261.63 },
+            { name: 'D4', freq: 293.66 },
+            { name: 'E4', freq: 329.63 },
+            { name: 'F4', freq: 349.23 },
+            { name: 'G4', freq: 392.00 },
+            { name: 'A4', freq: 440.00 },
+            { name: 'B4', freq: 493.88 },
+            { name: 'C5', freq: 523.25 }
+        ];
+
+        // Create the "Up and Down" pattern
+        const fullPattern = [...majorScale, ...[...majorScale].reverse().slice(1)];
+
+        const initAudio = () => {
+            audioCtx.value = new (window.AudioContext || window.webkitAudioContext)();
+            audioStarted.ref = true;
+            audioStarted.value = true;
+        };
+
+        const playTone = (freq, duration) => {
+            const osc = audioCtx.value.createOscillator();
+            const gain = audioCtx.value.createGain();
+
+            osc.type = 'triangle'; // Smooth but audible
+            osc.frequency.setValueAtTime(freq, audioCtx.value.currentTime);
+
+            gain.gain.setValueAtTime(0, audioCtx.value.currentTime);
+            gain.gain.linearRampToValueAtTime(0.2, audioCtx.value.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.value.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.value.destination);
+
+            osc.start();
+            osc.stop(audioCtx.value.currentTime + duration);
+        };
+
+        const runSequence = (index = 0) => {
+            if (!isPlaying.value) return;
+
+            const note = fullPattern[index];
+            currentNoteName.value = note.name;
+            
+            const noteDuration = 60 / bpm.value; // length of one beat
+            playTone(note.freq, noteDuration);
+
+            sequenceTimeout = setTimeout(() => {
+                const nextIndex = (index + 1) % fullPattern.length;
+                runSequence(nextIndex);
+            }, noteDuration * 1000);
+        };
+
+        const toggleScale = () => {
+            isPlaying.value = !isPlaying.value;
+            if (isPlaying.value) {
+                runSequence();
+            } else {
+                clearTimeout(sequenceTimeout);
+                currentNoteName.value = '';
+            }
+        };
+
+        return { audioStarted, initAudio, toggleScale, isPlaying, currentNoteName, bpm };
+    }
+}).mount('#app');
+</script>
+
+</body>
+</html>

@@ -3,128 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocal Scale Trainer</title>
+    <title>Vocal Trainer</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 2rem; }
-        .container { max-width: 600px; margin: 0 auto; border: 1px solid #444; padding: 20px; border-radius: 8px; }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        button { padding: 10px 20px; cursor: pointer; background: #444; color: white; border: none; border-radius: 4px; }
-        button:hover { background: #666; }
-        button.active { background: #27ae60; }
-        .note-display { font-size: 3rem; text-align: center; margin: 20px 0; color: #27ae60; font-weight: bold; min-height: 4rem; }
-        .status { font-size: 0.8rem; color: #888; text-align: center; }
+        :root { --accent: #2563eb; --border: #e5e7eb; --text: #1f2937; }
+        body { font-family: -apple-system, sans-serif; background: #fff; color: var(--text); padding: 1.5rem; margin: 0; }
+        .container { max-width: 650px; margin: 0 auto; }
+        
+        .section { margin-bottom: 2rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 1.5rem; }
+        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.1em; margin-bottom: 12px; display: block; }
+
+        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+        button { border: 1px solid var(--border); background: #fff; padding: 10px 14px; font-size: 0.75rem; cursor: pointer; border-radius: 4px; }
+        button.active { background: var(--text); color: white; border-color: var(--text); }
+        button.primary { background: var(--accent); color: white; border: none; font-weight: 700; width: 100%; padding: 15px; }
+        button.stop { background: #000; color: #fff; border: none; width: 100%; padding: 15px; }
+
+        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+        .note-btn { 
+    padding: 0; /* Remove padding to let aspect-ratio control size */
+    aspect-ratio: 1 / 1; /* Forces the button to stay square */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem; 
+}
+        .note-btn.selected { background: #eff6ff; border-color: var(--accent); color: var(--accent); }
+        .note-btn.playing { background: var(--accent) !important; color: white; transform: scale(1.1); z-index: 10; }
+
+        .ctrl-row { display: flex; gap: 20px; align-items: center; margin-top: 15px; }
+        .btn-group button.scale-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            padding: 8px 12px;
+            min-width: 100px;
+        }
+
+        .tag-main {
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .tag-sub {
+            font-size: 0.6rem;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        @media (max-width: 500px) {
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        input[type="range"] { flex: 1; }
     </style>
 </head>
 <body>
 
 <div id="app" class="container">
-    <h2>Vocal Scale Trainer</h2>
-    
-    <div v-if="!audioStarted">
-        <button @click="initAudio" style="width: 100%; height: 60px; font-size: 1.2rem; background: #2980b9;">
-            Initialize Audio Engine
-        </button>
+    <div class="section">
+        <span class="label">Scale selector</span>
+        
+
+        <div class="btn-group">
+            <button 
+                v-for="(pattern, name) in SCALES" 
+                @click="applyScale(name)" 
+                :class="['scale-btn', { active: activeScale === name }]"
+            >
+                <div class="tag-main">{{ name }}</div>
+                <div class="tag-sub">
+                    {{ pattern.map(offset => getNoteFromOffset(offset)).join(', ') }}
+                </div>            
+            </button>
+            
+        </div>
+        <div class="btn-group">
+            <button @click="clearSelection">Clear</button>
+        </div>
+    </div>
+    <div class="section" v-if="activeScale">
+        <span class="label">Root Note</span>
+        <div class="grid">
+            <button v-for="n in masterRange" @click="setRoot(n)" :class="['note-btn', { active: rootNote?.name === n.name }]">
+                {{ n.name }}
+            </button>
+        </div>
     </div>
 
-    <div v-else>
-        <div class="controls">
-            <button @click="toggleScale" :class="{ active: isPlaying }">
-                {{ isPlaying ? 'Stop' : 'Play Major Scale (C4)' }}
+    <div class="section">
+        <span class="label">Notes</span>
+        <div class="grid">
+            <button v-for="n in masterRange" @click="toggleNote(n)" 
+                    :class="['note-btn', { selected: isSelected(n), playing: currentNote === n.name }]">
+                {{ n.name }}
             </button>
-            <div style="margin-top: 10px;">
-                Tempo: <input type="range" v-model="bpm" min="60" max="200"> {{ bpm }} BPM
-            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <span class="label">Playback</span>
+        
+        <div class="btn-group">
+            <button @click="mode = 'loop'" :class="{ active: mode === 'loop' }">Repeat</button>
+            <button @click="mode = 'pendulum'" :class="{ active: mode === 'pendulum' }">Pendulum</button>
         </div>
 
-        <div class="note-display">
-            {{ currentNoteName || '---' }}
+        <div class="ctrl-row">
+            <input type="range" v-model="bpm" min="40" max="220">
+            <span style="font-size: 0.8rem; width: 60px;">{{ bpm }} BPM</span>
         </div>
-        
-        <p class="status">Mode: Up & Down (C4 - C5 - C4)</p>
+
+        <div style="margin-top: 20px;">
+            <button v-if="!isPlaying" class="primary" @click="start" :disabled="selectedNotes.length === 0">LOOP</button>
+            <button v-else class="stop" @click="stop">STOP</button>
+        </div>
     </div>
 </div>
 
 <script>
-const { createApp, ref, computed } = Vue;
+const { createApp, ref } = Vue;
+
+// --- DOMAIN CONSTANTS ---
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const SCALES = {
+    'Major': [0, 2, 4, 5, 7, 9, 11, 12],
+    'Major2': [0, 2, 4, 5, 7, 9, 11, 12, 14],
+    'Minor': [0, 2, 3, 5, 7, 8, 10, 12],
+    'Pentatonic': [0, 2, 4, 7, 9, 12],
+    'Lydian': [0, 2, 4, 6, 7, 9, 11, 12],
+    'test': [0, 2, 4, 6, 7,  12, 9, 11,]
+};
+
+// --- AUDIO ENGINE ---
+const AudioEngine = {
+    ctx: null,
+    // New method to be called directly on button click
+    resume() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    },
+    play(freq, dur) {
+        // We assume resume() was called by the start button
+        if (!this.ctx) return; 
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        
+        // Anti-pop envelope
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+        
+        osc.connect(gain); 
+        gain.connect(this.ctx.destination);
+        
+        osc.start(); 
+        osc.stop(this.ctx.currentTime + dur);
+    }
+};
 
 createApp({
     setup() {
-        const audioCtx = ref(null);
-        const audioStarted = ref(false);
-        const isPlaying = ref(false);
-        const currentNoteName = ref('');
-        const bpm = ref(120);
-        let sequenceTimeout = null;
+        const masterRange = [
+            // --- Octave 2 (65.41Hz - 123.47Hz) ---
+            { name: "C2", freq: 65.41, absIndex: 24 }, { name: "C#2", freq: 69.30, absIndex: 25 },
+            { name: "D2", freq: 73.42, absIndex: 26 }, { name: "D#2", freq: 77.78, absIndex: 27 },
+            { name: "E2", freq: 82.41, absIndex: 28 }, { name: "F2", freq: 87.31, absIndex: 29 },
+            { name: "F#2", freq: 92.50, absIndex: 30 }, { name: "G2", freq: 98.00, absIndex: 31 },
+            { name: "G#2", freq: 103.83, absIndex: 32 }, { name: "A2", freq: 110.00, absIndex: 33 },
+            { name: "A#2", freq: 116.54, absIndex: 34 }, { name: "B2", freq: 123.47, absIndex: 35 },
 
-        // Frequencies for C Major Scale (C4 to C5)
-        const majorScale = [
-            { name: 'C4', freq: 261.63 },
-            { name: 'D4', freq: 293.66 },
-            { name: 'E4', freq: 329.63 },
-            { name: 'F4', freq: 349.23 },
-            { name: 'G4', freq: 392.00 },
-            { name: 'A4', freq: 440.00 },
-            { name: 'B4', freq: 493.88 },
-            { name: 'C5', freq: 523.25 }
+            // --- Octave 3 (130.81Hz - 246.94Hz) ---
+            { name: "C3", freq: 130.81, absIndex: 36 }, { name: "C#3", freq: 138.59, absIndex: 37 },
+            { name: "D3", freq: 146.83, absIndex: 38 }, { name: "D#3", freq: 155.56, absIndex: 39 },
+            { name: "E3", freq: 164.81, absIndex: 40 }, { name: "F3", freq: 174.61, absIndex: 41 },
+            { name: "F#3", freq: 185.00, absIndex: 42 }, { name: "G3", freq: 196.00, absIndex: 43 },
+            { name: "G#3", freq: 207.65, absIndex: 44 }, { name: "A3", freq: 220.00, absIndex: 45 },
+            { name: "A#3", freq: 233.08, absIndex: 46 }, { name: "B3", freq: 246.94, absIndex: 47 },
+
+            // --- Octave 4 (261.63Hz - 493.88Hz) ---
+            { name: "C4", freq: 261.63, absIndex: 48 }, { name: "C#4", freq: 277.18, absIndex: 49 },
+            { name: "D4", freq: 293.66, absIndex: 50 }, { name: "D#4", freq: 311.13, absIndex: 51 },
+            { name: "E4", freq: 329.63, absIndex: 52 }, { name: "F4", freq: 349.23, absIndex: 53 },
+            { name: "F#4", freq: 369.99, absIndex: 54 }, { name: "G4", freq: 392.00, absIndex: 55 },
+            { name: "G#4", freq: 415.30, absIndex: 56 }, { name: "A4", freq: 440.00, absIndex: 57 },
+            { name: "A#4", freq: 466.16, absIndex: 58 }, { name: "B4", freq: 493.88, absIndex: 59 },
+
+            // --- Octave 5 (523.25Hz - 987.77Hz) ---
+            { name: "C5", freq: 523.25, absIndex: 60 }, { name: "C#5", freq: 554.37, absIndex: 61 },
+            { name: "D5", freq: 587.33, absIndex: 62 }, { name: "D#5", freq: 622.25, absIndex: 63 },
+            { name: "E5", freq: 659.25, absIndex: 64 }, { name: "F5", freq: 698.46, absIndex: 65 },
+            { name: "F#5", freq: 739.99, absIndex: 66 }, { name: "G5", freq: 783.99, absIndex: 67 },
+            { name: "G#5", freq: 830.61, absIndex: 68 }, { name: "A5", freq: 880.00, absIndex: 69 },
+            { name: "A#5", freq: 932.33, absIndex: 70 }, { name: "B5", freq: 987.77, absIndex: 71 },
+
+            // --- Octave 6 (1046.50Hz - 1975.53Hz) ---
+            { name: "C6", freq: 1046.50, absIndex: 72 }, { name: "C#6", freq: 1108.73, absIndex: 73 },
+            { name: "D6", freq: 1174.66, absIndex: 74 }, { name: "D#6", freq: 1244.51, absIndex: 75 },
+            { name: "E6", freq: 1318.51, absIndex: 76 }, { name: "F6", freq: 1396.91, absIndex: 77 },
+            { name: "F#6", freq: 1479.98, absIndex: 78 }, { name: "G6", freq: 1567.98, absIndex: 79 },
+            { name: "G#6", freq: 1661.22, absIndex: 80 }, { name: "A6", freq: 1760.00, absIndex: 81 },
+            { name: "A#6", freq: 1864.66, absIndex: 82 }, { name: "B6", freq: 1975.53, absIndex: 83 }
         ];
 
-        // Create the "Up and Down" pattern
-        const fullPattern = [...majorScale, ...[...majorScale].reverse().slice(1)];
+        const selectedNotes = ref([]);
+        const rootNote = ref(masterRange.find(n => n.name === 'C4'));
+        const activeScale = ref(null);
+        const bpm = ref(100);
+        const mode = ref('pendulum');
+        const isPlaying = ref(false);
+        const currentNote = ref('');
 
-        const initAudio = () => {
-            audioCtx.value = new (window.AudioContext || window.webkitAudioContext)();
-            audioStarted.ref = true;
-            audioStarted.value = true;
-        };
+        let timer = null;
+        let seqIndex = 0;
+        let direction = 1;
 
-        const playTone = (freq, duration) => {
-            const osc = audioCtx.value.createOscillator();
-            const gain = audioCtx.value.createGain();
-
-            osc.type = 'triangle'; // Smooth but audible
-            osc.frequency.setValueAtTime(freq, audioCtx.value.currentTime);
-
-            gain.gain.setValueAtTime(0, audioCtx.value.currentTime);
-            gain.gain.linearRampToValueAtTime(0.2, audioCtx.value.currentTime + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.value.currentTime + duration);
-
-            osc.connect(gain);
-            gain.connect(audioCtx.value.destination);
-
-            osc.start();
-            osc.stop(audioCtx.value.currentTime + duration);
-        };
-
-        const runSequence = (index = 0) => {
-            if (!isPlaying.value) return;
-
-            const note = fullPattern[index];
-            currentNoteName.value = note.name;
+        // --- SELECTION METHODS ---
+        const applyScale = (scaleName) => {
+            activeScale.value = scaleName;
+            const pattern = SCALES[scaleName];
+            const rootIdx = rootNote.value.absIndex;
             
-            const noteDuration = 60 / bpm.value; // length of one beat
-            playTone(note.freq, noteDuration);
-
-            sequenceTimeout = setTimeout(() => {
-                const nextIndex = (index + 1) % fullPattern.length;
-                runSequence(nextIndex);
-            }, noteDuration * 1000);
+            selectedNotes.value = pattern.map(diff => {
+                return masterRange.find(note => note.absIndex === rootIdx + diff);
+            }).filter(n => n !== undefined); // Ensure we don't add notes out of range
         };
 
-        const toggleScale = () => {
-            isPlaying.value = !isPlaying.value;
-            if (isPlaying.value) {
-                runSequence();
+        const setRoot = (note) => {
+            rootNote.value = note;
+            if (activeScale.value) applyScale(activeScale.value);
+        };
+
+        const toggleNote = (note) => {
+            activeScale.value = null; 
+            const idx = selectedNotes.value.findIndex(n => n.absIndex === note.absIndex);
+            if (idx > -1) selectedNotes.value.splice(idx, 1);
+            else selectedNotes.value.push(note);
+            // selectedNotes.value.sort((a, b) => a.absIndex - b.absIndex);
+        };
+
+        // --- SEQUENCER METHODS ---
+        const tick = () => {
+            if (!isPlaying.value || selectedNotes.value.length === 0) return;
+
+            const note = selectedNotes.value[seqIndex];
+            currentNote.value = note.name;
+            const dur = 60 / bpm.value;
+            AudioEngine.play(note.freq, dur);
+
+            if (mode.value === 'loop') {
+                seqIndex = (seqIndex + 1) % selectedNotes.value.length;
             } else {
-                clearTimeout(sequenceTimeout);
-                currentNoteName.value = '';
+                seqIndex += direction;
+                if (seqIndex >= selectedNotes.value.length - 1 || seqIndex <= 0) direction *= -1;
             }
+            timer = setTimeout(tick, dur * 1000);
         };
 
-        return { audioStarted, initAudio, toggleScale, isPlaying, currentNoteName, bpm };
+        const getNoteFromOffset = (offset) => {
+            if (!rootNote.value) return '';
+            const targetIndex = rootNote.value.absIndex + offset;
+            // Find the note in our master list that matches the calculated index
+            const note = masterRange.find(n => n.absIndex === targetIndex);
+            return note ? note.name : '?'; 
+        };
+
+        const start = () => {
+            // CRITICAL: Initialize audio context inside the click handler
+            AudioEngine.resume(); 
+            
+            isPlaying.value = true;
+            seqIndex = 0;
+            direction = 1;
+            tick();
+        };
+
+        const stop = () => {
+            isPlaying.value = false;
+            clearTimeout(timer);
+            currentNote.value = '';
+        };
+
+        return {
+            SCALES, masterRange, selectedNotes, rootNote, activeScale,
+            bpm, mode, isPlaying, currentNote,
+            getNoteFromOffset,
+            applyScale, setRoot, toggleNote, start, stop,
+            clearSelection: () => { selectedNotes.value = []; activeScale.value = null; },
+            isSelected: (n) => selectedNotes.value.some(sn => sn.absIndex === n.absIndex)
+
+        };
     }
 }).mount('#app');
 </script>
-
 </body>
 </html>

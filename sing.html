@@ -3,60 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocal Trainer</title>
+    <title>SING</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        :root { --accent: #2563eb; --border: #e5e7eb; --text: #1f2937; }
-        body { font-family: -apple-system, sans-serif; background: #fff; color: var(--text); padding: 1.5rem; margin: 0; }
-        .container { max-width: 650px; margin: 0 auto; }
-        
-        .section { margin-bottom: 2rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 1.5rem; }
-        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.1em; margin-bottom: 12px; display: block; }
+:root { 
+    --accent: #2563eb; 
+    --root-accent: #4f46e5; /* New Deep Indigo for Root */
+    --border: #e5e7eb; 
+    --text: #1f2937; 
+}
 
-        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
-        button { border: 1px solid var(--border); background: #fff; padding: 10px 14px; font-size: 0.75rem; cursor: pointer; border-radius: 4px; }
-        button.active { background: var(--text); color: white; border-color: var(--text); }
-        button.primary { background: var(--accent); color: white; border: none; font-weight: 700; width: 100%; padding: 15px; }
-        button.stop { background: #000; color: #fff; border: none; width: 100%; padding: 15px; }
+/* Force black text for all interactive elements to fix iOS blue text */
+body, button, input, select, textarea { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text); 
+    -webkit-text-fill-color: var(--text); /* Fix for some mobile browsers */
+}
 
-        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
-        .note-btn { 
-    padding: 0; /* Remove padding to let aspect-ratio control size */
-    aspect-ratio: 1 / 1; /* Forces the button to stay square */
+body { background: #fff; padding: 1rem; margin: 0; line-height: 1.5; }
+.container { max-width: 650px; margin: 0 auto; }
+
+.section { margin-bottom: 1.5rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 1.25rem; }
+.label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.1em; margin-bottom: 12px; display: block; }
+
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; justify-content: center;}
+
+/* Standard Buttons */
+button { 
+    border: 1px solid var(--border); 
+    background: #fff; 
+    padding: 10px 14px; 
+    font-size: 0.75rem; 
+    cursor: pointer; 
+    border-radius: 6px; 
+}
+button.active { background: var(--text); color: white; -webkit-text-fill-color: white; border-color: var(--text); }
+button.primary { background: var(--accent); color: white; -webkit-text-fill-color: white; border: none; font-weight: 700; width: 100%; padding: 15px; }
+button.stop { background: #000; color: #fff; -webkit-text-fill-color: white; border: none; width: 100%; padding: 15px; }
+
+/* Note Containers */
+.flex-container { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+
+.note-btn { 
+    flex: 0 0 auto;
+    width: 40px; 
+    height: 40px;
+    aspect-ratio: 1 / 1; 
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.65rem; 
+    font-size: 0.7rem; 
+    padding: 0; 
+    transition: transform 0.1s ease;
 }
-        .note-btn.selected { background: #eff6ff; border-color: var(--accent); color: var(--accent); }
-        .note-btn.playing { background: var(--accent) !important; color: white; transform: scale(1.1); z-index: 10; }
 
-        .ctrl-row { display: flex; gap: 20px; align-items: center; margin-top: 15px; }
-        .btn-group button.scale-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            text-align: left;
-            padding: 8px 12px;
-            min-width: 100px;
-        }
+/* Specific styling for Root Note selectors */
+.root-note-btn { 
+    width: 32px; /* Smaller size for root selector */
+    height: 32px;
+    font-size: 0.6rem;
+    background-color: #f8fafc;
+}
+.root-note-btn.active { 
+    background-color: var(--root-accent) !important; 
+    border-color: var(--root-accent);
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+}
 
-        .tag-main {
-            font-weight: 700;
-            font-size: 0.75rem;
-        }
+/* Playback States */
+.note-btn.selected { background: #eff6ff; border-color: var(--accent); color: var(--accent); font-weight: bold; }
+.note-btn.playing { 
+    background: var(--accent) !important; 
+    color: white !important; 
+    -webkit-text-fill-color: white !important;
+    transform: scale(1.1); 
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
 
-        .tag-sub {
-            font-size: 0.6rem;
-            opacity: 0.7;
-            margin-top: 2px;
-        }
-        @media (max-width: 200px) {
-            .grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        input[type="range"] { flex: 1; }
+/* Scale Cards */
+.btn-group button.scale-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 60px;
+    max-width: 100px;
+    justify-content: center;
+    gap: 2px;
+}
+.tag-main { font-weight: 700; font-size: 0.75rem; }
+.tag-sub { font-size: 0.4rem; opacity: 0.7; }
+
+input[type="range"] { flex: 1; accent-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -84,9 +124,11 @@
         </div>
     </div>
     <div class="section" v-if="activeScale">
-        <span class="label">Root Note</span>
-        <div class="grid">
-            <button v-for="n in masterRange" @click="setRoot(n)" :class="['note-btn', { active: rootNote?.name === n.name }]">
+        <span class="label">Root Note Selector</span>
+        <div class="flex-container">
+            <button v-for="n in masterRange" 
+                    @click="setRoot(n)" 
+                    :class="['note-btn root-note-btn', { active: rootNote?.name === n.name }]">
                 {{ n.name }}
             </button>
         </div>
@@ -94,7 +136,7 @@
 
     <div class="section">
         <span class="label">Notes</span>
-        <div class="grid">
+        <div class="flex-container">
             <button v-for="n in masterRange" @click="toggleNote(n)" 
                     :class="['note-btn', { selected: isSelected(n), playing: currentNote === n.name }]">
                 {{ n.name }}
@@ -223,8 +265,8 @@ createApp({
         const selectedNotes = ref([]);
         const rootNote = ref(masterRange.find(n => n.name === 'C4'));
         const activeScale = ref(null);
-        const bpm = ref(100);
-        const mode = ref('pendulum');
+        const bpm = ref(120);
+        const mode = ref('loop');
         const isPlaying = ref(false);
         const currentNote = ref('');
 

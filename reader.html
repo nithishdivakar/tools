@@ -31,7 +31,7 @@
         .tag:hover { filter: brightness(92%); transform: translateY(-1px); }
         .tag.success { --accent: var(--blue); }
         .tag.error { --accent: var(--red); }
-        .tag.waiting { --accent: var(--yellow); }
+        .tag.waiting, .tag.fetching { --accent: var(--yellow); }
         .tag.muted { --accent: var(--gray); }
         .tag.stone { --accent: var(--black); }
 
@@ -79,6 +79,8 @@
         .logo { font-weight: 900; letter-spacing: 1px; color: #0f172a; }
         .debug-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
         .pill { border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); }}
+        .spinning {animation: spin 1s linear infinite; display: inline-block;}
     </style>
 </head>
 <body>
@@ -133,10 +135,11 @@
 
             <div class="tag-main">
                 <span v-if="source.starred" class="star-icon">★</span>
+                <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ source.displayName }}</span>
                 <span class="count">({{ source.count }})</span>
-                <span class="txt-btn"
-                    style="font-size: 0.7rem; margin-left: 4px;"
+                <span :class="['txt-btn', { 'spinning': source.status === 'fetching' }]"
+                    style="font-size: 0.7rem;"
                     @click.stop="refreshSource(source)">↻</span>
             </div>
 
@@ -276,7 +279,7 @@ createApp({
         };
 
         const fetchSource = async (state) => {
-            state.status = 'waiting'; // Reset status to show loading
+            state.status = 'fetching'; // Reset status to show loading
             try {
                 const bundle = await RSSEngine.process({
                     url: state.url,

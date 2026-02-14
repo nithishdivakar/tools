@@ -49,7 +49,7 @@
         .source-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
         .source-header { display: flex; justify-content: space-between; align-items: center; }
         .bulk-actions { font-size: 0.75rem; display: flex; gap: 4px; align-items: center; }
-        
+
         /* Text Buttons */
         .txt-btn { --accent: var(--blue); color: var(--accent); cursor: pointer; font-weight: bold; padding: 2px 5px; }
         .txt-btn:hover, .txt-btn.selected { text-decoration: underline var(--accent) solid 2px; }
@@ -60,10 +60,10 @@
         .feed-container { display: flex; flex-direction: column; gap: 16px; }
         .item { background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .item:hover { border-color: var(--border); }
-        
+
         .feed-container.list .item { display: flex; gap: 12px; }
         .feed-container.list .thumb { width: 75px; height: 75px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
-        
+
         .feed-container.card .item { display: flex; flex-direction: column; gap: 10px; }
         .feed-container.card .thumb { width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
 
@@ -100,7 +100,7 @@
     </div>
     <div class="bulk-actions">
         <span class='txt-btn ph' style="padding-left: 0;">Days:</span>
-        <span :class="['txt-btn', { 'selected': dateMode === '1' }]"  @click="setDatePreset(3)">1</span>
+        <span :class="['txt-btn', { 'selected': dateMode === '1' }]"  @click="setDatePreset(1)">1</span>
         <span :class="['txt-btn', { 'selected': dateMode === '3' }]"  @click="setDatePreset(3)">3</span>
         <span :class="['txt-btn', { 'selected': dateMode === '7' }]"  @click="setDatePreset(7)">7</span>
         <span :class="['txt-btn', { 'selected': dateMode === '30' }]" @click="setDatePreset(30)">30</span>
@@ -115,10 +115,13 @@
 
     <div class="source-header">
         <div class="bulk-actions">
-            <span class='txt-btn ph' style="padding-left: 0;">Show:</span>
-            <span :class="['txt-btn', { 'selected': selectionMode === 'all' }]" @click="update_source_selection('all')">all</span>
-            <span :class="['txt-btn', { 'selected': selectionMode === 'star' }]" @click="update_source_selection('star')">star</span>
-            <span :class="['txt-btn', { 'selected': selectionMode === 'none' }]" @click="update_source_selection('none')">none</span>
+            <span class='txt-btn ph' style="padding-left: 0;">Sets:</span>
+            <span v-for="tag in allTags"
+                  :key="tag"
+                  :class="['txt-btn', { 'selected': activeTag === tag }]"
+                  @click="selectTag(tag)">
+                {{ tag }}
+            </span>
         </div>
         <div class="bulk-actions">
             <span style="font-size: xx-small;color:#475569"> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }} {{displayedItems}}/{{totalItems}}</span>
@@ -220,17 +223,29 @@ createApp({
         const articles = ref([]);
         const viewMode = ref('list');
         const seenLinks = new Set();
-        const filters = reactive({ start: '', end: '', selectedSources: new Set(FEED_CONFIG.map(f => f.url)) });
-        const selectionMode = ref('star');
+        const filters = reactive({ start: '', end: '', selectedSources: new Set() });
         const dateMode = ref('3');
+        const activeTag = ref('star');
 
-        const sourceStates = reactive(FEED_CONFIG.map(config => ({
-            url: config.url,
-            displayName: config.name || 'fetching...',
-            count: 0,
-            status: 'waiting',
-            starred: config.starred || false
-        })));
+        const sourceStates = reactive(FEED_CONFIG.map(config => {
+            let tags = config.tags || [];
+
+            return {
+                url: config.url,
+                displayName: config.name || 'fetching...',
+                count: 0,
+                status: 'waiting',
+                tags: tags,
+                starred: tags.includes('star')
+            }
+        }));
+
+        const allTags = computed(() => {
+            const tags = new Set(['all']);
+            sourceStates.forEach(s => s.tags.forEach(t => tags.add(t)));
+            tags.add('none');
+            return Array.from(tags);
+        });
 
         const updateVisibility = () => {
             articles.value.forEach(item => {
@@ -244,42 +259,25 @@ createApp({
 
         watch(filters, updateVisibility, { deep: true });
 
-        // const sortedArticles = computed(() => [...articles.value].sort((a, b) => b.date - a.date));
-
         const sortedArticles = computed(() => [...articles.value].sort((a, b) => {
-            // First, compare dates by day
             const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
-
-            // If it's the same day, prioritize starred (true comes before false)
             if (dateDiff === 0) {
                 return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
             }
-
             return dateDiff;
         }));
 
-
         const toggleSource = (url) => {
-            selectionMode.value = 'custom';
+            activeTag.value = 'custom';
             filters.selectedSources.has(url) ? filters.selectedSources.delete(url) : filters.selectedSources.add(url);
-        };
-
-        const update_source_selection = (type) => {
-            // modes: none all star
-            selectionMode.value = type;
-            filters.selectedSources.clear();
-
-            if (type === 'none') return;
-
-            sourceStates.forEach(s => {
-                if (type === 'all' || (type === 'star' && s.starred)) {
-                    filters.selectedSources.add(s.url);
-                }
-            });
+            if (filters.selectedSources.has(url)) {
+                 const state = sourceStates.find(s => s.url === url);
+                 if (state && state.status === 'waiting') fetchSource(state);
+            }
         };
 
         const fetchSource = async (state) => {
-            state.status = 'fetching'; // Reset status to show loading
+            state.status = 'fetching';
             try {
                 const bundle = await RSSEngine.process({
                     url: state.url,
@@ -313,66 +311,70 @@ createApp({
             fetchSource(state);
         };
 
-        const fetchAll = (onlyStarred = false) => {
-            sourceStates.forEach(state => {
-                if (!onlyStarred || state.starred) {
-                    fetchSource(state);
-                }
-            });
-        };
-
         const setDatePreset = (days) => {
-            dateMode.value = days;
+            dateMode.value = String(days);
             if (days === 'custom') return;
-
-            const end = new Date();
+            filters.end = '';
             const start = new Date();
-            start.setDate(end.getDate() - parseInt(days));
-
-            filters.end = end.toISOString().split('T')[0];
+            start.setDate(start.getDate() - parseInt(days));
             filters.start = start.toISOString().split('T')[0];
         };
+
         const statusCounts = computed(() => {
             const counts = { waiting: 0, success: 0, error: 0 };
             sourceStates.forEach(s => {
-                if (counts.hasOwnProperty(s.status)) {
-                    counts[s.status]++;
-                }
+                if (counts.hasOwnProperty(s.status)) counts[s.status]++;
             });
             return counts;
         });
+
         const totalItems = computed(() => articles.value.length);
         const displayedItems = computed(() => articles.value.filter(item => item.display).length);
         const articlesCount = computed(() => {
             const counts = articles.value.reduce((acc, item) => {
-                // Extracts YYYY-MM
                 const m = item.date.toISOString().slice(0, 7);
                 acc[m] = (acc[m] || 0) + 1;
                 return acc;
             }, {});
-
             return Object.entries(counts)
                 .map(([month, count]) => ({ month, count }))
-                .sort((a, b) => b.month.localeCompare(a.month)); // Sort newest month first
+                .sort((a, b) => b.month.localeCompare(a.month));
         });
+
         const formatDate = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        const selectTag = (tag) => {
+            activeTag.value = tag;
+            filters.selectedSources.clear();
+            if (tag === 'none') return;
+
+            sourceStates.forEach(s => {
+                const matches = tag === 'all' || s.tags.includes(tag);
+                if (matches) {
+                    filters.selectedSources.add(s.url);
+                    if (s.status === 'waiting') fetchSource(s);
+                }
+            });
+        };
+
         onMounted(() => {
             setDatePreset('1');
             viewMode.value = 'card';
-            update_source_selection('star');
-            fetchAll(true); //only fetch starred
+            selectTag('star');
         });
 
         const getFavicon = (url) => {
             try {
                 const hostname = new URL(url).hostname;
                 return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-            } catch (e) {
-                return '';
-            }
+            } catch (e) { return ''; }
         }
 
-        return { articles, sortedArticles, sourceStates, filters, viewMode, toggleSource, update_source_selection, formatDate,selectionMode,dateMode, setDatePreset, totalItems, displayedItems, statusCounts, articlesCount, refreshSource, getFavicon };
+        return {
+            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag,
+            selectTag, toggleSource, formatDate, dateMode, setDatePreset, totalItems,
+            displayedItems, statusCounts, articlesCount, refreshSource, getFavicon
+        };
     }
 }).mount('#app');
 </script>

@@ -145,18 +145,24 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
     </div>
     <div class="section">
         <span class="label">Tempo ({{ bpm }} BPM)</span>
-        <div class="btn-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div class="flex-container">
             <button 
                 v-for="t in [
-                    {n: 'Largo', v: 50}, {n: 'Adagio', v: 72}, {n: 'Andante', v: 90},
-                    {n: 'Moderato', v: 115}, {n: 'Allegro', v: 135}, {n: 'Presto', v: 180}
+                    {n: 'Largo', v: 50}, 
+                    {n: 'Adagio', v: 72}, 
+                    {n: '80', v: 80},
+                    {n: 'Andante', v: 90},
+                    {n: 'Moderato', v: 115}, 
+                    {n: '120', v: 120}, 
+                    {n: 'Allegro', v: 135}, 
+                    {n: '150', v: 150}, 
+                    {n: 'Presto', v: 180}
                 ]"
                 @click="bpm = t.v"
-                :class="{ active: bpm === t.v }"
-                style="padding: 8px 4px; line-height: 1.2;"
+                :class="['scale-btn', { active: bpm === t.v }]"
             >
-                <div style="font-weight: bold; font-size: 0.7rem;">{{ t.n }}</div>
-                <div style="font-size: 0.6rem; opacity: 0.8;">{{ t.v }}</div>
+                <div class="tag-main">{{ t.n }}</div>
+                <div class="tag-sub">{{ t.v }}</div>
             </button>
         </div>
         
@@ -164,11 +170,9 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
             <input type="range" v-model.number="bpm" min="40" max="220" style="flex: 1;">
         </div>
     </div>
-
+    
     <div class="section">
         <span class="label">Playback</span>
-
-
         <div class="btn-group">
             <button 
                 @click="autoAdvance=!autoAdvance" 
@@ -196,9 +200,7 @@ const { createApp, ref } = Vue;
 // --- DOMAIN CONSTANTS ---
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const SCALES = {
-    '33': [0, 2, -1, 4, ],
     'Major': [0, 2, 4, 5, 7, 9, 11, 12],
-    'Major + 1': [0, 2, 4, 5, 7, 9, 11, 12, 14],
     'Dorian (D)': [0, 2, 3, 5, 7, 9, 10, 12],
     'Phrygian (E)': [0, 1, 3, 5, 7, 8, 10, 12],
     'Lydian (F)': [0, 2, 4, 6, 7, 9, 11, 12],
@@ -209,12 +211,15 @@ const SCALES = {
     'Scale 1.5': [0, 4, 7, 12,  16, 19, 17, 14, 11, 7, 5, 2, 0, -1, -1, -1], // Grand Arpeggio" followed by a scalar descent
     '1.5 Octave Zig-Zag': [0, 2, 4, 6, 7, 9, 11, 13, 14, 12, 10, 8, 7, 5, 3, 1, 0],
     'Interval Jumps': [0, 4, 2, 5, 4, 7, 5, 9, 7, 11, 9, 12, 12, 9, 11, 7, 9, 5, 7, 4, 5, 2, 4, 0],
-    'The Turn': [0, 2, 1, 0, 4, 6, 5, 4, 7, 9, 8, 7, 12, 11, 10, 12, 0]
+    'The Turn': [0, 2, 1, 0, 4, 6, 5, 4, 7, 9, 8, 7, 12, 11, 10, 12, 0],
+
+    'Major + 1': [0,2,4,5,  7,9,11,12, 14,12,11,9, 7,5,4,2, 0,-1,-1,-1],
+    'Maj8 arpeggio': [0, 4, 7, 12, 7, 4, 0, -1],
+    'ex2': [0, 4, 7, 12,12,12,12, 7, 4, 0, -1, -1]
 };
-// --- AUDIO ENGINE ---
+
 const AudioEngine = {
     ctx: null,
-    // New method to be called directly on button click
     resume() {
         if (!this.ctx) {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -230,6 +235,7 @@ const AudioEngine = {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
+        // osc.type = 'square';
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
         
         // Anti-pop envelope
@@ -325,7 +331,6 @@ createApp({
             const dur = 60 / bpm.value;
             AudioEngine.play(note.freq, dur);
 
-            // Logic to track repetitions and advance root
             let nextIndex;
             if (mode.value === 'loop') {
                 nextIndex = (seqIndex + 1) % selectedNotes.value.length;
@@ -355,18 +360,26 @@ createApp({
             }
         };
 
-
         const setRoot = (note) => {
             rootNote.value = note;
+            const dur = 60 / bpm.value;
+            AudioEngine.resume();
+            AudioEngine.play(note.freq, dur);
             if (activeScale.value) applyScale(activeScale.value);
         };
 
         const toggleNote = (note) => {
             activeScale.value = null; 
             const idx = selectedNotes.value.findIndex(n => n.absIndex === note.absIndex);
-            if (idx > -1) selectedNotes.value.splice(idx, 1);
-            else selectedNotes.value.push(note);
-            // selectedNotes.value.sort((a, b) => a.absIndex - b.absIndex);
+            
+            if (idx > -1) {
+                selectedNotes.value.splice(idx, 1);
+            } else {
+                selectedNotes.value.push(note);
+                const dur = 60 / bpm.value;
+                AudioEngine.resume();
+                AudioEngine.play(note.freq, dur);
+            }
         };
 
 
@@ -391,7 +404,7 @@ createApp({
             SCALES, masterRange, selectedNotes, rootNote, activeScale,
             bpm, mode, isPlaying, currentNote, autoAdvance, kReps,
             applyScale, setRoot, toggleNote, start, stop,
-            getNoteFromOffset: (off) => off === -1 ? 'REST' : masterRange.find(n => n.absIndex === rootNote.value.absIndex + off)?.name,
+            getNoteFromOffset: (off) => off === -1 ? '-' : masterRange.find(n => n.absIndex === rootNote.value.absIndex + off)?.name,
             clearSelection: () => { selectedNotes.value = []; activeScale.value = null; },
             isSelected: (n) => selectedNotes.value.some(sn => sn.absIndex === n.absIndex)
         };

@@ -42,7 +42,7 @@ button.primary { background: var(--accent); color: white; -webkit-text-fill-colo
 button.stop { background: #000; color: #fff; -webkit-text-fill-color: white; border: none; width: 100%; padding: 15px; }
 
 /* Note Containers */
-.flex-container { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+.flex-container { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 
 .note-btn { 
     flex: 0 0 auto;
@@ -143,20 +143,46 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
             </button>
         </div>
     </div>
+    <div class="section">
+        <span class="label">Tempo ({{ bpm }} BPM)</span>
+        <div class="btn-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <button 
+                v-for="t in [
+                    {n: 'Largo', v: 50}, {n: 'Adagio', v: 72}, {n: 'Andante', v: 90},
+                    {n: 'Moderato', v: 115}, {n: 'Allegro', v: 135}, {n: 'Presto', v: 180}
+                ]"
+                @click="bpm = t.v"
+                :class="{ active: bpm === t.v }"
+                style="padding: 8px 4px; line-height: 1.2;"
+            >
+                <div style="font-weight: bold; font-size: 0.7rem;">{{ t.n }}</div>
+                <div style="font-size: 0.6rem; opacity: 0.8;">{{ t.v }}</div>
+            </button>
+        </div>
+        
+        <div class="ctrl-row" style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+            <input type="range" v-model.number="bpm" min="40" max="220" style="flex: 1;">
+        </div>
+    </div>
 
     <div class="section">
         <span class="label">Playback</span>
-        
+
+
+        <div class="btn-group">
+            <button 
+                @click="autoAdvance=!autoAdvance" 
+                :class="['scale-btn', { active: autoAdvance }]"
+                style="max-width: fit-content;"
+            >Auto-Advance Root</button>
+        </div>
+        <div class="btn-group">
+            <span v-if="autoAdvance"> every <input type="number" v-model="kReps" style="width: 30px;"> reps</span>
+        </div>
         <div class="btn-group">
             <button @click="mode = 'loop'" :class="{ active: mode === 'loop' }">Repeat</button>
             <button @click="mode = 'pendulum'" :class="{ active: mode === 'pendulum' }">Pendulum</button>
         </div>
-
-        <div class="ctrl-row">
-            <input type="range" v-model="bpm" min="40" max="220">
-            <span style="font-size: 0.8rem; width: 60px;">{{ bpm }} BPM</span>
-        </div>
-
         <div style="margin-top: 20px;">
             <button v-if="!isPlaying" class="primary" @click="start" :disabled="selectedNotes.length === 0">LOOP</button>
             <button v-else class="stop" @click="stop">STOP</button>
@@ -170,6 +196,7 @@ const { createApp, ref } = Vue;
 // --- DOMAIN CONSTANTS ---
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const SCALES = {
+    '33': [0, 2, -1, 4, ],
     'Major': [0, 2, 4, 5, 7, 9, 11, 12],
     'Major + 1': [0, 2, 4, 5, 7, 9, 11, 12, 14],
     'Dorian (D)': [0, 2, 3, 5, 7, 9, 10, 12],
@@ -179,7 +206,7 @@ const SCALES = {
     'Minor / Aeolian (A)': [0, 2, 3, 5, 7, 8, 10, 12],
     'Locrian (B)': [0, 1, 3, 5, 6, 8, 10, 12],
     'Pentatonic': [0, 2, 4, 7, 9, 12],
-    'Scale 1.5': [0, 4, 7, 12, 16, 19, 17, 14, 11, 7, 5, 2, 0], // Grand Arpeggio" followed by a scalar descent
+    'Scale 1.5': [0, 4, 7, 12,  16, 19, 17, 14, 11, 7, 5, 2, 0, -1, -1, -1], // Grand Arpeggio" followed by a scalar descent
     '1.5 Octave Zig-Zag': [0, 2, 4, 6, 7, 9, 11, 13, 14, 12, 10, 8, 7, 5, 3, 1, 0],
     'Interval Jumps': [0, 4, 2, 5, 4, 7, 5, 9, 7, 11, 9, 12, 12, 9, 11, 7, 9, 5, 7, 4, 5, 2, 4, 0],
     'The Turn': [0, 2, 1, 0, 4, 6, 5, 4, 7, 9, 8, 7, 12, 11, 10, 12, 0]
@@ -269,21 +296,65 @@ createApp({
         const mode = ref('loop');
         const isPlaying = ref(false);
         const currentNote = ref('');
+        
+        // New reactive state for Auto-Advance
+        const autoAdvance = ref(false);
+        const kReps = ref(2); 
+        let repCounter = 0;
 
         let timer = null;
         let seqIndex = 0;
         let direction = 1;
 
-        // --- SELECTION METHODS ---
         const applyScale = (scaleName) => {
             activeScale.value = scaleName;
             const pattern = SCALES[scaleName];
             const rootIdx = rootNote.value.absIndex;
             
             selectedNotes.value = pattern.map(diff => {
+                if (diff === -1) return { name: 'REST', freq: 0, absIndex: -1 }; // Silence Object
                 return masterRange.find(note => note.absIndex === rootIdx + diff);
-            }).filter(n => n !== undefined); // Ensure we don't add notes out of range
+            }).filter(n => n !== undefined);
         };
+
+        const tick = () => {
+            if (!isPlaying.value || selectedNotes.value.length === 0) return;
+
+            const note = selectedNotes.value[seqIndex];
+            currentNote.value = note.name;
+            const dur = 60 / bpm.value;
+            AudioEngine.play(note.freq, dur);
+
+            // Logic to track repetitions and advance root
+            let nextIndex;
+            if (mode.value === 'loop') {
+                nextIndex = (seqIndex + 1) % selectedNotes.value.length;
+                if (nextIndex === 0) handleRepetition();
+            } else {
+                nextIndex = seqIndex + direction;
+                if (nextIndex >= selectedNotes.value.length - 1 || nextIndex <= 0) {
+                    direction *= -1;
+                    if (nextIndex <= 0) handleRepetition();
+                }
+            }
+            
+            seqIndex = nextIndex;
+            timer = setTimeout(tick, dur * 1000);
+        };
+
+        const handleRepetition = () => {
+            repCounter++;
+            if (autoAdvance.value && repCounter >= kReps.value) {
+                repCounter = 0;
+                const nextRootIdx = rootNote.value.absIndex + 1;
+                const nextRoot = masterRange.find(n => n.absIndex === nextRootIdx);
+                if (nextRoot) {
+                    rootNote.value = nextRoot;
+                    applyScale(activeScale.value);
+                }
+            }
+        };
+
 
         const setRoot = (note) => {
             rootNote.value = note;
@@ -298,31 +369,7 @@ createApp({
             // selectedNotes.value.sort((a, b) => a.absIndex - b.absIndex);
         };
 
-        // --- SEQUENCER METHODS ---
-        const tick = () => {
-            if (!isPlaying.value || selectedNotes.value.length === 0) return;
 
-            const note = selectedNotes.value[seqIndex];
-            currentNote.value = note.name;
-            const dur = 60 / bpm.value;
-            AudioEngine.play(note.freq, dur);
-
-            if (mode.value === 'loop') {
-                seqIndex = (seqIndex + 1) % selectedNotes.value.length;
-            } else {
-                seqIndex += direction;
-                if (seqIndex >= selectedNotes.value.length - 1 || seqIndex <= 0) direction *= -1;
-            }
-            timer = setTimeout(tick, dur * 1000);
-        };
-
-        const getNoteFromOffset = (offset) => {
-            if (!rootNote.value) return '';
-            const targetIndex = rootNote.value.absIndex + offset;
-            // Find the note in our master list that matches the calculated index
-            const note = masterRange.find(n => n.absIndex === targetIndex);
-            return note ? note.name : '?'; 
-        };
 
         const start = () => {
             // CRITICAL: Initialize audio context inside the click handler
@@ -342,12 +389,11 @@ createApp({
 
         return {
             SCALES, masterRange, selectedNotes, rootNote, activeScale,
-            bpm, mode, isPlaying, currentNote,
-            getNoteFromOffset,
+            bpm, mode, isPlaying, currentNote, autoAdvance, kReps,
             applyScale, setRoot, toggleNote, start, stop,
+            getNoteFromOffset: (off) => off === -1 ? 'REST' : masterRange.find(n => n.absIndex === rootNote.value.absIndex + off)?.name,
             clearSelection: () => { selectedNotes.value = []; activeScale.value = null; },
             isSelected: (n) => selectedNotes.value.some(sn => sn.absIndex === n.absIndex)
-
         };
     }
 }).mount('#app');

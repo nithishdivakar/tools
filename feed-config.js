@@ -4,6 +4,7 @@
  */
 const FEED_CONFIG = [
     { url: "http://lesserwrong.com/feed.xml", name: "Less Wrong", tags: ["star"] },
+    { url: "https://lilianweng.github.io/index.xml", name: "Lil'Log", tags: ["star"] },
     { url: "https://hnrss.org/frontpage", name: "HN Frontpage", tags: ["star", "news"] },
     { url: "https://gwern.substack.com/feed", name: "gwern", tags: ["star"] },
     { url: "http://www.offconvex.org/feed.xml", name: "Off The Convex Path", tags: ["star"] },

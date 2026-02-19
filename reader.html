@@ -140,7 +140,7 @@
                 <span v-if="source.starred" class="star-icon">★</span>
                 <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ source.displayName }}</span>
-                <span class="count">({{ source.count }})</span>
+                <span class="count">({{ source.count.visible }}/{{ source.count.total }})</span>
                 <span :class="['txt-btn', { 'spinning': source.status === 'fetching' }]"
                     style="font-size: 0.7rem;"
                     @click.stop="refreshSource(source)">↻</span>
@@ -233,7 +233,7 @@ createApp({
             return {
                 url: config.url,
                 displayName: config.name || 'fetching...',
-                count: 0,
+                count: { visible: 0, total: 0 },
                 status: 'waiting',
                 tags: tags,
                 starred: tags.includes('star')
@@ -248,12 +248,19 @@ createApp({
         });
 
         const updateVisibility = () => {
+            sourceStates.forEach(s => s.count.visible = 0);
+
             articles.value.forEach(item => {
                 const itemDate = new Date(item.date).toISOString().split('T')[0];
                 const withinStart = !filters.start || itemDate >= filters.start;
                 const withinEnd = !filters.end || itemDate <= filters.end;
                 const sourceActive = filters.selectedSources.has(item.sourceId);
                 item.display = withinStart && withinEnd && sourceActive;
+
+                if (withinStart && withinEnd) {
+                    const state = sourceStates.find(s => s.url === item.sourceId);
+                    if (state) state.count.visible++;
+                }
             });
         };
 
@@ -299,7 +306,7 @@ createApp({
                             });
                         }
                     });
-                    state.count = bundle.items.length;
+                    state.count.total = bundle.items.length;
                     state.status = 'success';
                     updateVisibility();
                 } else { state.status = 'error'; }

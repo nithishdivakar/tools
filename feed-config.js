@@ -90,7 +90,6 @@ const FEED_CONFIG = [
     { url: "https://refactoringenglish.com/index.xml" },
     { url: "https://shkspr.mobi/blog/feed/" },
     { url: "https://simone.org/feed/", name: "Simone" },
-    { url: "https://simonwillison.net/atom/everything/", name: "Simon Willison" },
     { url: "https://skyfall.dev/rss.xml" },
     { url: "https://steveblank.com/feed/" },
     { url: "https://susam.net/feed.xml" },

@@ -229,7 +229,7 @@ createApp({
         const activeTag = ref('star');
 
         const sourceStates = reactive(FEED_CONFIG.map(config => {
-            let tags = config.tags || [];
+            let tags = config.tags || ['untag'];
 
             return {
                 url: config.url,

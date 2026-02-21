@@ -103,8 +103,8 @@
         <span :class="['txt-btn', { 'selected': dateMode === '1' }]"  @click="setDatePreset(1)">1</span>
         <span :class="['txt-btn', { 'selected': dateMode === '3' }]"  @click="setDatePreset(3)">3</span>
         <span :class="['txt-btn', { 'selected': dateMode === '7' }]"  @click="setDatePreset(7)">7</span>
-        <span :class="['txt-btn', { 'selected': dateMode === '30' }]" @click="setDatePreset(30)">30</span>
-        <span :class="['txt-btn', { 'selected': dateMode === 'custom' }]" @click="setDatePreset('custom')">custom</span>
+        <span :class="['txt-btn', { 'selected': dateMode === 'custom' }]" @click="setDatePreset('custom')">set</span>
+        <span :class="['txt-btn', { 'selected': dateMode === 'ee' }]" @click="setDatePreset('ee')">all</span>
     </div>
 
     <div v-if="dateMode === 'custom'" class="flex items-center gap-2">
@@ -166,14 +166,15 @@
                     •
                     {{ formatDate(item.date) }}
                     •
-                    <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[-]</span>
+                    <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
                 </div>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb" style="margin-top: 4px;">
                     {{item.snippet.substring(0, item.snippet_length)}} <span v-if="item.snippet_length < item.snippet.length">...</span>
                     <!-- [{{item.snippet_length}}|{{item.snippet.length}}] -->
-                    <span class="txt-btn" v-if="item.snippet_length < item.snippet.length" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);"> more </span>
-                    <span class="txt-btn" v-if="item.snippet_length > 160" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);"> less </span>
+                    <span class="txt-btn" style="padding-right:" v-if="item.snippet_length < item.snippet.length" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);">more</span>
+                    <span class="txt-btn" style="padding:0"v-if="item.snippet_length < item.snippet.length && item.snippet_length > 160">/</span>
+                    <span class="txt-btn" style="padding-left:" v-if="item.snippet_length > 160" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
                 </div>
             </div>
     </div>
@@ -321,6 +322,12 @@ createApp({
         const setDatePreset = (days) => {
             dateMode.value = String(days);
             if (days === 'custom') return;
+
+            if (days === 'ee'){
+            filters.start = '';
+            filters.end = '';
+                return;
+            } 
             filters.end = '';
             const start = new Date();
             start.setDate(start.getDate() - parseInt(days));
@@ -348,7 +355,7 @@ createApp({
                 .sort((a, b) => b.month.localeCompare(a.month));
         });
 
-        const formatDate = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const formatDate = (d) => d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
         const selectTag = (tag) => {
             activeTag.value = tag;

@@ -14,7 +14,9 @@ const FEED_CONFIG = [
     { url: "https://theoatmeal.com/feed/rss", name: "The Oatmeal", tags: ["star"] },
     { url: "https://scottaaronson.blog/?feed=rss2", name: "Shtetl-Optimized", tags: ["star"] },
     { url: "https://www.xkcd.com/rss.xml", name: "XKCD", tags: ["star"] },
-    { url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=2", name : "EA", tags: ["star"] },
+    { url: "https://forum.effectivealtruism.org/feed.xml?view=curated-rss", name : "EA curated", tags: ["star"] },
+    { url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=2", name : "EA frontpage", tags: ["star"] },
+    { url: "https://forum.effectivealtruism.org/feed.xml?view=community-rss&karmaThreshold=200", name : "EA all", tags: ["star"] },
     { url: "http://lesserwrong.com/feed.xml", name: "Less Wrong", tags: ["star"] },
 
     { url: "https://rss.arxiv.org/rss/cs.cl+cs.cv", name: "cs.cl+cs.cv", tags: ["paper"] },

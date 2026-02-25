@@ -76,11 +76,13 @@
         .title:visited { color: #64748b; }
         .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; word-break: break-word; }
 
-        .logo { font-weight: 900; letter-spacing: 1px; color: #0f172a; }
+        .logo { /*font-weight: 900; letter-spacing: 1px;*/ color: #0f172a; }
         .debug-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
         .pill { border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); }}
         .spinning {animation: spin 1s linear infinite; display: inline-block;}
+
+        .source-scroll-move { transition: transform 1s ease-out; }
     </style>
 </head>
 <body>
@@ -129,9 +131,12 @@
         </div>
     </div>
 
-
-    <div class="source-scroll">
-        <div v-for="source in sourceStates"
+    <transition-group 
+    name="source-scroll" 
+    tag="div" 
+    class="source-scroll"
+    >
+        <div v-for="source in sortedSources"
              :key="source.url"
              @click="toggleSource(source.url)"
              :class="['tag', `${source.status}`, { selected: filters.selectedSources.has(source.url), star: source.starred }]">
@@ -150,7 +155,7 @@
                 {{ source.url }}
             </div>
         </div>
-    </div>
+    </transition-group>
 </div>
 
 
@@ -173,7 +178,7 @@
                     {{item.snippet.substring(0, item.snippet_length)}} <span v-if="item.snippet_length < item.snippet.length">...</span>
                     <!-- [{{item.snippet_length}}|{{item.snippet.length}}] -->
                     <span class="txt-btn" style="padding-right:" v-if="item.snippet_length < item.snippet.length" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);">more</span>
-                    <span class="txt-btn" style="padding:0"v-if="item.snippet_length < item.snippet.length && item.snippet_length > 160">/</span>
+                    <span class="txt-btn" style="padding:0" v-if="item.snippet_length < item.snippet.length && item.snippet_length > 160"> or </span>
                     <span class="txt-btn" style="padding-left:" v-if="item.snippet_length > 160" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
                 </div>
             </div>
@@ -248,6 +253,15 @@ createApp({
             return Array.from(tags);
         });
 
+        const sortedSources = computed(() => {
+            return [...sourceStates].sort((a, b) => {
+                const aSelected = filters.selectedSources.has(a.url);
+                const bSelected = filters.selectedSources.has(b.url);
+                if (aSelected === bSelected) return 0;
+                return aSelected ? -1 : 1;
+            });
+        });
+
         const updateVisibility = () => {
             sourceStates.forEach(s => s.count.visible = 0);
 
@@ -267,13 +281,20 @@ createApp({
 
         watch(filters, updateVisibility, { deep: true });
 
-        const sortedArticles = computed(() => [...articles.value].sort((a, b) => {
-            const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
-            if (dateDiff === 0) {
-                return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
-            }
-            return dateDiff;
-        }));
+        const sortedArticles = computed(() => {
+            // Phase 1: Standard Sort (Relevance)
+            const baseSorted = [...articles.value].sort((a, b) => {
+                const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
+                if (dateDiff === 0) {
+                    return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
+                }
+                return dateDiff;
+            });
+
+            // Phase 2: Apply Diversity (MMR)
+            // Lambda 0.8 keeps it mostly chronological but shuffles duplicates/same-source bursts
+            return getDiverseArticles(baseSorted);
+        });
 
         const toggleSource = (url) => {
             activeTag.value = 'custom';
@@ -301,7 +322,7 @@ createApp({
                             articles.value.push({
                                 ...item,
                                 display: true,
-                                snippet_length: 160,
+                                snippet_length: 500,
                                 snippet: item.snippet,
                                 sourceName: state.displayName
                             });
@@ -371,6 +392,34 @@ createApp({
             });
         };
 
+        const getDiverseArticles = (rawArticles) => {
+            // group articles by source
+            const buckets = {};
+            rawArticles.forEach(item => {
+                if (!buckets[item.sourceId]) buckets[item.sourceId] = [];
+                buckets[item.sourceId].push(item);
+            });
+
+            const result = [];
+            const sourceIds = Object.keys(buckets);
+            let itemsRemaining = true;
+            let index = 0;
+
+            // Interleave by take the 1st from every source, then the 2nd, etc.
+            while (itemsRemaining) {
+                itemsRemaining = false;
+                sourceIds.forEach(id => {
+                    if (buckets[id][index]) {
+                        result.push(buckets[id][index]);
+                        itemsRemaining = true;
+                    }
+                });
+                index++;
+            }
+
+            return result;
+        };
+
         onMounted(() => {
             setDatePreset('1');
             viewMode.value = 'card';
@@ -385,7 +434,7 @@ createApp({
         }
 
         return {
-            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag,
+            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag,sortedSources,
             selectTag, toggleSource, formatDate, dateMode, setDatePreset, totalItems,
             displayedItems, statusCounts, articlesCount, refreshSource, getFavicon
         };

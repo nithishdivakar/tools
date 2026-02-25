@@ -60,7 +60,24 @@ const RSSEngine = {
         console.log("Failed: "+ url)
         throw new Error(`Connection failed across all strategies`);
     },
+    extractCleanText(htmlDoc) {
+        // Select elements that usually represent a new line or block
+        const blocks = htmlDoc.querySelectorAll('p, div, br, li, h1, h2, h3, h4, h5, h6, tr');
 
+        blocks.forEach(el => {
+            const tagName = el.tagName.toLowerCase();
+            if (tagName === 'br') {
+                el.replaceWith('\n');
+            } else {
+                // Add a newline after the element to separate it from following content
+                el.after('\n');
+            }
+        });
+
+        return (htmlDoc.body.textContent || "")
+            .replace(/\n\s*\n/g, '\n\n') // Reduce excessive whitespace to double newlines
+            .trim();
+    },
     parse(xmlText, sourceBundle) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
@@ -98,7 +115,8 @@ const RSSEngine = {
                                getTag("content");
             
             const htmlDoc = parser.parseFromString(rawContent, 'text/html');
-            const blurb = (htmlDoc.body.textContent || "").trim();
+            // const blurb = (htmlDoc.body.textContent || "").trim();
+            const blurb = this.extractCleanText(htmlDoc);
 
             // 4. Detailed Image Extraction (from original logic)
             let image = el.querySelector("enclosure[type^='image']")?.getAttribute("url") || 

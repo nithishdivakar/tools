@@ -126,7 +126,7 @@
             </span>
         </div>
         <div class="bulk-actions">
-            <span style="font-size: 0.65rem;color: rgb(71, 85, 105);text-align: right;line-height: 1.0rem;"> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }} {{displayedItems}}/{{totalItems}}</span>
+            <span style="font-size: 0.65rem;color: rgb(71, 85, 105);text-align: right;line-height: 1.0rem;"> W{{ statusCounts.waiting }}|D{{ statusCounts.success }}|F{{ statusCounts.error }}|T{{ sourceStates.length }} Vi{{displayedItems}}/Ti{{totalItems}}</span>
 
         </div>
     </div>
@@ -168,18 +168,22 @@
                     <span v-if="item.sourceStarred">•</span>
                     <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
                     {{ item.sourceName }}
-                    •
+                    <span>•</span>
                     {{ formatDate(item.date) }}
-                    •
+                    <span>•</span>
                     <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
                 </div>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
-                <div class="blurb" style="margin-top: 4px;">
-                    {{item.snippet.substring(0, item.snippet_length)}} <span v-if="item.snippet_length < item.snippet.length">...</span>
-                    <!-- [{{item.snippet_length}}|{{item.snippet.length}}] -->
-                    <span class="txt-btn" style="padding-right:" v-if="item.snippet_length < item.snippet.length" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);">more</span>
-                    <span class="txt-btn" style="padding:0" v-if="item.snippet_length < item.snippet.length && item.snippet_length > 160"> or </span>
-                    <span class="txt-btn" style="padding-left:" v-if="item.snippet_length > 160" @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
+                <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
+                    {{ item.snippet.substring(0, item.snippet_length || 160) }}
+                    <span v-if="(item.snippet_length || 160) < item.snippet.length">... </span>
+                    <span class="txt-btn" 
+                          v-if="(item.snippet_length || 160) < item.snippet.length" 
+                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);">more</span>
+                    <span class="txt-btn" v-if="item.snippet_length > 160 && item.snippet_length < item.snippet.length"> or </span>
+                    <span class="txt-btn" 
+                          v-if="item.snippet_length > 160" 
+                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
                 </div>
             </div>
     </div>
@@ -291,8 +295,7 @@ createApp({
                 return dateDiff;
             });
 
-            // Phase 2: Apply Diversity (MMR)
-            // Lambda 0.8 keeps it mostly chronological but shuffles duplicates/same-source bursts
+            // Phase 2: Apply Diversity
             return getDiverseArticles(baseSorted);
         });
 
@@ -394,6 +397,7 @@ createApp({
 
         const getDiverseArticles = (rawArticles) => {
             // group articles by source
+
             const buckets = {};
             rawArticles.forEach(item => {
                 if (!buckets[item.sourceId]) buckets[item.sourceId] = [];

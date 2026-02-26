@@ -4,6 +4,10 @@
  */
 const FEED_CONFIG = [
     { url: "http://lesserwrong.com/feed.xml", name: "Less Wrong", tags: ["star"] },
+    { url: "https://www.lesswrong.com/feed.xml?view=curated-rss", name: "LW curated", tags: ["star"] },
+    { url: "https://www.lesswrong.com/feed.xml?view=frontpage-rss&karmaThreshold=45", name: "LW frontpage", tags: ["star"] },
+    { url: "https://www.lesswrong.com/feed.xml?view=community-rss&karmaThreshold=125", name: "LW all", tags: ["star"] },
+
     { url: "https://lilianweng.github.io/index.xml", name: "Lil'Log", tags: ["star"] },
     { url: "https://gwern.substack.com/feed", name: "gwern", tags: ["star"] },
     { url: "http://www.offconvex.org/feed.xml", name: "Off The Convex Path", tags: ["star"] },
@@ -11,17 +15,24 @@ const FEED_CONFIG = [
     { url: "https://lethain.com/feeds.xml", name: "Irrational Exuberance", tags: ["star"] },
     { url: "https://www.spakhm.com/feed.rss", name: "Slava Akhmechet", tags: ["star"] },
     { url: "https://apenwarr.ca/log/rss.php", name: "apenwarr", tags: ["star"] },
-    { url: "https://theoatmeal.com/feed/rss", name: "The Oatmeal", tags: ["star"] },
+    { url: "https://theoatmeal.com/feed/rss", name: "The Oatmeal", tags: ["star", "comics"] },
     { url: "https://scottaaronson.blog/?feed=rss2", name: "Shtetl-Optimized", tags: ["star"] },
-    { url: "https://www.xkcd.com/rss.xml", name: "XKCD", tags: ["star"] },
+    { url: "https://www.xkcd.com/rss.xml", name: "XKCD", tags: ["star", "comics"] },
     { url: "https://forum.effectivealtruism.org/feed.xml?view=curated-rss", name : "EA curated", tags: ["star"] },
     { url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=2", name : "EA frontpage", tags: ["star"] },
     { url: "https://forum.effectivealtruism.org/feed.xml?view=community-rss&karmaThreshold=200", name : "EA all", tags: ["star"] },
     { url: "http://lesserwrong.com/feed.xml", name: "Less Wrong", tags: ["star"] },
 
+    { url: "http://ben-evans.com/benedictevans?format=rss", name:"Benedict Evans"},
+    { url: "https://blog.pragmaticengineer.com/rss/", name:"The Pragmatic Engineer"},
+    { url: "https://jvns.ca/atom.xml", name: "Julia Evans"},
+
+    
     { url: "https://rss.arxiv.org/rss/cs.cl+cs.cv", name: "cs.cl+cs.cv", tags: ["paper"] },
     { url: "https://rss.arxiv.org/rss/cs.lg", name: "CS.LG", tags: ["paper"] },
 
+    { url: "https://thegradient.pub/rss/", name: "The Gradient", tags: ["news"]},
+    { url: "http://www.reddit.com/r/MachineLearning/.rss", name: "r/MachineLearning", tags: ["news"]},
     { url: "https://hnrss.org/frontpage", name: "HN Frontpage", tags: ["news"] },
     { url: "https://hnrss.org/newest", name: "HN newest", tags: ["news"] },
     { name: "The Verge", url: "https://www.theverge.com/rss/index.xml",  tags: ["news"] },

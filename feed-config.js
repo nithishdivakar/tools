@@ -3,7 +3,6 @@
  * Each entry requires a name and url. 'starred' is optional.
  */
 const FEED_CONFIG = [
-    { url: "http://lesserwrong.com/feed.xml", name: "Less Wrong", tags: ["star"] },
     { url: "https://www.lesswrong.com/feed.xml?view=curated-rss", name: "LW curated", tags: ["star"] },
     { url: "https://www.lesswrong.com/feed.xml?view=frontpage-rss&karmaThreshold=45", name: "LW frontpage", tags: ["star"] },
     { url: "https://www.lesswrong.com/feed.xml?view=community-rss&karmaThreshold=125", name: "LW all", tags: ["star"] },

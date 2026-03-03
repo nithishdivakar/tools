@@ -211,6 +211,8 @@
                     {{ item.date.toISOString().split('T')[0]}}
                     <span>•</span>
                     <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
+                    <span>•</span>
+                    <span @click.stop="isolateSource(item.sourceId)" style="cursor: pointer;">[:v//d]</span>
                 </div>
                 <pre class="debug" style="display: none;">
                 {{ item }}
@@ -218,15 +220,15 @@
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
                     
-                    {{ item.snippet.substring(0, item.snippet_length || 160) }}
-                    <span v-if="(item.snippet_length || 160) < item.snippet.length">... </span>
+                    {{ item.snippet.substring(0, item.snippet_length || 500) }}
+                    <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
                     <span class="txt-btn" 
-                          v-if="(item.snippet_length || 160) < item.snippet.length" 
-                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) + 500);">more</span>
-                    <span class="txt-btn" v-if="item.snippet_length > 160 && item.snippet_length < item.snippet.length"> or </span>
+                          v-if="(item.snippet_length || 500) < item.snippet.length" 
+                          @click="item.snippet_length = Math.max(500, (item.snippet_length || 500) + 500);">more</span>
+                    <span class="txt-btn" v-if="item.snippet_length > 500 && item.snippet_length < item.snippet.length"> or </span>
                     <span class="txt-btn" 
-                          v-if="item.snippet_length > 160" 
-                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
+                          v-if="item.snippet_length > 500" 
+                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 500) - 500);">less</span>
                 </div>
             </div>
         </div>
@@ -393,6 +395,12 @@ createApp({
             }
         };
 
+        const isolateSource = (url) => {
+            activeTag.value = 'custom';
+            filters.selectedSources.clear();
+            toggleSource(url);
+        };
+
         const fetchSource = async (state) => {
             state.status = 'fetching';
             const cachedBundle = await CacheDB.get(state.url);
@@ -544,7 +552,7 @@ createApp({
 
         return {
             articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag, sortedSources,
-            selectTag, toggleSource, formatDate, dateMode, setDatePreset, totalItems,
+            selectTag, toggleSource, isolateSource, formatDate, dateMode, setDatePreset, totalItems,
             displayedItems, statusCounts, articlesCount, refreshSource, getFavicon, nukeCache, getOrdScore, src_search_query, src_search
         };
     }

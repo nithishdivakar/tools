@@ -53,7 +53,6 @@ const FEED_CONFIG = [
     { url: "https://aresluna.org/main.rss" },
     { url: "https://beej.us/blog/rss.xml" },
     { url: "https://bernsteinbear.com/feed.xml" },
-    { url: "https://berthub.eu/articles/index.xml" },
     { url: "https://blog.jim-nielsen.com/feed.xml" },
     { url: "https://blog.miguelgrinberg.com/feed" },
     { url: "https://blog.pixelmelt.dev/rss/" },

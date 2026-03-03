@@ -6,6 +6,7 @@
     <title>READ</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="feed-config.js"></script>
+    <script src="cache-db.js"></script>
     <script src="rss-engine.js"></script>
     <style>
         :root {
@@ -28,7 +29,7 @@
             flex-direction: column; align-items: center; gap: 2px; background: var(--white);
         }
         .tag.selected { border-style: solid; border-color: var(--accent); color: var(--accent); }
-        .tag:hover { filter: brightness(92%); transform: translateY(-1px); }
+        .tag:hover { filter: brightness(92%); /*transform: translateY(-1px); */}
         .tag.success { --accent: var(--blue); }
         .tag.error { --accent: var(--red); }
         .tag.waiting, .tag.fetching { --accent: var(--yellow); }
@@ -47,7 +48,7 @@
             display: flex; flex-direction: column; gap: 4px;
         }
         .source-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
-        .source-header { display: flex; justify-content: space-between; align-items: center; }
+        .source-header { display: flex; justify-content: space-between; align-items: center; column-gap: 1rem;}
         .bulk-actions { font-size: 0.75rem; display: flex; gap: 0 8px; align-items: center; flex-wrap: wrap;}
 
         /* Text Buttons */
@@ -66,6 +67,7 @@
 
         .feed-container.card .item { display: flex; flex-direction: column; gap: 10px; }
         .feed-container.card .thumb { width: 100%; /*aspect-ratio: 16 / 9;*/ border-radius: 6px; object-fit: contain; border: 1px solid var(--border); }
+        .feed-container.table {display: none}
 
         /* Content Meta */
         .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -82,7 +84,20 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); }}
         .spinning {animation: spin 1s linear infinite; display: inline-block;}
 
-        .source-scroll-move { transition: transform 1s ease-out; }
+        .source-scroll-move { transition: transform 0.2s ease-out; }
+
+        .debug {
+            font-family: monospace;
+            font-size: 6px;
+            white-space: pre-wrap;word-wrap: break-word;
+        }
+        .tb {
+            max-width: 300px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .hide { display: none;}
     </style>
 </head>
 <body>
@@ -96,6 +111,7 @@
         </div>
 
         <div class="bulk-actions">
+            <span :class="['txt-btn', { 'selected': viewMode === 'table' }]"  @click="viewMode = 'table'">Table</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">䷀ LIST</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">〓 CARD</span>
         </div>
@@ -136,13 +152,25 @@
     tag="div" 
     class="source-scroll"
     >
+        <div :class="['tag', 'default', { 'selected': src_search === true }]" @click="src_search = !src_search">
+            <div class="tag-main">
+                SRC
+            </div>
+            <div class="tag-sub">
+                SEARCH
+            </div>
+        </div>
         <div v-for="source in sortedSources"
              :key="source.url"
              @click="toggleSource(source.url)"
-             :class="['tag', `${source.status}`, { selected: filters.selectedSources.has(source.url), star: source.starred }]">
+             :class="['tag', `${source.status}`, { 
+                 selected: filters.selectedSources.has(source.url), 
+                 star: source.tags.includes('star') 
+             }]">
 
             <div class="tag-main">
-                <span v-if="source.starred" class="star-icon">★</span>
+
+                <span v-if="source.tags.includes('star')" class="star-icon">★</span>
                 <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ source.displayName }}</span>
                 <span class="count">({{ source.count.visible }}/{{ source.count.total }})</span>
@@ -153,28 +181,43 @@
 
             <div class="tag-sub">
                 {{ source.url }}
+                {{ source.tags.includes('star') }}
+                {{source}}
             </div>
         </div>
     </transition-group>
+    <div v-if="src_search" class="flex items-center gap-2" style="margin-bottom: 8px;">
+        <input 
+            type="text" 
+            v-model="src_search_query" 
+            placeholder="Search sources..." 
+            class="pill" 
+            style="width: 100%; padding: 8px; border-style: solid;"
+        >
+    </div>
 </div>
 
-
-<div :class="['feed-container', viewMode === 'card' ? 'card' : 'list']">
-    <div v-for="item in sortedArticles" :key="item.link" v-show="item.display" class="item">
-            <img v-if="item.image" :src="item.image" class="thumb" onerror="this.style.display='none'">
+<div :class="['feed-container', viewMode]">
+    <template v-for="item in sortedArticles" :key="item.link">
+        <div v-if="item.display" class="item">
+            <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
             <div class="content">
                 <div class="meta">
-                    <span v-if="item.sourceStarred" class="star-icon">★</span>
-                    <span v-if="item.sourceStarred">•</span>
+                    <span v-if="item.source.tags.includes('star')" class="star-icon">★</span>
+                    <span v-if="item.source.tags.includes('star')">•</span>
                     <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
                     {{ item.sourceName }}
                     <span>•</span>
-                    {{ formatDate(item.date) }}
+                    {{ item.date.toISOString().split('T')[0]}}
                     <span>•</span>
                     <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
                 </div>
+                <pre class="debug" style="display: none;">
+                {{ item }}
+                </pre>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
+                    
                     {{ item.snippet.substring(0, item.snippet_length || 160) }}
                     <span v-if="(item.snippet_length || 160) < item.snippet.length">... </span>
                     <span class="txt-btn" 
@@ -186,8 +229,32 @@
                           @click="item.snippet_length = Math.max(160, (item.snippet_length || 160) - 500);">less</span>
                 </div>
             </div>
-    </div>
+        </div>
+    </template>
 </div>
+
+<template v-if="viewMode === 'table'">
+
+    <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
+        <tbody>
+            <template v-for="item in sortedArticles" :key="item.link">
+                <tr v-if="item.display">
+                    </div>
+                    <!-- <td> {{ item.date.toDateString() }}</td> -->
+                    <td> {{ item.date.toISOString().split('.')[0]}}</td>
+                    <td> {{ item.sourceName }}</td> 
+                    <td class="tb"> {{ item.title }}</td>
+                    <td> {{ item.seqId }}</td>
+                    <td> {{item.ingestedAt}}</td> 
+                    <td> {{ item.ordScore }}</td>
+                    <!-- <td> {{ item.sourceId }}</td>  -->
+                    <!-- <td> {{ item.link }} </td> -->
+                </tr>
+            </template>
+        </tbody>
+    </table>
+</template>
+
 
     <details style="margin-top: 30px;">
         <summary>
@@ -223,6 +290,9 @@
             </code>
         </div>
     </details>
+
+<span class="txt-btn" style="color: var(--red)" @click="nukeCache">CLEAR CACHE</span>
+
 </div>
 
 <script>
@@ -236,6 +306,9 @@ createApp({
         const filters = reactive({ start: '', end: '', selectedSources: new Set() });
         const dateMode = ref('3');
         const activeTag = ref('star');
+        const src_search_query = ref('');
+        const src_search = ref(false);
+        let globalSeq = 0;
 
         const sourceStates = reactive(FEED_CONFIG.map(config => {
             let tags = config.tags || ['untag'];
@@ -245,8 +318,8 @@ createApp({
                 displayName: config.name || 'fetching...',
                 count: { visible: 0, total: 0 },
                 status: 'waiting',
-                tags: tags,
-                starred: tags.includes('star')
+                tags: tags//,
+                // starred: tags.includes('star')
             }
         }));
 
@@ -258,14 +331,25 @@ createApp({
         });
 
         const sortedSources = computed(() => {
-            return [...sourceStates].sort((a, b) => {
+            let filtered = sourceStates;
+
+            // Filter by search query
+            if (src_search_query.value.trim()) {
+                const query = src_search_query.value.toLowerCase();
+                filtered = filtered.filter(s => 
+                    s.displayName.toLowerCase().includes(query) || 
+                    s.url.toLowerCase().includes(query)
+                );
+            }
+
+            return [...filtered].sort((a, b) => {
+                // Keep your existing sort logic or add relevance here
                 const aSelected = filters.selectedSources.has(a.url);
                 const bSelected = filters.selectedSources.has(b.url);
                 if (aSelected === bSelected) return 0;
                 return aSelected ? -1 : 1;
             });
         });
-
         const updateVisibility = () => {
             sourceStates.forEach(s => s.count.visible = 0);
 
@@ -285,19 +369,20 @@ createApp({
 
         watch(filters, updateVisibility, { deep: true });
 
-        const sortedArticles = computed(() => {
-            // Phase 1: Standard Sort (Relevance)
-            const baseSorted = [...articles.value].sort((a, b) => {
-                const dateDiff = b.date.toDateString() === a.date.toDateString() ? 0 : b.date - a.date;
-                if (dateDiff === 0) {
-                    return (b.sourceStarred === a.sourceStarred) ? b.date - a.date : (b.sourceStarred ? 1 : -1);
-                }
-                return dateDiff;
-            });
+        const getOrdScore = (article) => {
+            const day = Math.floor(new Date(article.date).getTime() / (1000 * 60 * 60 * 24))*(1000 * 60 * 60 * 24); // tick every 24 hours
+            const inj = Math.floor(new Date(article.ingestedAt).getTime() / (1000 * 10))*(1000 * 10); // tick every 10 second
+            const offset = ((article.sourceName + article.title  + article.snippet).length % 97); 
 
-            // Phase 2: Apply Diversity
-            return getDiverseArticles(baseSorted);
-        });
+            // strict order according to day and clipped injestion time, but shuffle within.
+            return day + inj + offset;
+        };
+
+        const sortedArticles = computed(() => {
+            return [...articles.value]
+                .filter(a => a.display)
+                .sort((a, b) => b.ordScore - a.ordScore);
+        }); 
 
         const toggleSource = (url) => {
             activeTag.value = 'custom';
@@ -310,12 +395,22 @@ createApp({
 
         const fetchSource = async (state) => {
             state.status = 'fetching';
+            const cachedBundle = await CacheDB.get(state.url);
             try {
-                const bundle = await RSSEngine.process({
-                    url: state.url,
-                    name: state.displayName,
-                    starred: state.starred
-                });
+                let bundle;
+                if (cachedBundle) {
+                    bundle = cachedBundle;
+                    console.log(`Cache hit for ${state.url}`);
+                } else {
+                    bundle = await RSSEngine.process({
+                        url: state.url,
+                        name: state.displayName
+                    });
+                    if (bundle.status === 'success') {
+                        await CacheDB.set(state.url, bundle);
+                    }
+                }
+
                 if (bundle.status === 'success') {
                     const original = FEED_CONFIG.find(f => f.url === state.url);
                     state.displayName = original.name ? original.name : `(${bundle.metadata.title})`;
@@ -327,7 +422,10 @@ createApp({
                                 display: true,
                                 snippet_length: 500,
                                 snippet: item.snippet,
-                                sourceName: state.displayName
+                                sourceName: state.displayName,
+                                seqId: globalSeq++,
+                                source: state,
+                                ordScore: getOrdScore(item)
                             });
                         }
                     });
@@ -379,7 +477,8 @@ createApp({
                 .sort((a, b) => b.month.localeCompare(a.month));
         });
 
-        const formatDate = (d) => d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        // const formatDate = (d) => d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        const formatDate = (d) => d.toDateString();
 
         const selectTag = (tag) => {
             activeTag.value = tag;
@@ -425,6 +524,7 @@ createApp({
         };
 
         onMounted(() => {
+            CacheDB.cleanup();
             setDatePreset('1');
             viewMode.value = 'card';
             selectTag('star');
@@ -437,10 +537,15 @@ createApp({
             } catch (e) { return ''; }
         }
 
+        const nukeCache = async () => {
+            await CacheDB.nuke();
+            location.reload(); // Refresh to clear current session memory
+        };
+
         return {
-            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag,sortedSources,
+            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag, sortedSources,
             selectTag, toggleSource, formatDate, dateMode, setDatePreset, totalItems,
-            displayedItems, statusCounts, articlesCount, refreshSource, getFavicon
+            displayedItems, statusCounts, articlesCount, refreshSource, getFavicon, nukeCache, getOrdScore, src_search_query, src_search
         };
     }
 }).mount('#app');

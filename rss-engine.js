@@ -9,7 +9,6 @@ const RSSEngine = {
             id: sourceConfig.url,
             name: sourceConfig.name,
             url: sourceConfig.url,
-            starred: !!sourceConfig.starred,
             status: 'waiting',
             lastFetched: new Date(),
             strategyUsed: null,
@@ -55,9 +54,12 @@ const RSSEngine = {
                         return { text, strategy: strat.name };
                     }
                 }
-            } catch (e) { continue; }
+            } catch (e) { 
+                console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
+                continue; 
+            }
         }
-        console.log("Failed: "+ url)
+        console.log("All stratergies failed for "+ url)
         throw new Error(`Connection failed across all strategies`);
     },
     extractCleanText(htmlDoc) {
@@ -103,6 +105,7 @@ const RSSEngine = {
         const entries = Array.from(doc.querySelectorAll("item, entry"));
         
         const items = entries.map(el => {
+            const ingestionTime = Date.now();
             const getTag = (tag) => el.querySelector(tag)?.textContent || "";
             
             // 2. Enhanced Link Extraction
@@ -137,10 +140,10 @@ const RSSEngine = {
                 link: link.trim(),
                 date: isNaN(date.getTime()) ? new Date() : date,
                 snippet: blurb,
+                ingestedAt: ingestionTime,
                 image: image || null,
                 sourceId: sourceBundle.id,
-                sourceName: feedMeta.title,
-                sourceStarred: sourceBundle.starred
+                sourceName: feedMeta.title
             };
         });
 

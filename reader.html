@@ -92,7 +92,7 @@
             white-space: pre-wrap;word-wrap: break-word;
         }
         .tb {
-            max-width: 300px;
+            max-width: 200px;
             text-overflow: ellipsis;
             white-space: nowrap;
             overflow: hidden;
@@ -152,7 +152,7 @@
     tag="div" 
     class="source-scroll"
     >
-        <div :class="['tag', 'default', { 'selected': src_search === true }]" @click="src_search = !src_search">
+        <div :class="['tag', 'default', { 'selected': src_search === true }]" :key="source_search" @click="src_search = !src_search">
             <div class="tag-main">
                 SRC
             </div>
@@ -241,7 +241,6 @@
         <tbody>
             <template v-for="item in sortedArticles" :key="item.link">
                 <tr v-if="item.display">
-                    </div>
                     <!-- <td> {{ item.date.toDateString() }}</td> -->
                     <td> {{ item.date.toISOString().split('.')[0]}}</td>
                     <td> {{ item.sourceName }}</td> 
@@ -258,10 +257,27 @@
 </template>
 
 
+
+
+
     <details style="margin-top: 30px;">
         <summary>
             debug
         </summary>
+        <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
+            <tbody>
+                <template v-for="source in sortedSources" :key="source.url">
+                    <tr>
+                        <td class="tb" style="max-width:100px"> {{ source.displayName }}</td>
+                        <td> V{{ source.count.visible }}</td>
+                        <td> T{{ source.count.total }}</td> 
+                        <td> {{source.status}}</td>
+                        <td class="tb"> {{ source.url }}</td>
+                        <td> {{source.tags}}</td> 
+                    </tr>
+                </template>
+            </tbody>
+        </table>
         <div class="debug-grid">
             <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">
               <template v-for="sel in ['selected', 'not selected']" :key="sel">
@@ -312,6 +328,9 @@ createApp({
         const src_search = ref(false);
         let globalSeq = 0;
 
+        // print duplicated urls to console.
+        console.log([...new Set(FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i))]);
+
         const sourceStates = reactive(FEED_CONFIG.map(config => {
             let tags = config.tags || ['untag'];
 
@@ -333,9 +352,20 @@ createApp({
         });
 
         const sortedSources = computed(() => {
-            let filtered = sourceStates;
+            // selected ones are shown first, 
+            // but withing the group, 
+            // order depends on the day.
 
-            // Filter by search query
+            let filtered = [...sourceStates]; 
+            const seed = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+            filtered.sort((a, b) => {
+                const hashA = [...(a.url + seed)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const hashB = [...(b.url + seed)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                return hashA - hashB;
+            });
+
+            // Filter by search query if present
             if (src_search_query.value.trim()) {
                 const query = src_search_query.value.toLowerCase();
                 filtered = filtered.filter(s => 
@@ -344,14 +374,16 @@ createApp({
                 );
             }
 
-            return [...filtered].sort((a, b) => {
-                // Keep your existing sort logic or add relevance here
+            // Selected items first sort.
+            return filtered.sort((a, b) => {
                 const aSelected = filters.selectedSources.has(a.url);
                 const bSelected = filters.selectedSources.has(b.url);
                 if (aSelected === bSelected) return 0;
                 return aSelected ? -1 : 1;
             });
         });
+
+
         const updateVisibility = () => {
             sourceStates.forEach(s => s.count.visible = 0);
 

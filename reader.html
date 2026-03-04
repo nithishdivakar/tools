@@ -18,7 +18,7 @@
 
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #1e293b; margin: 0; padding: 20px; }
         .flex { display: flex; } .items-center { align-items: center; } .gap-2 { gap: 8px; }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 800px; margin: 0 auto; }
 
         /* Tag Styling */
         .tag {
@@ -58,19 +58,19 @@
         .txt-btn.ph:hover { text-decoration: none; }
 
         /* Feed Layouts */
-        .feed-container { display: flex; flex-direction: column; gap: 16px; }
+        .feed-container { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; justify-content: space-between;}
         .item { background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .item:hover { border-color: var(--border); }
 
-        .feed-container.list .item { display: flex; gap: 12px; }
-        .feed-container.list .thumb { width: 75px; height: 75px; border-radius: 6px; object-fit: contain; border: 1px solid var(--border); }
+        .feed-container.list .item { display: flex; gap: 12px; align-items: flex-start;}
+        .feed-container.list .thumb { width: 75px; /*height: 75px;*/ border-radius: 6px; object-fit: contain; border: 1px solid var(--border); flex: 3;}
 
-        .feed-container.card .item { display: flex; flex-direction: column; gap: 10px; }
+        .feed-container.card .item { display: flex; flex-direction: column; gap: 10px; flex: 1 1 300px; max-width: 400px;}
         .feed-container.card .thumb { width: 100%; /*aspect-ratio: 16 / 9;*/ border-radius: 6px; object-fit: contain; border: 1px solid var(--border); }
         .feed-container.table {display: none}
 
         /* Content Meta */
-        .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .content { flex: 7; min-width: 0; display: flex; flex-direction: column; }
         .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 500; }
         .source-icon { width: 12px; height: 12px; border-radius: 2px; }
         .star-icon { color: var(--yellow); }

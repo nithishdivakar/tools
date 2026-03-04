@@ -56,5 +56,13 @@ const CacheDB = {
                 cursor.continue();
             }
         };
-    }
+    },
+
+    async count() {
+        const db = await this.init();
+        return new Promise((resolve) => {
+            const req = db.transaction(this.STORE_NAME).objectStore(this.STORE_NAME).count();
+            req.onsuccess = () => resolve(req.result);
+        });
+    },
 };

@@ -309,7 +309,9 @@
         </div>
     </details>
 
-<span class="txt-btn" style="color: var(--red)" @click="nukeCache">CLEAR CACHE</span>
+<span class="txt-btn" style="color: var(--red)" @click="nukeCache">
+    CLEAR CACHE ({{ cachedCount }} items)
+</span>
 
 </div>
 
@@ -326,6 +328,7 @@ createApp({
         const activeTag = ref('star');
         const src_search_query = ref('');
         const src_search = ref(false);
+        const cachedCount = ref(0);
         let globalSeq = 0;
 
         // print duplicated urls to console.
@@ -563,8 +566,9 @@ createApp({
             return result;
         };
 
-        onMounted(() => {
-            CacheDB.cleanup();
+        onMounted(async () => {
+            await CacheDB.cleanup();
+            cachedCount.value = await CacheDB.count();
             setDatePreset('1');
             viewMode.value = 'card';
             selectTag('star');
@@ -584,7 +588,7 @@ createApp({
 
         return {
             articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag, sortedSources,
-            selectTag, toggleSource, isolateSource, formatDate, dateMode, setDatePreset, totalItems,
+            selectTag, toggleSource, isolateSource, formatDate, dateMode, setDatePreset, totalItems,cachedCount,
             displayedItems, statusCounts, articlesCount, refreshSource, getFavicon, nukeCache, getOrdScore, src_search_query, src_search
         };
     }

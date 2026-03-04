@@ -111,9 +111,9 @@
         </div>
 
         <div class="bulk-actions">
-            <span :class="['txt-btn', { 'selected': viewMode === 'table' }]"  @click="viewMode = 'table'">Table</span>
-            <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">䷀ LIST</span>
-            <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">〓 CARD</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'table' }]"  @click="viewMode = 'table'">☷ TABLE</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">☰ LIST</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">⧉ CARD</span>
         </div>
     </div>
     <div class="bulk-actions">
@@ -264,7 +264,7 @@
         <summary>
             debug
         </summary>
-        <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
+        <table style="width: 10000px; border-collapse: collapse; font-size: x-small; background: var(--white);">
             <tbody>
                 <template v-for="source in sortedSources" :key="source.url">
                     <tr>
@@ -406,19 +406,28 @@ createApp({
 
         watch(filters, updateVisibility, { deep: true });
 
+        const compareTuples = (tupleA, tupleB) => {
+            for (let i = 0; i < tupleA.length; i++) {
+                if (tupleA[i] < tupleB[i]) return -1;
+                if (tupleA[i] > tupleB[i]) return 1;
+            }
+            return 0;
+        };
+
         const getOrdScore = (article) => {
             const day = Math.floor(new Date(article.date).getTime() / (1000 * 60 * 60 * 24))*(1000 * 60 * 60 * 24); // tick every 24 hours
             const inj = Math.floor(new Date(article.ingestedAt).getTime() / (1000 * 10))*(1000 * 10); // tick every 10 second
             const offset = ((article.sourceName + article.title  + article.snippet).length % 97); 
 
             // strict order according to day and clipped injestion time, but shuffle within.
-            return day + inj + offset;
+            // return day + inj + offset;
+            return [-day, inj, -offset];
         };
 
         const sortedArticles = computed(() => {
             return [...articles.value]
                 .filter(a => a.display)
-                .sort((a, b) => b.ordScore - a.ordScore);
+                .sort((a, b) => compareTuples(a.ordScore, b.ordScore)); //b.ordScore - a.ordScore);
         }); 
 
         const toggleSource = (url) => {

@@ -41,6 +41,7 @@ const RSSEngine = {
     async fetchWithStrategy(url) {
         const strategies = [
             { name: 'Direct', url: url },
+            { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
             { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
             { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
         ];

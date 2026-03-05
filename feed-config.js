@@ -3,6 +3,8 @@
  * Each entry requires a name and url. 'starred' is optional.
  */
 const FEED_CONFIG = [
+    { url: "https://nitter.net/dieworkwear/rss", tags: ["twitter"]},
+    { url: "https://nitter.net/vboykis/rss", tags: ["twitter"]},
     { url: "https://www.lesswrong.com/feed.xml?view=curated-rss", name: "LW curated", tags: ["star"] },
     { url: "https://www.lesswrong.com/feed.xml?view=frontpage-rss&karmaThreshold=45", name: "LW frontpage", tags: ["tech"] },
     { url: "https://www.lesswrong.com/feed.xml?view=community-rss&karmaThreshold=125", name: "LW all", tags: ["tech"] },

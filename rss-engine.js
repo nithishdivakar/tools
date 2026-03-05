@@ -37,31 +37,108 @@ const RSSEngine = {
 
         return bundle;
     },
+    // async fetchWithStrategy(url) {
+    //     const strategies = [
+    //         // { name: 'Direct', url: url },
+    //         { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+    //         { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+    //         { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
+    //         { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+    //         { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
+    //     ];
 
+    //     for (let i = strategies.length - 1; i > 0; i--) {
+    //         const j = Math.floor(Math.random() * (i + 1));
+    //         [strategies[i], strategies[j]] = [strategies[j], strategies[i]];
+    //     }
+
+    //     // It's best to try Direct first just in case the site allows CORS.
+    //     strategies.unshift({ name: 'Direct', url: url });
+
+    //     for (const strat of strategies) {
+    //         try {
+    //             const res = await fetch(strat.url);
+    //             if (res.ok) {
+    //                 const text = await res.text();
+    //                 if (text && text.trim().length > 0) {
+    //                     return { text, strategy: strat.name };
+    //                 }
+    //             }
+    //         } catch (e) { 
+    //             console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
+    //             continue; 
+    //         }
+    //     }
+    //     console.log("All stratergies failed for "+ url)
+    //     throw new Error(`Connection failed across all strategies`);
+    // },
     async fetchWithStrategy(url) {
         const strategies = [
-            { name: 'Direct', url: url },
             { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
             { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+            { name: 'ThingProxy', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+            { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
             { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
         ];
 
-        for (const strat of strategies) {
-            try {
-                const res = await fetch(strat.url);
-                if (res.ok) {
-                    const text = await res.text();
-                    if (text && text.trim().length > 0) {
-                        return { text, strategy: strat.name };
-                    }
-                }
-            } catch (e) { 
-                console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
-                continue; 
-            }
+        // Shuffle and add Direct
+        for (let i = strategies.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [strategies[i], strategies[j]] = [strategies[j], strategies[i]];
         }
-        console.log("All stratergies failed for "+ url)
-        throw new Error(`Connection failed across all strategies`);
+        strategies.unshift({ name: 'Direct', url: url });
+
+        // Create ONE controller to rule them all
+        const globalController = new AbortController();
+        const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        const activePromises = [];
+
+        try {
+            for (const strat of strategies) {
+                const strategyPromise = (async () => {
+                    try {
+                        // Pass the global signal to every fetch
+                        const res = await fetch(strat.url, { signal: globalController.signal });
+                        if (res.ok) {
+                            const text = await res.text();
+                            if (text && text.trim().length > 0) {
+                                // SUCCESS! Kill all other pending fetches
+                                globalController.abort(); 
+                                return { text, strategy: strat.name };
+                            }
+                        }
+                        console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
+                        throw new Error('Fail');
+                    } catch (e) {
+                        // Keep the promise "pending" forever if it fails/aborts 
+                        // so it doesn't trigger Promise.any early
+                        console.log("Stratergy [" + strat.name + "] failed for " + strat.url + e);
+                        return await new Promise(() => {}); 
+                    }
+                })();
+
+                activePromises.push(strategyPromise);
+
+                // Wait 5s or until the current one (or any previous one) finishes
+                const result = await Promise.race([
+                    strategyPromise,
+                    Promise.any(activePromises),
+                    timeout(5000).then(() => 'STAGGER_NEXT')
+                ]);
+
+                if (result && result !== 'STAGGER_NEXT') {
+                    return result;
+                }
+            }
+
+            // Final fallback to wait for whoever wins
+            return await Promise.any(activePromises);
+
+        } catch (err) {
+            console.log("All stratergies failed for "+ url)
+            throw new Error("All strategies failed.");
+        }
     },
     extractCleanText(htmlDoc) {
         // Select elements that usually represent a new line or block

@@ -152,7 +152,7 @@
     tag="div" 
     class="source-scroll"
     >
-        <div :class="['tag', 'default', { 'selected': src_search === true }]" :key="source_search" @click="src_search = !src_search">
+        <div :class="['tag', 'default', { 'selected': src_search === true }]" :key="src_search" @click="src_search = !src_search">
             <div class="tag-main">
                 SRC
             </div>
@@ -236,35 +236,30 @@
 </div>
 
 <template v-if="viewMode === 'table'">
+    <div style="font-size: x-small; display: grid; grid-template-columns: 80px 80px 150px 30px 100px 160px 100px; gap: 0;">
+        
+        <template v-for="item in sortedArticles" :key="item.link">
+            <div v-if="item.display" style="display: contents;">
+                <div class="cell">{{ item.date.toISOString().split('.')[0] }}</div>
+                <div class="cell">{{ item.sourceName }}</div> 
+                <div class="cell">{{ item.title }}</div>
+                <div class="cell">{{ item.seqId }}</div>
+                <div class="cell">{{ item.ingestedAt }}</div>
+                <div class="cell">{{ item.ordScore }}</div>
+                <!-- <div class="cell">{{ item.sourceId }}</div> -->
+                <!-- <div class="cell">{{ item.link }}</div> -->
+                <div class="cell">{{ item.strategyUsed }}</div>
+            </div>
+        </template>
 
-    <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
-        <tbody>
-            <template v-for="item in sortedArticles" :key="item.link">
-                <tr v-if="item.display">
-                    <!-- <td> {{ item.date.toDateString() }}</td> -->
-                    <td> {{ item.date.toISOString().split('.')[0]}}</td>
-                    <td> {{ item.sourceName }}</td> 
-                    <td class="tb"> {{ item.title }}</td>
-                    <td> {{ item.seqId }}</td>
-                    <td> {{item.ingestedAt}}</td> 
-                    <td> {{ item.ordScore }}</td>
-                    <!-- <td> {{ item.sourceId }}</td>  -->
-                    <!-- <td> {{ item.link }} </td> -->
-                </tr>
-            </template>
-        </tbody>
-    </table>
+    </div>
 </template>
-
-
-
-
 
     <details style="margin-top: 30px;">
         <summary>
             debug
         </summary>
-        <table style="width: 10000px; border-collapse: collapse; font-size: x-small; background: var(--white);">
+        <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
             <tbody>
                 <template v-for="source in sortedSources" :key="source.url">
                     <tr>
@@ -477,6 +472,7 @@ createApp({
                                 sourceName: state.displayName,
                                 seqId: globalSeq++,
                                 source: state,
+                                strategyUsed: bundle.strategyUsed,
                                 ordScore: getOrdScore(item)
                             });
                         }

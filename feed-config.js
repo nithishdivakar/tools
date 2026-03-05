@@ -3,8 +3,6 @@
  * Each entry requires a name and url. 'starred' is optional.
  */
 const FEED_CONFIG = [
-    { url: "https://nitter.net/dieworkwear/rss", tags: ["twitter"]},
-    { url: "https://nitter.net/vboykis/rss", tags: ["twitter"]},
     { url: "https://www.lesswrong.com/feed.xml?view=curated-rss", name: "LW curated", tags: ["star"] },
     { url: "https://www.lesswrong.com/feed.xml?view=frontpage-rss&karmaThreshold=45", name: "LW frontpage", tags: ["tech"] },
     { url: "https://www.lesswrong.com/feed.xml?view=community-rss&karmaThreshold=125", name: "LW all", tags: ["tech"] },
@@ -13,6 +11,7 @@ const FEED_CONFIG = [
     { url: "https://gwern.substack.com/feed", name: "gwern", tags: ["star", "people"] },
     { url: "http://www.offconvex.org/feed.xml", name: "Off The Convex Path", tags: ["star"] },
     { url: "https://vickiboykis.com/index.xml", name: "Vicki Boykis", tags: ["star", "people"] },
+    { url: "https://sebastianraschka.com/rss_feed.xml", name: "Sebastian Raschka", tags: ["star", "people"] },
     { url: "https://lethain.com/feeds.xml", name: "Irrational Exuberance", tags: ["star", "people"] },
     { url: "https://www.spakhm.com/feed.rss", name: "Slava Akhmechet", tags: ["star", "people"] },
     { url: "https://apenwarr.ca/log/rss.php", name: "apenwarr", tags: ["star", "people"] },

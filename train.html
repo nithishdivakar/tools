@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix CSV Tracker + Notes</title>
+    <title>TRAIN</title>
     <script src="train-config.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
@@ -80,8 +80,8 @@
 
     <div v-if="selection.exercise">
         <div style="display:flex; justify-content: space-between; align-items: center;">
-            <label v-if="mode === 'split'">Sets (L Rps | L W | R Rps | R W)</label>
-            <label v-else>Sets (Reps | Weight)</label>
+            <label v-if="mode === 'split'">Sets ( L W | L Rps | R W | R Rps)</label>
+            <label v-else>Sets (Weight | Reps)</label>
             <select v-model="mode" style="width: auto; padding: 4px; font-size: 11px;">
                 <option value="std">Standard</option>
                 <option value="split">Split</option>
@@ -93,22 +93,22 @@
             <span style="font-size:12px; color:#94a3b8; font-weight:bold; text-align:center;">{{n}}</span>
             
             <template v-if="mode !== 'split'">
-                <input type="number" v-model.number="sets[n-1].r" placeholder="Reps">
                 <input type="text" v-model="sets[n-1].w" :placeholder="mode === 'bw' ? 'BW +/-' : 'Weight'">
+                <input type="number" v-model.number="sets[n-1].r" placeholder="Reps">
             </template>
 
             <template v-else>
-                <input type="number" v-model.number="sets[n-1].lr" placeholder="L Reps">
                 <input type="text" v-model="sets[n-1].lw" placeholder="L W">
-                <input type="number" v-model.number="sets[n-1].rr" placeholder="R Reps">
+                <input type="number" v-model.number="sets[n-1].lr" placeholder="L Reps">
                 <input type="text" v-model="sets[n-1].rw" placeholder="R W">
+                <input type="number" v-model.number="sets[n-1].rr" placeholder="R Reps">
             </template>
         </div>
         
         <label>Notes</label>
         <textarea v-model="notes" placeholder="Comments"></textarea>
         
-        <button @click="saveSet" class="save-btn">Save to DB</button>
+        <button @click="saveSet" class="save-btn">Add</button>
     </div>
 
     <div class="secondary-btns">
@@ -140,7 +140,7 @@ createApp({
 
         const initDB = () => {
             return new Promise((resolve) => {
-                const request = indexedDB.open('MatrixCSVNotesStore', 1);
+                const request = indexedDB.open('TrainTool', 1);
                 request.onupgradeneeded = (e) => e.target.result.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
                 request.onsuccess = (e) => resolve(e.target.result);
             });

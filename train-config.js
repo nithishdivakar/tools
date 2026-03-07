@@ -33,7 +33,7 @@ const EX_DB = [
 { muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'Squat', reps: '5-8'},
 { muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'Front Squat', reps: '5-8'},
 { muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'Leg Press', reps: '5-8'},
-{ muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'hack squat', reps: '5-8'},
+{ muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'Hack squat', reps: '5-8'},
 { muscle: 'Quads', functional:'Primary', movement: 'Squat Variations', name: 'Goblet Squat', reps: '5-8'},
 { muscle: 'Quads', functional:'Secondary1', movement: 'Posture', name: 'Step-ups', reps: '12-15'},
 { muscle: 'Quads', functional:'Isolation1', movement: 'Femoris focus', name: 'Leg extension', reps: '15-20'},

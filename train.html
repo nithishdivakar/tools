@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix CSV Tracker + Notes</title>
+    <script src="train-config.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root { --accent: #2563eb; --dot-off: #cbd5e1; --success: #22c55e; --bg: #f8fafc; --muted: #f1f5f9; }
+        body { font-family: -apple-system, system-ui, sans-serif; padding: 12px; margin: 0; background: var(--bg); color: #1e293b; line-height: 1.4; }
+        
+        .matrix-container { overflow-x: auto; margin-bottom: 20px; background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .matrix { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
+        .matrix-row { display: flex; align-items: center; gap: 8px; }
+        .matrix-label-cell { width: 90px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: #475569; }
+        .matrix-data-cell { width: 45px; flex-shrink: 0; display: flex; justify-content: center; }
+        .matrix-header { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; text-align: center; overflow-wrap: break-word; word-break: break-all;}
+        
+        .dot-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--dot-off); background: transparent; cursor: pointer; transition: 0.2s; position: relative; }
+        .dot-btn.active { background: var(--success); border-color: var(--success); }
+        .dot-btn.selected { border-color: var(--accent); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
+        .dot-btn:disabled { background: var(--muted); border-color: #e2e8f0; cursor: not-allowed; opacity: 0.3; }
+
+        .selection-info { margin: 10px 0; font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+
+        .exercise-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .ex-btn { display: flex; flex-direction: column; padding: 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-align: left; cursor: pointer; row-gap: 4px;}
+        .ex-btn.selected { border-color: var(--accent); background: #eff6ff; }
+        .ex-btn.done { border-left: 5px solid var(--success); }
+        .ex-btn .meta { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+
+        /* Updated Set Row Grid */
+        .set-row { display: grid; grid-template-columns: 30px 1fr 1.5fr; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .set-row.split-row { grid-template-columns: 30px 1fr 1fr 1fr 1fr; }
+        
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        textarea { height: 70px; font-size: 14px; margin-top: 5px; resize: none; }
+        label { font-size: 11px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 10px; }
+
+        button.save-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; }
+        .secondary-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; padding-bottom: 40px; }
+        .secondary-btns button { flex: 1 1 45%; padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; color: #64748b; }
+        .csv-box { width: 100%; height: 120px; font-family: monospace; font-size: 10px; margin-top: 10px; border-color: #cbd5e1; background: #fff; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="matrix-container">
+        <div class="matrix">
+            <div class="matrix-row" style="align-items: flex-start;">
+                <div class="matrix-label-cell"></div>
+                <div v-for="f in uniqueFunctionals" :key="f" class="matrix-data-cell matrix-header">{{f}}</div>
+            </div>
+            <div v-for="m in uniqueMuscles" :key="m" class="matrix-row">
+                <div class="matrix-label-cell">{{m}}</div>
+                <div v-for="f in uniqueFunctionals" :key="f" class="matrix-data-cell">
+                    <button class="dot-btn" 
+                        :disabled="!isAvailable(m, f)"
+                        :class="{ active: isCategoryDone(m, f), selected: selection.muscle === m && selection.functional === f }"
+                        @click="selectFromGrid(m, f)">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="selection.muscle && selection.functional">
+        <div class="selection-info">{{selection.muscle}} / {{selection.functional}}</div>
+        <div class="exercise-list">
+            <button v-for="ex in availableExercises" :key="ex.name" class="ex-btn"
+                :class="{ selected: selection.exercise === ex.name, done: isExerciseDone(ex.name) }"
+                @click="selectExercise(ex)">
+                <span class="meta">{{ ex.movement }} • {{ ex.reps }}</span>
+                <span class="name">{{ ex.name }}</span>
+            </button>
+        </div>
+    </div>
+
+    <div v-if="selection.exercise">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <label v-if="mode === 'split'">Sets (L Rps | L W | R Rps | R W)</label>
+            <label v-else>Sets (Reps | Weight)</label>
+            <select v-model="mode" style="width: auto; padding: 4px; font-size: 11px;">
+                <option value="std">Standard</option>
+                <option value="split">Split</option>
+                <option value="bw">BW +/-</option>
+            </select>
+        </div>
+
+        <div v-for="n in 5" :key="n" class="set-row" :class="{ 'split-row': mode === 'split' }">
+            <span style="font-size:12px; color:#94a3b8; font-weight:bold; text-align:center;">{{n}}</span>
+            
+            <template v-if="mode !== 'split'">
+                <input type="number" v-model.number="sets[n-1].r" placeholder="Reps">
+                <input type="text" v-model="sets[n-1].w" :placeholder="mode === 'bw' ? 'BW +/-' : 'Weight'">
+            </template>
+
+            <template v-else>
+                <input type="number" v-model.number="sets[n-1].lr" placeholder="L Reps">
+                <input type="text" v-model="sets[n-1].lw" placeholder="L W">
+                <input type="number" v-model.number="sets[n-1].rr" placeholder="R Reps">
+                <input type="text" v-model="sets[n-1].rw" placeholder="R W">
+            </template>
+        </div>
+        
+        <label>Notes</label>
+        <textarea v-model="notes" placeholder="Comments"></textarea>
+        
+        <button @click="saveSet" class="save-btn">Save to DB</button>
+    </div>
+
+    <div class="secondary-btns">
+        <button @click="exportCSV">Export</button>
+        <button @click="importCSV">Import</button>
+        <button @click="clearLogs" style="color: #dc2626">Clear DB</button>
+    </div>
+    <textarea v-model="csvText" class="csv-box" placeholder="Paste CSV here to import..."></textarea>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+const createEmptySet = () => ({ 
+    r: null, w: '', 
+    lr: null, lw: '', 
+    rr: null, rw: '' 
+});
+
+createApp({
+    setup() {
+        const db = ref(null);
+        const logs = ref([]);
+        const csvText = ref('');
+        const mode = ref('std');
+        const notes = ref('');
+        const selection = ref({ muscle: '', functional: '', movement: '', exercise: '' });
+        const sets = ref(Array.from({length: 5}, createEmptySet));
+
+        const initDB = () => {
+            return new Promise((resolve) => {
+                const request = indexedDB.open('MatrixCSVNotesStore', 1);
+                request.onupgradeneeded = (e) => e.target.result.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+                request.onsuccess = (e) => resolve(e.target.result);
+            });
+        };
+
+        const loadLogs = () => {
+            const store = db.value.transaction(['logs'], 'readonly').objectStore('logs');
+            const request = store.getAll();
+            request.onsuccess = () => { logs.value = request.result; };
+        };
+
+        onMounted(async () => { db.value = await initDB(); loadLogs(); });
+
+        const uniqueMuscles = computed(() => EX_DB ? [...new Set(EX_DB.map(e => e.muscle))] : []);
+        const uniqueFunctionals = computed(() => EX_DB ? [...new Set(EX_DB.map(e => e.functional))] : []);
+        const isAvailable = (m, f) => EX_DB.some(e => e.muscle === m && e.functional === f);
+        const availableExercises = computed(() => EX_DB.filter(e => e.muscle === selection.value.muscle && e.functional === selection.value.functional));
+        
+        const isCategoryDone = (m, f) => logs.value.some(l => l.muscle === m && l.functional === f);
+        const isExerciseDone = (name) => logs.value.some(l => l.exercise === name);
+
+        const selectFromGrid = (m, f) => { selection.value = { muscle: m, functional: f, movement: '', exercise: '' }; };
+
+        const selectExercise = (ex) => {
+            selection.value.movement = ex.movement;
+            selection.value.exercise = ex.name;
+            const existing = [...logs.value].reverse().find(l => l.exercise === ex.name);
+            if (existing) {
+                mode.value = existing.mode || 'std';
+                notes.value = existing.notes || '';
+                sets.value = Array.from({length: 5}, (_, i) => {
+                    const s = existing.sets[i];
+                    if (!s) return createEmptySet();
+                    
+                    if (existing.mode === 'split') {
+                        const rs = s.r.toString().split('/');
+                        const ws = s.w.toString().split('/');
+                        return { 
+                            lr: parseInt(rs[0]) || null, rr: parseInt(rs[1]) || null,
+                            lw: ws[0] || '', rw: ws[1] || '',
+                            r: null, w: '' 
+                        };
+                    } else {
+                        return { r: s.r, w: s.w, lr: null, lw: '', rr: null, rw: '' };
+                    }
+                });
+            } else {
+                notes.value = '';
+                sets.value = Array.from({length: 5}, createEmptySet);
+            }
+        };
+
+        const saveSet = () => {
+            let valid = [];
+            if (mode.value === 'split') {
+                valid = sets.value.filter(s => (s.lr !== null && s.lw !== '') || (s.rr !== null && s.rw !== ''));
+            } else {
+                valid = sets.value.filter(s => s.r !== null && s.w !== '');
+            }
+            
+            if(!valid.length) return;
+
+            const processedSets = valid.map(s => {
+                if (mode.value === 'split') {
+                    return {
+                        r: `${s.lr || 0}/${s.rr || 0}`,
+                        w: `${s.lw || 0}/${s.rw || 0}`
+                    };
+                } else if (mode.value === 'bw') {
+                    const weight = s.w.toString().toLowerCase().startsWith('bw') ? s.w : `bw${s.w}`;
+                    return { r: s.r, w: weight.trim() };
+                } else {
+                    return { r: s.r, w: s.w };
+                }
+            });
+
+            const entry = { ...selection.value, mode: mode.value, notes: notes.value, sets: processedSets };
+            db.value.transaction(['logs'], 'readwrite').objectStore('logs').add(entry).onsuccess = () => { 
+                loadLogs(); 
+                selection.value.exercise = ''; 
+                sets.value = Array.from({length: 5}, createEmptySet);
+            };
+        };
+
+        const exportCSV = () => {
+            let csv = "muscle,functional,movement,name,set_no,reps,weight,notes\n";
+            logs.value.forEach(l => {
+                const cleanNote = l.notes ? `"${l.notes.replace(/"/g, '""')}"` : "";
+                l.sets.forEach((s, i) => {
+                    csv += `${l.muscle},${l.functional},${l.movement},${l.exercise},${i+1},${s.r},${s.w},${cleanNote}\n`;
+                });
+            });
+            csvText.value = csv;
+        };
+
+        const importCSV = async () => {
+            if (!csvText.value) return;
+            const lines = csvText.value.split('\n').filter(line => line.trim() !== '');
+            lines.shift(); // Remove header
+            
+            const grouped = {};
+            lines.forEach(line => {
+                const parts = line.match(/(".*?"|[^,]+)/g).map(p => p.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const [muscle, functional, movement, name, setNo, reps, weight, note] = parts;
+                
+                if (!grouped[name]) {
+                    let inferredMode = 'std';
+                    if (reps.includes('/')) inferredMode = 'split';
+                    else if (weight.toLowerCase().includes('bw')) inferredMode = 'bw';
+
+                    grouped[name] = { 
+                        muscle, functional, movement, exercise: name, 
+                        sets: [], notes: note || "", mode: inferredMode 
+                    };
+                }
+                grouped[name].sets.push({ r: reps, w: weight });
+            });
+
+            const tx = db.value.transaction(['logs'], 'readwrite');
+            Object.values(grouped).forEach(entry => tx.objectStore('logs').add(entry));
+            tx.oncomplete = () => { loadLogs(); alert("Imported!"); csvText.value = ''; };
+        };
+
+        const clearLogs = () => { if(confirm("Clear DB?")) { db.value.transaction(['logs'], 'readwrite').objectStore('logs').clear(); loadLogs(); } };
+
+        return { uniqueMuscles, uniqueFunctionals, selection, mode, sets, notes, csvText, availableExercises, isCategoryDone, isExerciseDone, isAvailable, selectFromGrid, selectExercise, saveSet, exportCSV, importCSV, clearLogs };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -303,9 +303,115 @@
         </div>
     </details>
 
-<span class="txt-btn" style="color: var(--red)" @click="nukeCache">
-    CLEAR CACHE ({{ cachedCount }} items)
-</span>
+<div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    <div class="tag error" @click="nukeCache" title="Wipes IndexedDB cache and reloads">
+        <div class="tag-main">CLEAR CACHE</div>
+        <div class="tag-sub">{{ cachedCount }} items stored</div>
+    </div>
+
+    <div class="tag muted" @click="showDebugStats = !showDebugStats">
+        <div class="tag-main">{{ showDebugStats ? '▲' : '▼' }} DEBUG STATS</div>
+        <div class="tag-sub">strategy · cache · timing</div>
+    </div>
+</div>
+
+<div v-if="showDebugStats" style="margin-top: 12px; font-family: monospace; font-size: 0.75rem; background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 14px;">
+
+    <!-- Session summary -->
+    <div>
+        <div style="font-weight: 700; margin-bottom: 6px; font-size: 0.8rem;">⏱ Session</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span class="pill">elapsed: {{ debugStats.sessionElapsed }}s</span>
+            <span class="pill">fetches: {{ debugStats.totalFetches }}</span>
+            <span class="pill">avg fetch: {{ debugStats.avgDuration }}ms</span>
+            <span class="pill">cache hits: {{ debugStats.cacheHits }} / misses: {{ debugStats.cacheMisses }}</span>
+            <span class="pill">cross-source dupes skipped: {{ debugStats.totalDupes }}</span>
+            <span class="pill">total articles ingested: {{ articles.length }}</span>
+        </div>
+    </div>
+
+    <!-- Strategy breakdown -->
+    <div>
+        <div style="font-weight: 700; margin-bottom: 6px; font-size: 0.8rem;">RSS Strategy Breakdown</div>
+        <table style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 3px 8px 3px 0;">Strategy</th>
+                    <th style="padding: 3px 8px;">OK</th>
+                    <th style="padding: 3px 8px;">Err</th>
+                    <th style="padding: 3px 8px;">Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(stats, strat) in debugStats.byStrategy" :key="strat" style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 3px 8px 3px 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ strat }}</td>
+                    <td style="padding: 3px 8px; color: var(--green);">{{ stats.success }}</td>
+                    <td style="padding: 3px 8px; color: var(--red);">{{ stats.error }}</td>
+                    <td style="padding: 3px 8px;">{{ stats.items }}</td>
+                </tr>
+                <tr v-if="Object.keys(debugStats.byStrategy).length === 0">
+                    <td colspan="4" style="padding: 4px 0; color: var(--gray);">no fetches yet</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Timing extremes -->
+    <div v-if="debugStats.slowest || debugStats.fastest">
+        <div style="font-weight: 700; margin-bottom: 6px; font-size: 0.8rem;">Timing Extremes</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div v-if="debugStats.slowest">
+                <span style="color: var(--red);">slowest:</span>
+                <span class="pill" style="margin-left: 4px;">{{ debugStats.slowest.name }} — {{ debugStats.slowest.duration }}ms ({{ debugStats.slowest.strategy }}{{ debugStats.slowest.cacheHit ? ', cached' : '' }})</span>
+            </div>
+            <div v-if="debugStats.fastest">
+                <span style="color: var(--green);">fastest:</span>
+                <span class="pill" style="margin-left: 4px;">{{ debugStats.fastest.name }} — {{ debugStats.fastest.duration }}ms ({{ debugStats.fastest.strategy }}{{ debugStats.fastest.cacheHit ? ', cached' : '' }})</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Failed sources -->
+    <div v-if="debugStats.errorSources.length > 0">
+        <div style="font-weight: 700; margin-bottom: 6px; font-size: 0.8rem; color: var(--red);">Failed Sources ({{ debugStats.errorSources.length }})</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div v-for="e in debugStats.errorSources" :key="e.url" style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                <span class="pill" style="color: var(--red);">{{ e.name || e.url }}</span>
+                <span style="opacity: 0.6; font-size: 0.65rem;">{{ e.error }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw fetch log -->
+    <details style="margin-top: 4px;">
+        <summary style="cursor: pointer; font-weight: 700; font-size: 0.8rem;">Raw Fetch Log ({{ fetchLog.length }} entries)</summary>
+        <table style="border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 0.65rem;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+                    <th style="padding: 2px 6px 2px 0;">Source</th>
+                    <th style="padding: 2px 6px;">Cache</th>
+                    <th style="padding: 2px 6px;">Strategy</th>
+                    <th style="padding: 2px 6px;">ms</th>
+                    <th style="padding: 2px 6px;">Items</th>
+                    <th style="padding: 2px 6px;">Dupes</th>
+                    <th style="padding: 2px 6px;">Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(e, i) in fetchLog" :key="i" style="border-bottom: 1px solid var(--border);" :style="e.error ? 'color: var(--red)' : ''">
+                    <td style="padding: 2px 6px 2px 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ e.name || e.url }}</td>
+                    <td style="padding: 2px 6px;">{{ e.cacheHit ? '✓' : '–' }}</td>
+                    <td style="padding: 2px 6px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ e.strategy }}</td>
+                    <td style="padding: 2px 6px;">{{ e.duration }}</td>
+                    <td style="padding: 2px 6px;">{{ e.itemCount }}</td>
+                    <td style="padding: 2px 6px;">{{ e.dupes }}</td>
+                    <td style="padding: 2px 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ e.error || '' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </details>
+
+</div>
 
 </div>
 
@@ -365,6 +471,11 @@ createApp({
         const src_search_query = ref('');
         const src_search = ref(false);
         const cachedCount = ref(0);
+        const showDebugStats = ref(false);
+
+        // Debug tracking
+        const fetchLog = reactive([]); // { url, cacheHit, strategy, duration, itemCount, error }
+        const sessionStart = Date.now();
 
         //  SOURCE STATES (fetch/network state, separate from the log)
         const sourceStates = reactive(FEED_CONFIG.map(config => ({
@@ -463,17 +574,22 @@ createApp({
 
         const fetchSource = async (state) => {
             state.status = 'fetching';
+            const t0 = Date.now();
             try {
                 let bundle = await CacheDB.get(state.url);
+                let cacheHit = false;
                 if (bundle) {
                     console.log(`Cache hit for ${state.url}`);
+                    cacheHit = true;
                 } else {
                     bundle = await RSSEngine.process({ url: state.url, name: state.displayName });
                     if (bundle.status === 'success') await CacheDB.set(state.url, bundle);
                 }
+                const duration = Date.now() - t0;
                 if (bundle.status === 'success') {
                     const original = FEED_CONFIG.find(f => f.url === state.url);
                     state.displayName = original.name || `(${bundle.metadata.title})`;
+                    let dupes = 0;
                     bundle.items.forEach(item => {
                         if (!seenLinks.has(item.link)) {
                             seenLinks.add(item.link);
@@ -484,12 +600,19 @@ createApp({
                                 source: state,
                                 strategyUsed: bundle.strategyUsed,
                             });
-                        }
+                        } else { dupes++; }
                     });
                     state.count.total = bundle.items.length;
                     state.status = 'success';
-                } else { state.status = 'error'; }
-            } catch (err) { state.status = 'error'; }
+                    fetchLog.push({ url: state.url, name: state.displayName, cacheHit, strategy: bundle.strategyUsed || 'unknown', duration, itemCount: bundle.items.length, dupes, error: null });
+                } else {
+                    fetchLog.push({ url: state.url, name: state.displayName, cacheHit, strategy: bundle.strategyUsed || 'unknown', duration: Date.now() - t0, itemCount: 0, dupes: 0, error: bundle.error || bundle.message || `status: ${bundle.status}` });
+                    state.status = 'error';
+                }
+            } catch (err) {
+                fetchLog.push({ url: state.url, name: state.displayName, cacheHit: false, strategy: 'none', duration: Date.now() - t0, itemCount: 0, dupes: 0, error: String(err) });
+                state.status = 'error';
+            }
         };
 
         const refreshSource = (state) => {
@@ -537,6 +660,32 @@ createApp({
             filters.start = start.toISOString().split('T')[0];
         };
 
+        const debugStats = computed(() => {
+            const byStrategy = {};
+            let cacheHits = 0, cacheMisses = 0, totalDupes = 0;
+            let totalDuration = 0, slowest = null, fastest = null;
+            fetchLog.forEach(e => {
+                if (e.cacheHit) cacheHits++; else cacheMisses++;
+                totalDupes += e.dupes || 0;
+                totalDuration += e.duration;
+                if (!slowest || e.duration > slowest.duration) slowest = e;
+                if (!fastest || e.duration < fastest.duration) fastest = e;
+                const s = e.strategy || 'unknown';
+                if (!byStrategy[s]) byStrategy[s] = { success: 0, error: 0, items: 0 };
+                if (e.error) byStrategy[s].error++;
+                else { byStrategy[s].success++; byStrategy[s].items += e.itemCount; }
+            });
+            const errorSources = fetchLog.filter(e => e.error);
+            return {
+                byStrategy, cacheHits, cacheMisses,
+                totalDupes, totalDuration,
+                avgDuration: fetchLog.length ? Math.round(totalDuration / fetchLog.length) : 0,
+                slowest, fastest, errorSources,
+                sessionElapsed: Math.round((Date.now() - sessionStart) / 1000),
+                totalFetches: fetchLog.length,
+            };
+        });
+
         const nukeCache = async () => { await CacheDB.nuke(); location.reload(); };
 
         const getFavicon = (url) => {
@@ -569,6 +718,8 @@ createApp({
             // actions
             selectTag, toggleSource, isolateSource, setDatePreset,
             refreshSource, getFavicon, nukeCache,
+            // debug
+            showDebugStats, debugStats, fetchLog,
         };
     }
 }).mount('#app');

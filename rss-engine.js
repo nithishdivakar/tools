@@ -60,7 +60,7 @@ const RSSEngine = {
     //             const res = await fetch(strat.url);
     //             if (res.ok) {
     //                 const text = await res.text();
-    //                 if (text && text.trim().length > 0) {
+    //                 if (text && text.trimStart().startsWith("<")) {
     //                     return { text, strategy: strat.name };
     //                 }
     //             }
@@ -74,11 +74,14 @@ const RSSEngine = {
     // },
     async fetchWithStrategy(url) {
         const strategies = [
-            { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
-            { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-            { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
-            { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
-            { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
+            { name: 'Mp', url: `https://red-snowflake-da20.47e73dbfc21166b.workers.dev/?url=${encodeURIComponent(url)}` },
+            // { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+            // { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+            // { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
+            // { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+            // { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+            // { name: 'RSSBridge', url: `https://rss-bridge.org/bridge01/?action=display&bridge=FeedMergeBridge&format=Atom&url=${encodeURIComponent(url)}` },
+            { name: 'FetchRSS', url: `https://fetchrss.com/rss/${encodeURIComponent(url)}` }
         ];
 
         // Shuffle and add Direct
@@ -102,7 +105,8 @@ const RSSEngine = {
                         const res = await fetch(strat.url, { signal: globalController.signal });
                         if (res.ok) {
                             const text = await res.text();
-                            if (text && text.trim().length > 0) {
+                            const lc = text.trimStart().toLowerCase();
+                            if (text && (lc.includes('<rss') || lc.includes('<feed') || lc.includes('<channel'))) {
                                 // SUCCESS! Kill all other pending fetches
                                 globalController.abort(); 
                                 return { text, strategy: strat.name };

@@ -59,7 +59,7 @@
 
         /* Feed Layouts */
         .feed-container { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; justify-content: space-between;}
-        .item { background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .item { background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%;}
         .item:hover { border-color: var(--border); }
 
         .feed-container.list .item { display: flex; gap: 12px; align-items: flex-start;}
@@ -147,9 +147,9 @@
         </div>
     </div>
 
-    <transition-group 
-    name="source-scroll" 
-    tag="div" 
+    <transition-group
+    name="source-scroll"
+    tag="div"
     class="source-scroll"
     >
         <div :class="['tag', 'default', { 'selected': src_search === true }]" :key="src_search" @click="src_search = !src_search">
@@ -163,9 +163,9 @@
         <div v-for="source in sortedSources"
              :key="source.url"
              @click="toggleSource(source.url)"
-             :class="['tag', `${source.status}`, { 
-                 selected: filters.selectedSources.has(source.url), 
-                 star: source.tags.includes('star') 
+             :class="['tag', `${source.status}`, {
+                 selected: filters.selectedSources.has(source.url),
+                 star: source.tags.includes('star')
              }]">
 
             <div class="tag-main">
@@ -173,7 +173,7 @@
                 <span v-if="source.tags.includes('star')" class="star-icon">★</span>
                 <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ source.displayName }}</span>
-                <span class="count">({{ source.count.visible }}/{{ source.count.total }})</span>
+                <span class="count">({{ visibleCountBySource[source.url] || 0 }}/{{ source.count.total }})</span>
                 <span :class="['txt-btn', { 'spinning': source.status === 'fetching' }]"
                     style="font-size: 0.7rem;"
                     @click.stop="refreshSource(source)">↻</span>
@@ -187,11 +187,11 @@
         </div>
     </transition-group>
     <div v-if="src_search" class="flex items-center gap-2" style="margin-bottom: 8px;">
-        <input 
-            type="text" 
-            v-model="src_search_query" 
-            placeholder="Search sources..." 
-            class="pill" 
+        <input
+            type="text"
+            v-model="src_search_query"
+            placeholder="Search sources..."
+            class="pill"
             style="width: 100%; padding: 8px; border-style: solid;"
         >
     </div>
@@ -199,7 +199,7 @@
 
 <div :class="['feed-container', viewMode]">
     <template v-for="item in sortedArticles" :key="item.link">
-        <div v-if="item.display" class="item">
+        <div class="item">
             <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
             <div class="content">
                 <div class="meta">
@@ -219,15 +219,15 @@
                 </pre>
                 <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
                 <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
-                    
+
                     {{ item.snippet.substring(0, item.snippet_length || 500) }}
                     <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
-                    <span class="txt-btn" 
-                          v-if="(item.snippet_length || 500) < item.snippet.length" 
+                    <span class="txt-btn"
+                          v-if="(item.snippet_length || 500) < item.snippet.length"
                           @click="item.snippet_length = Math.max(500, (item.snippet_length || 500) + 500);">more</span>
                     <span class="txt-btn" v-if="item.snippet_length > 500 && item.snippet_length < item.snippet.length"> or </span>
-                    <span class="txt-btn" 
-                          v-if="item.snippet_length > 500" 
+                    <span class="txt-btn"
+                          v-if="item.snippet_length > 500"
                           @click="item.snippet_length = Math.max(160, (item.snippet_length || 500) - 500);">less</span>
                 </div>
             </div>
@@ -236,14 +236,13 @@
 </div>
 
 <template v-if="viewMode === 'table'">
-    <div style="font-size: x-small; display: grid; grid-template-columns: 80px 80px 150px 30px 100px 160px 100px; gap: 0;">
-        
+    <div style="font-size: x-small; display: grid; grid-template-columns: 80px 80px 150px 30px 100px 160px; gap: 0;">
+
         <template v-for="item in sortedArticles" :key="item.link">
-            <div v-if="item.display" style="display: contents;">
+            <div style="display: contents;">
                 <div class="cell">{{ item.date.toISOString().split('.')[0] }}</div>
-                <div class="cell">{{ item.sourceName }}</div> 
+                <div class="cell">{{ item.sourceName }}</div>
                 <div class="cell">{{ item.title }}</div>
-                <div class="cell">{{ item.seqId }}</div>
                 <div class="cell">{{ item.ingestedAt }}</div>
                 <div class="cell">{{ item.ordScore }}</div>
                 <!-- <div class="cell">{{ item.sourceId }}</div> -->
@@ -264,11 +263,11 @@
                 <template v-for="source in sortedSources" :key="source.url">
                     <tr>
                         <td class="tb" style="max-width:100px"> {{ source.displayName }}</td>
-                        <td> V{{ source.count.visible }}</td>
-                        <td> T{{ source.count.total }}</td> 
+                        <td> V{{ visibleCountBySource[source.url] || 0 }}</td>
+                        <td> T{{ source.count.total }}</td>
                         <td> {{source.status}}</td>
                         <td class="tb"> {{ source.url }}</td>
-                        <td> {{source.tags}}</td> 
+                        <td> {{source.tags}}</td>
                     </tr>
                 </template>
             </tbody>
@@ -313,34 +312,105 @@
 <script>
 const { createApp, ref, computed, onMounted, reactive, watch } = Vue;
 
+//  SORT HELPERS
+
+const ordScore = (article) => {
+    const day = Math.floor(article.date.getTime() / 86400000) * 86400000;
+    return [-day, article.ingestedAt];
+};
+
+const compareTuples = (a, b) => {
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] < b[i]) return -1;
+        if (a[i] > b[i]) return 1;
+    }
+    return 0;
+};
+
+// Minimum articles between consecutive articles from the same source.
+const SOURCE_COOLDOWN = 3;
+
+// Space out articles from the same source by SOURCE_COOLDOWN slots.
+// Overflow (articles that never cleared cooldown) appended at end — nothing dropped.
+const diversify = (sorted) => {
+    const result = [];
+    const lastSeenAt = {};
+    for (const item of sorted) {
+        const last = lastSeenAt[item.sourceId] ?? -Infinity;
+        if (result.length - last > SOURCE_COOLDOWN) {
+            result.push(item);
+            lastSeenAt[item.sourceId] = result.length - 1;
+        }
+    }
+    const shown = new Set(result.map(a => a.id));
+    sorted.forEach(a => { if (!shown.has(a.id)) result.push(a); });
+    return result;
+};
+
+//  APP
+
 createApp({
     setup() {
+
+        //  LOG (append-only, never mutated after push)
         const articles = ref([]);
-        const viewMode = ref('list');
         const seenLinks = new Set();
+
+        //  SESSION STATE (the only mutable state)
         const filters = reactive({ start: '', end: '', selectedSources: new Set() });
+        const lastRenderTime = ref(Date.now()); // set on load and on filter change
+        const viewMode = ref('list');
         const dateMode = ref('3');
         const activeTag = ref('star');
         const src_search_query = ref('');
         const src_search = ref(false);
         const cachedCount = ref(0);
-        let globalSeq = 0;
 
-        // print duplicated urls to console.
-        console.log([...new Set(FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i))]);
+        //  SOURCE STATES (fetch/network state, separate from the log)
+        const sourceStates = reactive(FEED_CONFIG.map(config => ({
+            url: config.url,
+            displayName: config.name || 'fetching...',
+            count: { total: 0 },   // total: set at ingestion. visible: derived below.
+            status: 'waiting',
+            tags: config.tags || ['untag']
+        })));
 
-        const sourceStates = reactive(FEED_CONFIG.map(config => {
-            let tags = config.tags || ['untag'];
+        const stateByUrl = computed(() =>
+            Object.fromEntries(sourceStates.map(s => [s.url, s]))
+        );
 
-            return {
-                url: config.url,
-                displayName: config.name || 'fetching...',
-                count: { visible: 0, total: 0 },
-                status: 'waiting',
-                tags: tags//,
-                // starred: tags.includes('star')
-            }
-        }));
+        //  DERIVED VIEWS (pure functions of log + session state) ─
+
+        const isVisible = (item) => {
+            const d = item.date.toISOString().split('T')[0];
+            return (!filters.start || d >= filters.start)
+                && (!filters.end   || d <= filters.end)
+                && filters.selectedSources.has(item.sourceId);
+        };
+
+        // Reset lastRenderTime on every filter change — new session, clean boundary.
+        watch(filters, () => { lastRenderTime.value = Date.now(); }, { deep: true });
+
+        // Split into two buckets by lastRenderTime:
+        //   bucket 0 — ingestedAt <= lastRenderTime  (loaded this session)
+        //   bucket 1 — ingestedAt >  lastRenderTime  (arrived from slow sources after load)
+        // Each bucket is diversified independently so cooldown doesn't bleed across the seam.
+        const sortedArticles = computed(() => {
+            const rt = lastRenderTime.value;
+            const visible = articles.value.filter(isVisible);
+            const cmp = (a, b) => compareTuples(ordScore(a), ordScore(b));
+            const b0 = visible.filter(a => a.ingestedAt <= rt).sort(cmp);
+            const b1 = visible.filter(a => a.ingestedAt >  rt).sort(cmp);
+            return [...diversify(b0), ...diversify(b1)];
+        });
+
+        const visibleCountBySource = computed(() => {
+            const counts = {};
+            sortedArticles.value.forEach(a => {
+                counts[a.sourceId] = (counts[a.sourceId] || 0) + 1;
+            });
+            return counts;
+        });
 
         const allTags = computed(() => {
             const tags = new Set(['all']);
@@ -350,87 +420,92 @@ createApp({
         });
 
         const sortedSources = computed(() => {
-            // selected ones are shown first, 
-            // but withing the group, 
-            // order depends on the day.
-
-            let filtered = [...sourceStates]; 
             const seed = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-            filtered.sort((a, b) => {
-                const hashA = [...(a.url + seed)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const hashB = [...(b.url + seed)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            let filtered = [...sourceStates].sort((a, b) => {
+                const hashA = [...(a.url + seed)].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+                const hashB = [...(b.url + seed)].reduce((acc, c) => acc + c.charCodeAt(0), 0);
                 return hashA - hashB;
             });
-
-            // Filter by search query if present
             if (src_search_query.value.trim()) {
-                const query = src_search_query.value.toLowerCase();
-                filtered = filtered.filter(s => 
-                    s.displayName.toLowerCase().includes(query) || 
-                    s.url.toLowerCase().includes(query)
+                const q = src_search_query.value.toLowerCase();
+                filtered = filtered.filter(s =>
+                    s.displayName.toLowerCase().includes(q) || s.url.toLowerCase().includes(q)
                 );
             }
-
-            // Selected items first sort.
             return filtered.sort((a, b) => {
                 const aSelected = filters.selectedSources.has(a.url);
                 const bSelected = filters.selectedSources.has(b.url);
-                if (aSelected === bSelected) return 0;
-                return aSelected ? -1 : 1;
+                return aSelected === bSelected ? 0 : aSelected ? -1 : 1;
             });
         });
 
+        const statusCounts = computed(() => {
+            const counts = { waiting: 0, success: 0, error: 0 };
+            sourceStates.forEach(s => { if (s.status in counts) counts[s.status]++; });
+            return counts;
+        });
 
-        const updateVisibility = () => {
-            sourceStates.forEach(s => s.count.visible = 0);
+        const totalItems   = computed(() => articles.value.length);
+        const displayedItems = computed(() => sortedArticles.value.length);
 
+        const articlesCount = computed(() => {
+            const counts = {};
             articles.value.forEach(item => {
-                const itemDate = new Date(item.date).toISOString().split('T')[0];
-                const withinStart = !filters.start || itemDate >= filters.start;
-                const withinEnd = !filters.end || itemDate <= filters.end;
-                const sourceActive = filters.selectedSources.has(item.sourceId);
-                item.display = withinStart && withinEnd && sourceActive;
-
-                if (withinStart && withinEnd) {
-                    const state = sourceStates.find(s => s.url === item.sourceId);
-                    if (state) state.count.visible++;
-                }
+                const m = item.date.toISOString().slice(0, 7);
+                counts[m] = (counts[m] || 0) + 1;
             });
+            return Object.entries(counts)
+                .map(([month, count]) => ({ month, count }))
+                .sort((a, b) => b.month.localeCompare(a.month));
+        });
+
+        //  ACTIONS
+
+        const fetchSource = async (state) => {
+            state.status = 'fetching';
+            try {
+                let bundle = await CacheDB.get(state.url);
+                if (bundle) {
+                    console.log(`Cache hit for ${state.url}`);
+                } else {
+                    bundle = await RSSEngine.process({ url: state.url, name: state.displayName });
+                    if (bundle.status === 'success') await CacheDB.set(state.url, bundle);
+                }
+                if (bundle.status === 'success') {
+                    const original = FEED_CONFIG.find(f => f.url === state.url);
+                    state.displayName = original.name || `(${bundle.metadata.title})`;
+                    bundle.items.forEach(item => {
+                        if (!seenLinks.has(item.link)) {
+                            seenLinks.add(item.link);
+                            articles.value.push({
+                                ...item,
+                                snippet_length: 500,
+                                sourceName: state.displayName,
+                                source: state,
+                                strategyUsed: bundle.strategyUsed,
+                            });
+                        }
+                    });
+                    state.count.total = bundle.items.length;
+                    state.status = 'success';
+                } else { state.status = 'error'; }
+            } catch (err) { state.status = 'error'; }
         };
 
-        watch(filters, updateVisibility, { deep: true });
-
-        const compareTuples = (tupleA, tupleB) => {
-            for (let i = 0; i < tupleA.length; i++) {
-                if (tupleA[i] < tupleB[i]) return -1;
-                if (tupleA[i] > tupleB[i]) return 1;
-            }
-            return 0;
+        const refreshSource = (state) => {
+            articles.value = articles.value.filter(a => a.sourceId !== state.url);
+            seenLinks.delete(state.url);
+            fetchSource(state);
         };
-
-        const getOrdScore = (article) => {
-            const day = Math.floor(new Date(article.date).getTime() / (1000 * 60 * 60 * 24))*(1000 * 60 * 60 * 24); // tick every 24 hours
-            const inj = Math.floor(new Date(article.ingestedAt).getTime() / (1000 * 10))*(1000 * 10); // tick every 10 second
-            const offset = ((article.sourceName + article.title  + article.snippet).length % 97); 
-
-            // strict order according to day and clipped injestion time, but shuffle within.
-            // return day + inj + offset;
-            return [-day, inj, -offset];
-        };
-
-        const sortedArticles = computed(() => {
-            return [...articles.value]
-                .filter(a => a.display)
-                .sort((a, b) => compareTuples(a.ordScore, b.ordScore)); //b.ordScore - a.ordScore);
-        }); 
 
         const toggleSource = (url) => {
             activeTag.value = 'custom';
-            filters.selectedSources.has(url) ? filters.selectedSources.delete(url) : filters.selectedSources.add(url);
+            filters.selectedSources.has(url)
+                ? filters.selectedSources.delete(url)
+                : filters.selectedSources.add(url);
             if (filters.selectedSources.has(url)) {
-                 const state = sourceStates.find(s => s.url === url);
-                 if (state && state.status === 'waiting') fetchSource(state);
+                const state = stateByUrl.value[url];
+                if (state && state.status === 'waiting') fetchSource(state);
             }
         };
 
@@ -440,161 +515,60 @@ createApp({
             toggleSource(url);
         };
 
-        const fetchSource = async (state) => {
-            state.status = 'fetching';
-            const cachedBundle = await CacheDB.get(state.url);
-            try {
-                let bundle;
-                if (cachedBundle) {
-                    bundle = cachedBundle;
-                    console.log(`Cache hit for ${state.url}`);
-                } else {
-                    bundle = await RSSEngine.process({
-                        url: state.url,
-                        name: state.displayName
-                    });
-                    if (bundle.status === 'success') {
-                        await CacheDB.set(state.url, bundle);
-                    }
-                }
-
-                if (bundle.status === 'success') {
-                    const original = FEED_CONFIG.find(f => f.url === state.url);
-                    state.displayName = original.name ? original.name : `(${bundle.metadata.title})`;
-                    bundle.items.forEach(item => {
-                        if (!seenLinks.has(item.link)) {
-                            seenLinks.add(item.link);
-                            articles.value.push({
-                                ...item,
-                                display: true,
-                                snippet_length: 500,
-                                snippet: item.snippet,
-                                sourceName: state.displayName,
-                                seqId: globalSeq++,
-                                source: state,
-                                strategyUsed: bundle.strategyUsed,
-                                ordScore: getOrdScore(item)
-                            });
-                        }
-                    });
-                    state.count.total = bundle.items.length;
-                    state.status = 'success';
-                    updateVisibility();
-                } else { state.status = 'error'; }
-            } catch (err) { state.status = 'error'; }
-        };
-
-        const refreshSource = (state) => {
-            articles.value = articles.value.filter(a => a.sourceId !== state.url);
-            fetchSource(state);
-        };
-
-        const setDatePreset = (days) => {
-            dateMode.value = String(days);
-            if (days === 'custom') return;
-
-            if (days === 'ee'){
-            filters.start = '';
-            filters.end = '';
-                return;
-            } 
-            filters.end = '';
-            const start = new Date();
-            start.setDate(start.getDate() - parseInt(days));
-            filters.start = start.toISOString().split('T')[0];
-        };
-
-        const statusCounts = computed(() => {
-            const counts = { waiting: 0, success: 0, error: 0 };
-            sourceStates.forEach(s => {
-                if (counts.hasOwnProperty(s.status)) counts[s.status]++;
-            });
-            return counts;
-        });
-
-        const totalItems = computed(() => articles.value.length);
-        const displayedItems = computed(() => articles.value.filter(item => item.display).length);
-        const articlesCount = computed(() => {
-            const counts = articles.value.reduce((acc, item) => {
-                const m = item.date.toISOString().slice(0, 7);
-                acc[m] = (acc[m] || 0) + 1;
-                return acc;
-            }, {});
-            return Object.entries(counts)
-                .map(([month, count]) => ({ month, count }))
-                .sort((a, b) => b.month.localeCompare(a.month));
-        });
-
-        // const formatDate = (d) => d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        const formatDate = (d) => d.toDateString();
-
         const selectTag = (tag) => {
             activeTag.value = tag;
             filters.selectedSources.clear();
             if (tag === 'none') return;
-
             sourceStates.forEach(s => {
-                const matches = tag === 'all' || s.tags.includes(tag);
-                if (matches) {
+                if (tag === 'all' || s.tags.includes(tag)) {
                     filters.selectedSources.add(s.url);
                     if (s.status === 'waiting') fetchSource(s);
                 }
             });
         };
 
-        const getDiverseArticles = (rawArticles) => {
-            // group articles by source
+        const setDatePreset = (days) => {
+            dateMode.value = String(days);
+            if (days === 'custom') return;
+            if (days === 'ee') { filters.start = ''; filters.end = ''; return; }
+            filters.end = '';
+            const start = new Date();
+            start.setDate(start.getDate() - parseInt(days));
+            filters.start = start.toISOString().split('T')[0];
+        };
 
-            const buckets = {};
-            rawArticles.forEach(item => {
-                if (!buckets[item.sourceId]) buckets[item.sourceId] = [];
-                buckets[item.sourceId].push(item);
-            });
+        const nukeCache = async () => { await CacheDB.nuke(); location.reload(); };
 
-            const result = [];
-            const sourceIds = Object.keys(buckets);
-            let itemsRemaining = true;
-            let index = 0;
-
-            // Interleave by take the 1st from every source, then the 2nd, etc.
-            while (itemsRemaining) {
-                itemsRemaining = false;
-                sourceIds.forEach(id => {
-                    if (buckets[id][index]) {
-                        result.push(buckets[id][index]);
-                        itemsRemaining = true;
-                    }
-                });
-                index++;
-            }
-
-            return result;
+        const getFavicon = (url) => {
+            try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
+            catch (e) { return ''; }
         };
 
         onMounted(async () => {
             await CacheDB.cleanup();
             cachedCount.value = await CacheDB.count();
+            // Log duplicate URLs in config.
+            console.log('Duplicate feed URLs:', [...new Set(
+                FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i)
+            )]);
             setDatePreset('1');
             viewMode.value = 'card';
             selectTag('star');
         });
 
-        const getFavicon = (url) => {
-            try {
-                const hostname = new URL(url).hostname;
-                return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-            } catch (e) { return ''; }
-        }
-
-        const nukeCache = async () => {
-            await CacheDB.nuke();
-            location.reload(); // Refresh to clear current session memory
-        };
-
         return {
-            articles, sortedArticles, sourceStates, filters, viewMode, allTags, activeTag, sortedSources,
-            selectTag, toggleSource, isolateSource, formatDate, dateMode, setDatePreset, totalItems,cachedCount,
-            displayedItems, statusCounts, articlesCount, refreshSource, getFavicon, nukeCache, getOrdScore, src_search_query, src_search
+            // log
+            articles,
+            // session
+            filters, viewMode, dateMode, activeTag, src_search_query, src_search, cachedCount,
+            // source states
+            sourceStates,
+            // derived views
+            sortedArticles, sortedSources, allTags, statusCounts,
+            totalItems, displayedItems, articlesCount, visibleCountBySource,
+            // actions
+            selectTag, toggleSource, isolateSource, setDatePreset,
+            refreshSource, getFavicon, nukeCache,
         };
     }
 }).mount('#app');

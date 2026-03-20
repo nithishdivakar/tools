@@ -37,59 +37,24 @@ const RSSEngine = {
 
         return bundle;
     },
-    // async fetchWithStrategy(url) {
-    //     const strategies = [
-    //         // { name: 'Direct', url: url },
-    //         { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
-    //         { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-    //         { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
-    //         { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
-    //         { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` }
-    //     ];
-
-    //     for (let i = strategies.length - 1; i > 0; i--) {
-    //         const j = Math.floor(Math.random() * (i + 1));
-    //         [strategies[i], strategies[j]] = [strategies[j], strategies[i]];
-    //     }
-
-    //     // It's best to try Direct first just in case the site allows CORS.
-    //     strategies.unshift({ name: 'Direct', url: url });
-
-    //     for (const strat of strategies) {
-    //         try {
-    //             const res = await fetch(strat.url);
-    //             if (res.ok) {
-    //                 const text = await res.text();
-    //                 if (text && text.trimStart().startsWith("<")) {
-    //                     return { text, strategy: strat.name };
-    //                 }
-    //             }
-    //         } catch (e) { 
-    //             console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
-    //             continue; 
-    //         }
-    //     }
-    //     console.log("All stratergies failed for "+ url)
-    //     throw new Error(`Connection failed across all strategies`);
-    // },
     async fetchWithStrategy(url) {
         const strategies = [
-            { name: 'Mp', url: `https://red-snowflake-da20.47e73dbfc21166b.workers.dev/?url=${encodeURIComponent(url)}` },
-            // { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
-            // { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-            // { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
-            // { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
-            // { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
-            // { name: 'RSSBridge', url: `https://rss-bridge.org/bridge01/?action=display&bridge=FeedMergeBridge&format=Atom&url=${encodeURIComponent(url)}` },
+            { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+            { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+            { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
+            { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+            { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+            { name: 'RSSBridge', url: `https://rss-bridge.org/bridge01/?action=display&bridge=FeedMergeBridge&format=Atom&url=${encodeURIComponent(url)}` },
             { name: 'FetchRSS', url: `https://fetchrss.com/rss/${encodeURIComponent(url)}` }
         ];
 
         // Shuffle and add Direct
-        for (let i = strategies.length - 1; i > 0; i--) {
+        for (let i = strategies.length - 1; i > 1; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [strategies[i], strategies[j]] = [strategies[j], strategies[i]];
         }
         strategies.unshift({ name: 'Direct', url: url });
+        strategies.unshift({ name: 'Mp', url: `https://red-snowflake-da20.47e73dbfc21166b.workers.dev/?url=${encodeURIComponent(url)}` });
 
         // Create ONE controller to rule them all
         const globalController = new AbortController();

@@ -48,7 +48,7 @@
             display: flex; flex-direction: column; gap: 4px;
         }
         .source-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
-        .source-header { display: flex; justify-content: space-between; align-items: center; column-gap: 1rem;}
+        .source-header { display: flex; justify-content: space-between; align-items: flex-start; column-gap: 1rem;}
         .bulk-actions { font-size: 0.75rem; display: flex; gap: 0 8px; align-items: center; flex-wrap: wrap;}
 
         /* Text Buttons */
@@ -98,6 +98,21 @@
             overflow: hidden;
         }
         .hide { display: none;}
+
+        /* Fetch progress bar */
+        .fetch-progress {
+            height: 3px; 
+            border-radius: 3px;
+            background: var(--border);
+            overflow: hidden;
+        }
+        .fetch-progress-fill {
+            height: 100%; border-radius: inherit;
+            background: var(--blue);
+            transition: width 0.4s ease, background 0.3s ease;
+        }
+        .fetch-progress-fill.done { background: var(--green); }
+        .fetch-progress-fill.has-errors { background: var(--red); }
     </style>
 </head>
 <body>
@@ -181,8 +196,6 @@
 
             <div class="tag-sub">
                 {{ source.url }}
-                {{ source.tags.includes('star') }}
-                {{source}}
             </div>
         </div>
     </transition-group>
@@ -194,6 +207,12 @@
             class="pill"
             style="width: 100%; padding: 8px; border-style: solid;"
         >
+    </div>
+    <div class="fetch-progress" v-if="statusCounts.success + statusCounts.error < (filters.selectedSources.size || sourceStates.length)">
+        <div class="fetch-progress-fill"
+             :class="{ done: statusCounts.waiting + statusCounts.fetching === 0, 'has-errors': statusCounts.error > 0 && statusCounts.waiting + statusCounts.fetching === 0 }"
+             :style="{ width: ((statusCounts.success + statusCounts.error) / (filters.selectedSources.size || sourceStates.length) * 100) + '%' }">
+        </div>
     </div>
 </div>
 
@@ -552,7 +571,11 @@ createApp({
 
         const statusCounts = computed(() => {
             const counts = { waiting: 0, success: 0, error: 0 };
-            sourceStates.forEach(s => { if (s.status in counts) counts[s.status]++; });
+            sourceStates.forEach(s => {
+                if (filters.selectedSources.size === 0 || filters.selectedSources.has(s.url)) {
+                    if (s.status in counts) counts[s.status]++;
+                }
+            });
             return counts;
         });
 
@@ -700,9 +723,10 @@ createApp({
             console.log('Duplicate feed URLs:', [...new Set(
                 FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i)
             )]);
+
             setDatePreset('1');
             viewMode.value = 'card';
-            selectTag('star');
+            selectTag('newsletter');
         });
 
         return {

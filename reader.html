@@ -175,16 +175,13 @@
                 SEARCH
             </div>
         </div>
-        <div v-for="source in sortedSources"
-             :key="source.url"
-             @click="toggleSource(source.url)"
+        <div v-for="source in sortedSources" :key="source.url"
              :class="['tag', `${source.status}`, {
                  selected: filters.selectedSources.has(source.url),
                  star: source.tags.includes('star')
              }]">
 
-            <div class="tag-main">
-
+            <div class="tag-main" @click="toggleSource(source.url)">
                 <span v-if="source.tags.includes('star')" class="star-icon">★</span>
                 <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ source.displayName }}</span>
@@ -194,7 +191,7 @@
                     @click.stop="refreshSource(source)">↻</span>
             </div>
 
-            <div class="tag-sub">
+            <div class="tag-sub" @click="isolateSource(source.url)">
                 {{ source.url }}
             </div>
         </div>
@@ -726,7 +723,7 @@ createApp({
 
             setDatePreset('1');
             viewMode.value = 'card';
-            selectTag('star');
+            selectTag('none');
         });
 
         return {

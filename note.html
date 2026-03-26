@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  @import 'https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css';
+
+  :root {
+    --font-family-primary: "Computer Modern Serif", Georgia, serif;
+    --font-family-secondary: "Computer Modern Sans", sans-serif;
+    --font-family-tertiary: "Helvetica", sans-serif;
+    --font-family-monospace: "Computer Modern Typewriter", 'Menlo', monospace;
+    --font-weight-normal: 400;
+    --font-weight-bold: 700;
+    --font-size-base: 8pt;
+    --line-height-primary: 1.2;
+    --line-height-secondary: 1.0;
+    --line-height-heading: 1.0;
+    --line-height-monospace: 1.0;
+    /* Shorthands */
+    --font-primary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-primary) var(--font-family-primary);
+    --font-secondary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-secondary) var(--font-family-secondary);
+    --font-heading: var(--font-weight-bold) var(--font-size-base)/var(--line-height-heading) var(--font-family-secondary);
+    --font-monospace: var(--font-weight-normal) calc(var(--font-size-base) * 0.9)/var(--line-height-monospace) var(--font-family-monospace);
+    
+    --RED: #DB4437; --BLUE: #0000cc; --YELLOW: #F4B400; --GREEN: #0F9D58;
+    --BLACK: #000; --WHITE: #fff; --GRAY: #AAA; --GREY: #EEE;
+    --site-max-wdth: 500px;
+  }
+
+  
+  html { font-size: var(--font-size-base); }
+
+  body {
+    font: var(--font-primary);
+    max-width: var(--site-max-wdth);
+    margin: 0 auto;
+    padding: .5rem 1rem;
+    text-align: justify;
+    hyphens: auto;
+    background: var(--WHITE);
+    color: var(--BLACK);
+  }
+
+  h1, h2, h3, h4, .section-label { font: var(--font-heading); }
+
+  /* Config & Labels */
+  .cfg-toggle, .cfg-row label, .btn, .status, .ts-now, .hint, .pending-count, .section-label {
+    font: var(--font-monospace);
+    color: var(--GRAY);
+  }
+
+  .cfg-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.cfg-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem 0;
+    max-width: 50ch;
+}
+
+user agent stylesheet
+d
+
+  /* Input Elements */
+  textarea, input, code, pre { font: var(--font-monospace); }
+  
+  textarea {
+    width: 100%;
+    border: 1px solid var(--GRAY);
+    padding: 0.5rem;
+    color: var(--BLACK);
+    outline: none;
+  }
+
+.commit-row {
+    display: flex;
+    flex-direction: column;gap: 0.5rem 0;
+}
+  .commit-row input, .cfg-row input {
+    border: 1px solid var(--GRAY);
+    padding: 4px 8px;
+  }
+
+  /* Layout Containers */
+  .wrap {    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem 0; }
+  .section {display: flex;
+    flex-direction: column;
+    gap: 0.5rem 0;}
+  .entry { display: flex; gap: 1rem;}
+  .entry-body { font: var(--font-primary); min-width: 50ch;padding: 0.5rem;    border: 1px solid var(--GRAY);}
+
+  /* Utilities */
+  .btn { border: 1px solid var(--GREY); cursor: pointer; background: none; }
+  .btn:hover { border-color: var(--GRAY); color: var(--BLACK); }
+  .status.ok { color: var(--GREEN); }
+  .status.err { color: var(--RED); }
+  .entry-del {
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--GRAY);
+    text-align: center;
+    border-radius: 0.25rem;
+    background-color: var(--GREY);
+    cursor: pointer;
+}
+</style>
+</style>
+</head>
+<body>
+<div>
+    ndrwx
+</div>
+<div id="app">
+<div class="wrap">
+  <!-- config -->
+  <div>
+    <button class="cfg-toggle" @click="showCfg = !showCfg">⚙ config{{ showCfg ? ' ▲' : '' }}</button>
+    <div class="cfg-body" v-if="showCfg">
+      <div class="cfg-row"><label>token</label><input type="password" v-model="cfg.token" placeholder="ghp_xxxxxxxxxxxx" @input="saveCfg" /></div>
+      <div class="cfg-row"><label>repo</label><input type="text" v-model="cfg.repo" placeholder="username/repo" @input="saveCfg" /></div>
+      <div class="cfg-row"><label>file</label><input type="text" v-model="cfg.file" placeholder="notes.md" @input="saveCfg" /></div>
+      <div class="cfg-row"><label>branch</label><input type="text" v-model="cfg.branch" placeholder="main" @input="saveCfg" /></div>
+      <div class="cfg-actions">
+        <button class="btn primary" @click="pullRemote">↓ pull from repo</button>
+        <button class="btn" @click="exportMd">export .md</button>
+        <button class="btn" style="color:#c44;border-color:#e5c0c0" @click="clearLocal">clear local</button>
+      </div>
+      <div class="cfg-hint">
+        Token needs <strong>repo</strong> scope.
+        <a href="https://github.com/settings/tokens/new" target="_blank">create →</a>
+        Stored in localStorage only, never committed.
+      </div>
+    </div>
+  </div>
+
+  <!-- status -->
+  <div class="status" :class="statusCls">{{ statusMsg }}</div>
+
+  <!-- compose -->
+  <div class="compose">
+    <textarea
+      v-model="draft"
+      placeholder="note something…"
+      rows="2"
+      ref="ta"
+      @keydown.shift.enter.prevent="addNote"
+      @input="autoResize"
+    ></textarea>
+    <div class="compose-meta">
+      <span class="ts-now">{{ clock }}</span>
+      <span class="hint">shift+↵ save · ↵ newline</span>
+    </div>
+  </div>
+
+  <!-- commit row -->
+  <div class="commit-row" v-if="localNotes.length">
+    <input type="text" v-model="commitMsg" :placeholder="defaultCommitMsg" @keydown.enter.prevent="commitNow" />
+    <span class="pending-count">{{ localNotes.length }} note{{ localNotes.length !== 1 ? 's' : '' }}</span>
+    <button class="btn primary" :disabled="!repoReady || syncing" @click="commitNow">commit →</button>
+  </div>
+
+  <!-- local section -->
+  <div class="section">
+    <div class="section-label">local · uncommitted</div>
+    <div v-if="!localNotes.length" class="empty">nothing yet</div>
+    <div class="entry" v-for="n in localNotes" :key="n.id">
+      <div class="entry-body" v-html="renderMd(n.raw)"></div>
+      <div class="entry-del" @click="deleteLocal(n.id)">×</div>
+    </div>
+  </div>
+
+  <!-- remote section -->
+  <div class="section">
+    <div class="section-label">remote · from repo</div>
+    <div v-if="!remoteRaw" class="empty">not loaded</div>
+    <div v-else class="entry" style="background-color: var(--GREY);">
+      <div class="entry-body" v-html="renderMd(remoteRaw)"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+createApp({
+  setup() {
+    const showCfg    = ref(false);
+    const draft      = ref('');
+    const commitMsg  = ref('');
+    const localNotes = ref([]);
+    const remoteRaw  = ref('');
+    const syncing    = ref(false);
+    const statusMsg  = ref('');
+    const statusCls  = ref('');
+    const clock      = ref('');
+    const ta         = ref(null);
+
+    const cfg = ref({ token:'', repo:'', file:'notes.md', branch:'main' });
+
+    // Configure marked for safe rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
+
+    function renderMd(text) {
+      if (!text) return '';
+      return marked.parse(text);
+    }
+
+    // ── computed ──
+
+    const repoReady = computed(() => !!(cfg.value.token && cfg.value.repo));
+
+    const defaultCommitMsg = computed(() => {
+      const n = localNotes.value.length;
+      const ts = getNowFormatted();
+      return `notes: add ${n} note${n!==1?'s':''} [${ts}]`;
+    });
+
+    // ── formatting ──
+
+    function getNowFormatted() {
+      const d = new Date();
+      const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return `${date} ${time}`;
+    }
+
+    // ── clock ──
+
+    function tickClock() {
+      clock.value = getNowFormatted();
+    }
+
+    // ── status ──
+
+    let statusTimer = null;
+    function setStatus(msg, cls='', autoClear=false) {
+      clearTimeout(statusTimer);
+      statusMsg.value = msg;
+      statusCls.value = cls;
+      if (autoClear) statusTimer = setTimeout(() => { statusMsg.value = ''; statusCls.value = ''; }, 3000);
+    }
+
+    // ── config ──
+
+    function saveCfg() { localStorage.setItem('ncfg', JSON.stringify(cfg.value)); }
+    function loadCfg() {
+      try { const r = localStorage.getItem('ncfg'); if (r) cfg.value = {...cfg.value, ...JSON.parse(r)}; } catch(e){}
+    }
+
+    // ── local notes ──
+
+    function saveLocal() { localStorage.setItem('notes_local', JSON.stringify(localNotes.value)); }
+    function loadLocal() {
+      try { const r = localStorage.getItem('notes_local'); if (r) localNotes.value = JSON.parse(r); } catch(e){}
+    }
+
+    function addNote() {
+      const body = draft.value.trim(); if (!body) return;
+      const ts = getNowFormatted();
+      
+      localNotes.value.unshift({ id: uid(), raw: `## ${ts}\n\n${body}` });
+      
+      saveLocal();
+      draft.value = '';
+      nextTick(() => { if (ta.value) { ta.value.style.height = 'auto'; ta.value.focus(); } });
+    }
+
+    function deleteLocal(id) {
+      localNotes.value = localNotes.value.filter(n => n.id !== id);
+      saveLocal();
+    }
+
+    function clearLocal() {
+      if (!confirm('Delete all local notes?')) return;
+      localNotes.value = []; saveLocal(); setStatus('local notes cleared', '', true);
+    }
+
+    function autoResize() {
+      if (!ta.value) return;
+      ta.value.style.height = 'auto';
+      ta.value.style.height = Math.min(ta.value.scrollHeight, 220) + 'px';
+    }
+
+    // ── github ──
+
+    async function ghFetch(method, path, body) {
+      const res = await fetch('https://api.github.com' + path, {
+        method,
+        headers: {
+          'Authorization': 'token ' + cfg.value.token,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || res.statusText);
+      return data;
+    }
+
+    async function getFileMeta() {
+      try {
+        const { repo, file, branch } = cfg.value;
+        const d = await ghFetch('GET', `/repos/${repo}/contents/${file}?ref=${branch}`);
+        return { sha: d.sha, content: decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))) };
+      } catch(e) {
+        if (/404|Not Found/i.test(e.message)) return null;
+        throw e;
+      }
+    }
+
+    async function pullRemote() {
+      if (!repoReady.value) { setStatus('configure repo first', 'err'); return; }
+      setStatus('pulling…');
+      try {
+        const file = await getFileMeta();
+        if (!file) { remoteRaw.value = ''; setStatus('file not in repo yet', '', true); return; }
+        remoteRaw.value = file.content;
+        setStatus('pulled from repo', 'ok', true);
+      } catch(e) { setStatus('pull failed: ' + e.message, 'err'); }
+    }
+
+    async function commitNow() {
+      if (!repoReady.value) { setStatus('configure repo first', 'err'); showCfg.value = true; return; }
+      if (!localNotes.value.length) return;
+      syncing.value = true;
+      setStatus('committing…');
+      try {
+        const message = commitMsg.value.trim() || defaultCommitMsg.value;
+        const file = await getFileMeta();
+        const currentContent = file ? file.content : '';
+        const localMd = localNotes.value.map(n => n.raw).join('\n\n') + '\n\n';
+        const finalContent = localMd + currentContent;
+        const content = btoa(unescape(encodeURIComponent(finalContent)));
+        await ghFetch('PUT', `/repos/${cfg.value.repo}/contents/${cfg.value.file}`, {
+          message, content, branch: cfg.value.branch,
+          ...(file ? { sha: file.sha } : {}),
+        });
+        remoteRaw.value = finalContent;
+        localNotes.value  = [];
+        saveLocal();
+        commitMsg.value = '';
+        setStatus(`committed: "${message.slice(0,60)}"`, 'ok', true);
+      } catch(e) { setStatus('commit failed: ' + e.message, 'err'); }
+      syncing.value = false;
+    }
+
+    function exportMd() {
+      const localMd = localNotes.value.map(n => n.raw).join('\n\n') + (localNotes.value.length ? '\n\n' : '');
+      const full = localMd + remoteRaw.value;
+      const blob = new Blob([full], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'notes-' + new Date().toISOString().slice(0,10) + '.md';
+      a.click();
+    }
+
+    // ── utils ──
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+    // ── lifecycle ──
+
+    onMounted(() => {
+      loadCfg();
+      loadLocal();
+      tickClock();
+      setInterval(tickClock, 10000);
+      if (repoReady.value) setTimeout(pullRemote, 500);
+      nextTick(() => ta.value?.focus());
+    });
+
+    return {
+      showCfg, draft, commitMsg, localNotes, remoteRaw, syncing,
+      statusMsg, statusCls, clock, ta, cfg,
+      repoReady, defaultCommitMsg,
+      saveCfg, addNote, deleteLocal, clearLocal, autoResize,
+      pullRemote, commitNow, exportMd, renderMd
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

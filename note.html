@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>notes</title>
 <style>
   @import 'https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css';
@@ -14,7 +14,7 @@
     --font-family-monospace: "Computer Modern Typewriter", 'Menlo', monospace;
     --font-weight-normal: 400;
     --font-weight-bold: 700;
-    --font-size-base: 8pt;
+    --font-size-base: 12pt;
     --line-height-primary: 1.2;
     --line-height-secondary: 1.0;
     --line-height-heading: 1.0;
@@ -27,7 +27,7 @@
     
     --RED: #DB4437; --BLUE: #0000cc; --YELLOW: #F4B400; --GREEN: #0F9D58;
     --BLACK: #000; --WHITE: #fff; --GRAY: #AAA; --GREY: #EEE;
-    --site-max-wdth: 250px;
+    --site-max-wdth: 21rem;
   }
 
   
@@ -71,7 +71,7 @@
 textarea, input, code, pre { font: var(--font-monospace); }
 
 textarea {
-    width: 238px;
+    width: 20rem;
     border: 0.5px dashed #000000;
     padding: 0;
     color: var(--BLACK);
@@ -94,7 +94,7 @@ textarea {
   .wrap {    display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem 0; padding: 0 5px; background-color: white;}
+    gap: 1rem 0; padding: 0 0.5rem; background-color: white;}
   .section {display: flex;
     flex-direction: column;
     gap: 0.5rem 0; width: 100%;}
@@ -123,8 +123,8 @@ textarea {
   .status.ok { color: var(--GREEN); }
   .status.err { color: var(--RED); }
   .entry-del {
-    width: 10px;
-    height: 12px;
+    width: 1rem;
+    height: 1.2rem;
     border: 1px solid var(--GRAY);
     text-align: center;
     background-color: var(--WHITE);

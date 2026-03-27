@@ -74,6 +74,9 @@
                 @click="selectExercise(ex)">
                 <span class="meta">{{ ex.movement }} • {{ ex.reps }}</span>
                 <span class="name">{{ ex.name }}</span>
+                <span v-if="ex.comment" class="name" style="font-size: 12px; color: #64748b; font-style: italic;">
+                    {{ ex.comment }}
+                </span>
             </button>
         </div>
     </div>
@@ -155,7 +158,16 @@ createApp({
         onMounted(async () => { db.value = await initDB(); loadLogs(); });
 
         const uniqueMuscles = computed(() => EX_DB ? [...new Set(EX_DB.map(e => e.muscle))] : []);
-        const uniqueFunctionals = computed(() => EX_DB ? [...new Set(EX_DB.map(e => e.functional))] : []);
+        const uniqueFunctionals = computed(() => {
+            if (!EX_DB) return [];
+            const order = { 'Primary': 1, 'Secondary1': 2, 'Secondary2': 3, 'Isolation1': 4, 'Isolation2': 5 };
+            return [...new Set(EX_DB.map(e => e.functional))].sort((a, b) => {
+                const weightA = order[a] || 99;
+                const weightB = order[b] || 99;
+                
+                return weightA - weightB;
+            });
+        });
         const isAvailable = (m, f) => EX_DB.some(e => e.muscle === m && e.functional === f);
         const availableExercises = computed(() => EX_DB.filter(e => e.muscle === selection.value.muscle && e.functional === selection.value.functional));
         

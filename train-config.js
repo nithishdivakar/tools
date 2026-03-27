@@ -42,6 +42,7 @@ const EX_DB = [
 { muscle: 'Hamstrings', functional:'Primary', movement: 'Hip Hinge', name: 'Good mornings', reps: '5-8'},
 { muscle: 'Hamstrings', functional:'Isolation1', movement: 'Curl variations', name: 'Hamstring curl', reps: '12-15'},
 { muscle: 'Glutes', functional:'Primary', movement: 'Compound lift for glutes', name: 'Hip Thrust', reps: '8-12'},
+{ muscle: 'Glutes', functional:'Primary', movement: 'Compound lift for glutes', name: 'Dead Lift', reps: '5-8'},
 { muscle: 'Glutes', functional:'Secondary1', movement: 'Lunges ', name: 'Long Step lunges', reps: '12-15'},
 { muscle: 'Glutes', functional:'Isolation1', movement: 'Abductor focus', name: 'Hip ABduction ', reps: '12-15'},
 { muscle: 'Abs', functional:'Primary', movement: 'Crunch Variations', name: 'Cable crunch', reps: '8-12'},
@@ -61,6 +62,10 @@ const EX_DB = [
 { muscle: 'Calves', functional:'Primary', movement: 'Calf raise variations', name: 'Seated calf raises', reps: '15-20'},
 { muscle: 'Calves', functional:'Isolation1', movement: 'Tibialis focus', name: 'Tibialis raises', reps: '12-15'},
 { muscle: 'Calves', functional:'Isolation2', movement: 'Tibialis focus', name: 'Tibialis curl', reps: '12-15'},
+{ muscle: 'Seratus Anterior', functional:'Primary', movement: 'Scapular Protraction', name: 'Landmine press', reps: '5-8', comment: 'Twist upper body towards the weight at the end'},
+{ muscle: 'Seratus Anterior', functional:'Secondary1', movement: 'Scapular Protraction', name: 'Y raises', reps: '5-8', },
+{ muscle: 'Seratus Anterior', functional:'Isolation1', movement: 'Scapular Protraction', name: 'Serratus Wall Slide With Foam Roll', reps: '10-12', },
+
     // Add more here following the same structure
 ];
 

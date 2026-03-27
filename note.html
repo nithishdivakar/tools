@@ -27,7 +27,7 @@
     
     --RED: #DB4437; --BLUE: #0000cc; --YELLOW: #F4B400; --GREEN: #0F9D58;
     --BLACK: #000; --WHITE: #fff; --GRAY: #AAA; --GREY: #EEE;
-    --site-max-wdth: 52ch;
+    --site-max-wdth: 250px;
   }
 
   
@@ -36,11 +36,10 @@
   body {
     font: var(--font-primary);
     max-width: var(--site-max-wdth);
-    margin: 0 auto;
-    padding: .5rem 1rem;
+    margin: 0 0 auto 0;
+    padding: 0;
     text-align: justify;
     hyphens: auto;
-    background: var(--WHITE);
     color: var(--BLACK);
   }
 
@@ -61,8 +60,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem 0;
-    max-width: 50ch;
-    padding:0 0.5rem;
+    padding:0;
 }
 .cfg-actions {
     display: flex;
@@ -73,17 +71,19 @@
 textarea, input, code, pre { font: var(--font-monospace); }
 
 textarea {
-  width: 100%;
-  border: 1px solid var(--GRAY);
-  padding: 0.5rem;
-  color: var(--BLACK);
-  outline: none;
+    width: 238px;
+    border: 0.5px dashed #000000;
+    padding: 0;
+    color: var(--BLACK);
+    outline: none;
+    border-radius: 3px;
 }
 
 .commit-row {
     display: flex;
-    flex-direction: column;gap: 0.5rem 0;
-    width:52ch;
+    flex-direction: row;
+    gap: 0.5rem 0;
+    justify-content: flex-end;
 }
   .commit-row input, .cfg-row input {
     border: 1px solid var(--GRAY);
@@ -94,19 +94,30 @@ textarea {
   .wrap {    display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem 0; }
+    gap: 1rem 0; padding: 0 5px; background-color: white;}
   .section {display: flex;
     flex-direction: column;
-    gap: 0.5rem 0;}
+    gap: 0.5rem 0; width: 100%;}
   .entry { display: flex; gap: 0rem;}
-  .entry-body { font: var(--font-primary); width: 50ch;padding: 0.5rem;    border: 1px solid var(--GRAY);}
-
+.entry-body {
+  font: var(--font-primary); width: 100%; 
+  padding: 0;    border: 0px solid var(--GRAY);
+  
+  & h2 {
+    color: var(--GRAY);
+        font-size: 0.8rem;
+        font-weight: normal;
+        margin: 1rem 0 0 0;
+  }
+  & p{
+        margin: 0.5rem 0 0 0;
+  }
+}
   /* Utilities */
   .btn {border: 1px solid var(--GRAY);
     cursor: pointer;
     background: none;
     text-align: center;
-    height: 22px;
     color: var(--BLACK); }
   .btn:hover { border-color: var(--GRAY); color: var(--BLACK); }
   .status.ok { color: var(--GREEN); }
@@ -118,11 +129,8 @@ textarea {
     text-align: center;
     background-color: var(--WHITE);
     cursor: pointer;
-    position: relative;
-    left: -12px;
 }
 .compose{
-  width: 50ch;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -132,22 +140,23 @@ textarea {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    width: 51.5ch;
   }
 </style>
 </style>
 </head>
 <body>
-<div>
-    ndrwx
-</div>
 <div id="app">
 <div class="wrap">
   <!-- config -->
-  <div>
+  <div class="section">
+    ndrwx
+  </div>
+  <div class="section">
     <button class="cfg-toggle" @click="showCfg = !showCfg">⚙ config{{ showCfg ? ' ▲' : '' }}</button>
   </div>
-    <div class="cfg-body" v-if="showCfg">
+
+  <div class="section" v-if="showCfg">
+    <div class="cfg-body" >
       <div class="cfg-row"><label>token</label><input type="password" v-model="cfg.token" placeholder="ghp_xxxxxxxxxxxx" @input="saveCfg" /></div>
       <div class="cfg-row"><label>repo</label><input type="text" v-model="cfg.repo" placeholder="username/repo" @input="saveCfg" /></div>
       <div class="cfg-row"><label>file</label><input type="text" v-model="cfg.file" placeholder="notes.md" @input="saveCfg" /></div>
@@ -163,36 +172,33 @@ textarea {
         Stored in localStorage only, never committed.
       </div>
     </div>
+    </div>
 
   <!-- status -->
   <div class="status" :class="statusCls">{{ statusMsg }}</div>
 
-  <!-- compose -->
+  
+
+  <div class="section">
   <div class="compose">
+    <div class="compose-meta">
+      <span class="ts-now">{{ clock }}</span>
+    </div>
     <textarea
       v-model="draft"
-      placeholder="note something…"
+      placeholder="↵ newline | shift+↵ save"
       rows="5"
       ref="ta"
       @keydown.shift.enter.prevent="addNote"
       @input="autoResize"
     ></textarea>
-    <div class="compose-meta">
-      <span class="ts-now">{{ clock }}</span>
-      <span class="hint">↵ newline</span>
-      <span class="hint">shift+↵ save</span>
-    </div>
+    
+  </div>
   </div>
 
-  <!-- commit row -->
-  <div class="commit-row" v-if="localNotes.length">
-    <input type="text" v-model="commitMsg" :placeholder="defaultCommitMsg" @keydown.enter.prevent="commitNow" />
-    <button class="btn primary" :disabled="!repoReady || syncing" @click="commitNow">commit →</button>
-  </div>
 
   <!-- local section -->
   <div class="section">
-    <div class="section-label">local · uncommitted</div>
     <div v-if="!localNotes.length" class="empty">nothing yet</div>
     <div class="entry" v-for="n in localNotes" :key="n.id">
       <div class="entry-body" v-html="renderMd(n.raw)"></div>
@@ -200,11 +206,17 @@ textarea {
     </div>
   </div>
 
+  <!-- commit row -->
+  <div class="section">
+  <div class="commit-row" v-if="localNotes.length">
+    <button class="btn primary" :disabled="!repoReady || syncing" @click="commitNow">commit</button>
+  </div>
+</div>
+
   <!-- remote section -->
   <div class="section">
-    <div class="section-label">remote · from repo</div>
     <div v-if="!remoteRaw" class="empty">not loaded</div>
-    <div v-else class="entry" style="background-color: var(--GREY);">
+    <div v-else class="entry">
       <div class="entry-body" v-html="renderMd(remoteRaw)"></div>
     </div>
   </div>

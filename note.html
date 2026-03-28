@@ -5,142 +5,148 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>notes</title>
 <style>
-  @import 'https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css';
+@import 'https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css';
 
-  :root {
-    --font-family-primary: "Computer Modern Serif", Georgia, serif;
-    --font-family-secondary: "Computer Modern Sans", sans-serif;
-    --font-family-tertiary: "Helvetica", sans-serif;
-    --font-family-monospace: "Computer Modern Typewriter", 'Menlo', monospace;
-    --font-weight-normal: 400;
-    --font-weight-bold: 700;
-    --font-size-base: 12pt;
-    --line-height-primary: 1.2;
-    --line-height-secondary: 1.0;
-    --line-height-heading: 1.0;
-    --line-height-monospace: 1.0;
-    /* Shorthands */
-    --font-primary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-primary) var(--font-family-primary);
-    --font-secondary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-secondary) var(--font-family-secondary);
-    --font-heading: var(--font-weight-bold) var(--font-size-base)/var(--line-height-heading) var(--font-family-secondary);
-    --font-monospace: var(--font-weight-normal) calc(var(--font-size-base) * 0.9)/var(--line-height-monospace) var(--font-family-monospace);
-    
-    --RED: #DB4437; --BLUE: #0000cc; --YELLOW: #F4B400; --GREEN: #0F9D58;
-    --BLACK: #000; --WHITE: #fff; --GRAY: #AAA; --GREY: #EEE;
-    --site-max-wdth: 21rem;
-  }
+:root {
+  --font-family-primary: "Computer Modern Serif", Georgia, serif;
+  --font-family-secondary: "Computer Modern Sans", sans-serif;
+  --font-family-tertiary: "Computer Modern Sans", sans-serif;
+  --font-family-monospace: "Computer Modern Typewriter", 'Menlo', monospace;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --font-size-base: 12pt;
+  --line-height-primary: 1.2;
+  --line-height-secondary: 1.0;
+  --line-height-heading: 1.0;
+  --line-height-monospace: 1.0;
+  /* Shorthands */
+  --font-primary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-primary) var(--font-family-primary);
+  --font-secondary: var(--font-weight-normal) var(--font-size-base)/var(--line-height-secondary) var(--font-family-secondary);
+  --font-heading: var(--font-weight-bold) var(--font-size-base)/var(--line-height-heading) var(--font-family-secondary);
+  --font-monospace: var(--font-weight-normal) calc(var(--font-size-base) * 0.9)/var(--line-height-monospace) var(--font-family-monospace);
 
-  
-  html { font-size: var(--font-size-base); }
+  --RED: #DB4437; --BLUE: #0000cc; --YELLOW: #F4B400; --GREEN: #0F9D58;
+  --BLACK:  #000; --WHITE:   #fff;   --GRAY:    #AAA;  --GREY:    #EEE;
+  --site-max-wdth: 21rem;
+}
 
-  body {
-    font: var(--font-primary);
-    max-width: var(--site-max-wdth);
-    margin: 0 0 auto 0;
-    padding: 0;
-    text-align: justify;
-    hyphens: auto;
-    color: var(--BLACK);
-  }
+html { font-size: var(--font-size-base); }
 
-  h1, h2, h3, h4, .section-label { font: var(--font-heading); }
+body {
+  font: var(--font-primary);
+  max-width: var(--site-max-wdth);
+  margin: 0 auto ;
+  padding: 0;
+  text-align: justify;
+  hyphens: auto;
+  color: var(--BLACK);
+}
 
-  /* Config & Labels */
-  .cfg-toggle, .cfg-row label, .btn, .status, .ts-now, .hint, .pending-count, .section-label {
-    font: var(--font-monospace);
-    color: var(--GRAY);
-  }
+h1, h2, h3, h4, .section-label { font: var(--font-heading); }
 
-  .cfg-row {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;align-items: center;
+.cfg-toggle, .cfg-row label, .btn, .status, .ts-now, .hint, .pending-count, .section-label {
+  font: var(--font-monospace);
+  color: var(--GRAY);
+}
+
+.cfg-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;align-items: center;
 }
 .cfg-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem 0;
-    padding:0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem 0;
+  padding:0;
 }
 .cfg-actions {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }
 
 textarea, input, code, pre { font: var(--font-monospace); }
 
 textarea {
-    width: 20rem;
-    border: 0.5px dashed #000000;
-    padding: 0;
-    color: var(--BLACK);
-    outline: none;
-    border-radius: 3px;
+  width: 20rem;
+  border: 0.5px dashed #000000;
+  padding: 0;
+  color: var(--BLACK);
+  outline: none;
+  border-radius: 3px;
 }
 
 .commit-row {
-    display: flex;
-    flex-direction: row;
-    gap: 0.5rem 0;
-    justify-content: flex-end;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem 0;
+  justify-content: flex-end;
 }
-  .commit-row input, .cfg-row input {
-    border: 1px solid var(--GRAY);
-    padding: 4px 8px;
-  }
-
-  /* Layout Containers */
-  .wrap {    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem 0; padding: 0 0.5rem; background-color: white;}
-  .section {display: flex;
-    flex-direction: column;
-    gap: 0.5rem 0; width: 100%;}
-  .entry { display: flex; gap: 0rem;}
+.commit-row input, .cfg-row input {
+  border: 1px solid var(--GRAY);
+  padding: 4px 8px;
+}
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem 0;
+  padding: 0 0.5rem;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem 0; width: 100%;
+}
+.entry { display: flex; gap: 0rem;}
 .entry-body {
-  font: var(--font-primary); width: 100%; 
-  padding: 0;    border: 0px solid var(--GRAY);
-  
+  font: var(--font-primary);
+  width: 100%;
+  padding: 0;
+  border: 0px solid var(--GRAY);
   & h2 {
     color: var(--GRAY);
-        font-size: 0.8rem;
-        font-weight: normal;
-        margin: 1rem 0 0 0;
+    font-size: 0.8rem;
+    font-weight: normal;
+    margin: 1rem 0 0 0;
   }
-  & p{
-        margin: 0.5rem 0 0 0;
+  & :is(p, ul,ol) {
+    margin: 0.5rem 0 0 0;
+  }
+  & :is(ul, ol) {
+    padding-left: 3ch;
   }
 }
-  /* Utilities */
-  .btn {border: 1px solid var(--GRAY);
-    cursor: pointer;
-    background: none;
-    text-align: center;
-    color: var(--BLACK); }
-  .btn:hover { border-color: var(--GRAY); color: var(--BLACK); }
-  .status.ok { color: var(--GREEN); }
-  .status.err { color: var(--RED); }
-  .entry-del {
-    width: 1rem;
-    height: 1.2rem;
-    border: 1px solid var(--GRAY);
-    text-align: center;
-    background-color: var(--WHITE);
-    cursor: pointer;
+.btn {
+  border: 1px solid var(--GRAY);
+  cursor: pointer;
+  background: none;
+  text-align: center;
+  color: var(--BLACK);
 }
-.compose{
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem 0;
+.btn:hover { border-color: var(--GRAY); color: var(--BLACK); }
+.status.ok { color: var(--GREEN); }
+.status.err { color: var(--RED); }
+.entry-del {
+  width: 1rem;
+  height: 1.2rem;
+  border: 1px solid var(--GRAY);
+  text-align: center;
+  background-color: var(--WHITE);
+  cursor: pointer;
+}
+.compose {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem 0;
 }
 .compose-meta {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-  }
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
 </style>
 </style>
 </head>
@@ -177,7 +183,7 @@ textarea {
   <!-- status -->
   <div class="status" :class="statusCls">{{ statusMsg }}</div>
 
-  
+
 
   <div class="section">
   <div class="compose">
@@ -192,7 +198,7 @@ textarea {
       @keydown.shift.enter.prevent="addNote"
       @input="autoResize"
     ></textarea>
-    
+
   </div>
   </div>
 
@@ -309,9 +315,9 @@ createApp({
     function addNote() {
       const body = draft.value.trim(); if (!body) return;
       const ts = getNowFormatted();
-      
+
       localNotes.value.unshift({ id: uid(), raw: `## ${ts}\n\n${body}` });
-      
+
       saveLocal();
       draft.value = '';
       nextTick(() => { if (ta.value) { ta.value.style.height = 'auto'; ta.value.focus(); } });

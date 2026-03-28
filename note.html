@@ -64,6 +64,11 @@ h1, h2, h3, h4, .section-label { font: var(--font-heading); }
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  gap: 0 0.5rem;
+}
+.cfg-hint{
+  font: var(--font-monospace);
+  text-align: center;
 }
 
 textarea, input, code, pre { font: var(--font-monospace); }
@@ -171,9 +176,7 @@ textarea {
           <button class="btn" style="color:#c44;border-color:#e5c0c0" @click="clearLocal">clear local</button>
         </div>
         <div class="cfg-hint">
-          Token needs <strong>repo</strong> scope.
-          <a href="https://github.com/settings/tokens/new" target="_blank">create →</a>
-          Stored in localStorage only, never committed.
+          <i><a href="https://github.com/settings/tokens/new" target="_blank">Create</a> a PAT with repo scope.</i>
         </div>
       </div>
     </div>
@@ -291,7 +294,7 @@ createApp({
       const body = draft.value.trim(); if (!body) return;
       const ts = getNowFormatted();
 
-      localNotes.value.unshift({ id: uid(), raw: `## ${ts}\n\n${body}` });
+      localNotes.value.unshift({ id: uid(), raw: `## ${ts}\n${body}` });
 
       saveLocal();
       draft.value = '';

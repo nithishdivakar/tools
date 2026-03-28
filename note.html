@@ -152,82 +152,70 @@ textarea {
 </head>
 <body>
 <div id="app">
-<div class="wrap">
-  <!-- config -->
-  <div class="section">
-    ndrwx
-  </div>
-  <div class="section">
-    <button class="cfg-toggle" @click="showCfg = !showCfg">⚙ config{{ showCfg ? ' ▲' : '' }}</button>
-  </div>
-
-  <div class="section" v-if="showCfg">
-    <div class="cfg-body" >
-      <div class="cfg-row"><label>token</label><input type="password" v-model="cfg.token" placeholder="ghp_xxxxxxxxxxxx" @input="saveCfg" /></div>
-      <div class="cfg-row"><label>repo</label><input type="text" v-model="cfg.repo" placeholder="username/repo" @input="saveCfg" /></div>
-      <div class="cfg-row"><label>file</label><input type="text" v-model="cfg.file" placeholder="notes.md" @input="saveCfg" /></div>
-      <div class="cfg-row"><label>branch</label><input type="text" v-model="cfg.branch" placeholder="main" @input="saveCfg" /></div>
-      <div class="cfg-actions">
-        <button class="btn primary" @click="pullRemote">↓ pull from repo</button>
-        <button class="btn" @click="exportMd">export .md</button>
-        <button class="btn" style="color:#c44;border-color:#e5c0c0" @click="clearLocal">clear local</button>
+  <div class="wrap">
+    <div class="section">
+      ndrwx
+    </div>
+    <div class="section">
+      <button class="cfg-toggle" @click="showCfg = !showCfg">⚙ config{{ showCfg ? ' ▲' : '' }}</button>
+    </div>
+    <div class="section" v-if="showCfg">
+      <div class="cfg-body" >
+        <div class="cfg-row"><label>token</label><input type="password" v-model="cfg.token" placeholder="ghp_xxxxxxxxxxxx" @input="saveCfg" /></div>
+        <div class="cfg-row"><label>repo</label><input type="text" v-model="cfg.repo" placeholder="username/repo" @input="saveCfg" /></div>
+        <div class="cfg-row"><label>file</label><input type="text" v-model="cfg.file" placeholder="notes.md" @input="saveCfg" /></div>
+        <div class="cfg-row"><label>branch</label><input type="text" v-model="cfg.branch" placeholder="main" @input="saveCfg" /></div>
+        <div class="cfg-actions">
+          <button class="btn primary" @click="pullRemote">↓ pull from repo</button>
+          <button class="btn" @click="exportMd">export .md</button>
+          <button class="btn" style="color:#c44;border-color:#e5c0c0" @click="clearLocal">clear local</button>
+        </div>
+        <div class="cfg-hint">
+          Token needs <strong>repo</strong> scope.
+          <a href="https://github.com/settings/tokens/new" target="_blank">create →</a>
+          Stored in localStorage only, never committed.
+        </div>
       </div>
-      <div class="cfg-hint">
-        Token needs <strong>repo</strong> scope.
-        <a href="https://github.com/settings/tokens/new" target="_blank">create →</a>
-        Stored in localStorage only, never committed.
+    </div>
+
+    <div class="status" :class="statusCls">{{ statusMsg }}</div>
+    <div class="section">
+      <div class="compose">
+        <div class="compose-meta">
+          <span class="ts-now">{{ clock }}</span>
+        </div>
+        <textarea
+          v-model="draft"
+          placeholder="↵ newline | shift+↵ save"
+          rows="5"
+          ref="ta"
+          @keydown.shift.enter.prevent="addNote"
+          @input="autoResize"
+        ></textarea>
       </div>
     </div>
+
+    <div class="section">
+      <div v-if="!localNotes.length" class="empty">nothing yet</div>
+      <div class="entry" v-for="n in localNotes" :key="n.id">
+        <div class="entry-body" v-html="renderMd(n.raw)"></div>
+        <div class="entry-del" @click="deleteLocal(n.id)">×</div>
+      </div>
     </div>
 
-  <!-- status -->
-  <div class="status" :class="statusCls">{{ statusMsg }}</div>
-
-
-
-  <div class="section">
-  <div class="compose">
-    <div class="compose-meta">
-      <span class="ts-now">{{ clock }}</span>
+    <div class="section">
+      <div class="commit-row" v-if="localNotes.length">
+        <button class="btn primary" :disabled="!repoReady || syncing" @click="commitNow">commit</button>
+      </div>
     </div>
-    <textarea
-      v-model="draft"
-      placeholder="↵ newline | shift+↵ save"
-      rows="5"
-      ref="ta"
-      @keydown.shift.enter.prevent="addNote"
-      @input="autoResize"
-    ></textarea>
 
-  </div>
-  </div>
-
-
-  <!-- local section -->
-  <div class="section">
-    <div v-if="!localNotes.length" class="empty">nothing yet</div>
-    <div class="entry" v-for="n in localNotes" :key="n.id">
-      <div class="entry-body" v-html="renderMd(n.raw)"></div>
-      <div class="entry-del" @click="deleteLocal(n.id)">×</div>
+    <div class="section">
+      <div v-if="!remoteRaw" class="empty">not loaded</div>
+      <div v-else class="entry">
+        <div class="entry-body" v-html="renderMd(remoteRaw)"></div>
+      </div>
     </div>
   </div>
-
-  <!-- commit row -->
-  <div class="section">
-  <div class="commit-row" v-if="localNotes.length">
-    <button class="btn primary" :disabled="!repoReady || syncing" @click="commitNow">commit</button>
-  </div>
-</div>
-
-  <!-- remote section -->
-  <div class="section">
-    <div v-if="!remoteRaw" class="empty">not loaded</div>
-    <div v-else class="entry">
-      <div class="entry-body" v-html="renderMd(remoteRaw)"></div>
-    </div>
-  </div>
-
-</div>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -250,7 +238,6 @@ createApp({
 
     const cfg = ref({ token:'', repo:'', file:'notes.md', branch:'main' });
 
-    // Configure marked for safe rendering
     marked.setOptions({
       breaks: true,
       gfm: true,
@@ -263,17 +250,13 @@ createApp({
       return marked.parse(text);
     }
 
-    // ── computed ──
-
     const repoReady = computed(() => !!(cfg.value.token && cfg.value.repo));
 
     const defaultCommitMsg = computed(() => {
       const n = localNotes.value.length;
       const ts = getNowFormatted();
-      return `notes: add ${n} note${n!==1?'s':''} [${ts}]`;
+      return `add ${n} entr${n!==1?'ies':'y'} [${ts}]`;
     });
-
-    // ── formatting ──
 
     function getNowFormatted() {
       const d = new Date();
@@ -282,13 +265,9 @@ createApp({
       return `${date} ${time}`;
     }
 
-    // ── clock ──
-
     function tickClock() {
       clock.value = getNowFormatted();
     }
-
-    // ── status ──
 
     let statusTimer = null;
     function setStatus(msg, cls='', autoClear=false) {
@@ -298,14 +277,10 @@ createApp({
       if (autoClear) statusTimer = setTimeout(() => { statusMsg.value = ''; statusCls.value = ''; }, 3000);
     }
 
-    // ── config ──
-
     function saveCfg() { localStorage.setItem('ncfg', JSON.stringify(cfg.value)); }
     function loadCfg() {
       try { const r = localStorage.getItem('ncfg'); if (r) cfg.value = {...cfg.value, ...JSON.parse(r)}; } catch(e){}
     }
-
-    // ── local notes ──
 
     function saveLocal() { localStorage.setItem('notes_local', JSON.stringify(localNotes.value)); }
     function loadLocal() {
@@ -339,8 +314,6 @@ createApp({
       ta.value.style.height = Math.min(ta.value.scrollHeight, 220) + 'px';
     }
 
-    // ── github ──
-
     async function ghFetch(method, path, body) {
       const res = await fetch('https://api.github.com' + path, {
         method,
@@ -369,7 +342,7 @@ createApp({
 
     async function pullRemote() {
       if (!repoReady.value) { setStatus('configure repo first', 'err'); return; }
-      setStatus('pulling…');
+      setStatus('pulling...');
       try {
         const file = await getFileMeta();
         if (!file) { remoteRaw.value = ''; setStatus('file not in repo yet', '', true); return; }
@@ -382,7 +355,7 @@ createApp({
       if (!repoReady.value) { setStatus('configure repo first', 'err'); showCfg.value = true; return; }
       if (!localNotes.value.length) return;
       syncing.value = true;
-      setStatus('committing…');
+      setStatus('committing...');
       try {
         const message = commitMsg.value.trim() || defaultCommitMsg.value;
         const file = await getFileMeta();
@@ -413,11 +386,7 @@ createApp({
       a.click();
     }
 
-    // ── utils ──
-
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-
-    // ── lifecycle ──
 
     onMounted(() => {
       loadCfg();

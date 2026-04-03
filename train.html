@@ -111,7 +111,7 @@
         </div>
 
     </div>
-    <div class="section" style="gap: 15px 0;">
+    <div v-if="selection.exercise" class="section" style="gap: 15px 0;">
         <label>Notes</label>
         <textarea v-model="notes" placeholder="Comments"></textarea>
         <button @click="saveSet" class="save-btn">Add</button>

@@ -170,7 +170,6 @@ window.ARTICLES = [
     year: 2019,
     summary: "How Amazon implements leader election safely without split-brain in distributed control planes."
   },
-
   {
     id: "meta-cassandra",
     title: "Cassandra: A Decentralized Structured Storage System",
@@ -270,7 +269,6 @@ window.ARTICLES = [
     year: 2012,
     summary: "LinkedIn's distributed key-value store based on Dynamo principles for high availability."
   },
-
   {
     id: "uber-ringpop",
     title: "Building Ringpop, a Distributed Gossip Layer",
@@ -316,7 +314,6 @@ window.ARTICLES = [
     year: 2022,
     summary: "How Uber manages data and ML workflows at scale with a declarative workflow engine."
   },
-
   {
     id: "netflix-chaos",
     title: "Chaos Engineering: Building Confidence in System Behavior Through Experiments",
@@ -371,7 +368,6 @@ window.ARTICLES = [
     year: 2014,
     summary: "In-memory time-series database for dimensional metrics at Netflix scale — billions of metrics/min."
   },
-
   {
     id: "twitter-snowflake",
     title: "Announcing Snowflake: Globally Unique ID Generation",
@@ -399,7 +395,6 @@ window.ARTICLES = [
     year: 2017,
     summary: "How Twitter's infrastructure evolved to handle 500M tweets/day with fanout and timeline caching."
   },
-
   {
     id: "stripe-idempotency",
     title: "Designing Robust and Predictable APIs with Idempotency",
@@ -427,7 +422,6 @@ window.ARTICLES = [
     year: 2022,
     summary: "Design principles behind Stripe's payment APIs — idempotency, atomicity, and failure handling."
   },
-
   {
     id: "airbnb-microservices",
     title: "Untangling Microservices: How Airbnb Reorganized Its Architecture",
@@ -455,7 +449,6 @@ window.ARTICLES = [
     year: 2023,
     summary: "End-to-end feature engineering platform that bridges offline training and online serving of ML features."
   },
-
   {
     id: "cloudflare-workers",
     title: "Cloudflare Workers: Edge Computing Architecture",
@@ -483,7 +476,6 @@ window.ARTICLES = [
     year: 2021,
     summary: "Approximate counting in distributed systems — sliding windows without shared state."
   },
-
   {
     id: "discord-trillion-messages",
     title: "How Discord Stores Trillions of Messages",
@@ -511,7 +503,6 @@ window.ARTICLES = [
     year: 2020,
     summary: "Eliminating GC pauses in a latency-sensitive read states service by rewriting Go in Rust."
   },
-
   {
     id: "databricks-delta-lake",
     title: "Delta Lake: High-Performance ACID Table Storage over Cloud Object Stores",
@@ -539,7 +530,6 @@ window.ARTICLES = [
     year: 2015,
     summary: "Unified batch and stream processing engine with stateful operators and exactly-once semantics."
   },
-
   {
     id: "snowflake-elastic-warehouse",
     title: "The Snowflake Elastic Data Warehouse",
@@ -549,7 +539,6 @@ window.ARTICLES = [
     year: 2016,
     summary: "Multi-cluster shared data architecture separating compute from storage for elastic data warehousing."
   },
-
   {
     id: "cockroachdb-architecture",
     title: "CockroachDB: The Resilient Geo-Distributed SQL Database",
@@ -568,7 +557,6 @@ window.ARTICLES = [
     year: 2020,
     summary: "HTAP database combining TiKV (row-store) and TiFlash (columnar) with Raft for strong consistency."
   },
-
   {
     id: "cap-theorem",
     title: "Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services",
@@ -632,7 +620,6 @@ window.ARTICLES = [
     year: 2011,
     summary: "CRDTs: data structures that merge automatically without coordination, enabling strong eventual consistency."
   },
-
   {
     id: "pinterest-sharding",
     title: "Sharding Pinterest: How we scaled our MySQL fleet",
@@ -651,7 +638,6 @@ window.ARTICLES = [
     year: 2022,
     summary: "Cache invalidation patterns for maintaining consistency between MySQL and memcache at Pinterest scale."
   },
-
   {
     id: "slack-flannel",
     title: "Flannel: An Application-Level Edge Cache to Make Slack Scale",
@@ -670,7 +656,6 @@ window.ARTICLES = [
     year: 2019,
     summary: "How Slack rebuilt its search infrastructure to handle billions of messages with low latency."
   },
-
   {
     id: "shopify-pods",
     title: "Shopify's Architecture to Handle the World's Biggest Flash Sales",
@@ -689,7 +674,6 @@ window.ARTICLES = [
     year: 2022,
     summary: "Migrating a decade-old Rails monolith without rewrites using the strangler fig migration pattern."
   },
-
   {
     id: "dropbox-magic-pocket",
     title: "Magic Pocket: Dropbox's Exabyte-Scale Blob Storage System",
@@ -708,7 +692,6 @@ window.ARTICLES = [
     year: 2018,
     summary: "How Dropbox migrated their Python monolith to a typed, modular service platform."
   },
-
   {
     id: "figma-multiplayer",
     title: "How Figma's Multiplayer Technology Works",
@@ -727,7 +710,6 @@ window.ARTICLES = [
     year: 2020,
     summary: "Vertical partitioning and PgBouncer connection pooling to scale Figma's Postgres past a single node."
   },
-
   {
     id: "github-mysql-ha",
     title: "MySQL High Availability at GitHub",
@@ -746,7 +728,6 @@ window.ARTICLES = [
     year: 2024,
     summary: "How GitHub elastically provisions millions of ephemeral runner VMs for Actions workflows."
   },
-
   {
     id: "spotify-event-delivery",
     title: "Event Delivery at Spotify",
@@ -765,7 +746,6 @@ window.ARTICLES = [
     year: 2020,
     summary: "Developer portal unifying infrastructure tooling, service discovery, and docs across Spotify's 2000+ services."
   },
-
   {
     id: "msft-cosmos",
     title: "Azure Cosmos DB: A Globally Distributed, Multi-Model Database Service",
@@ -784,7 +764,6 @@ window.ARTICLES = [
     year: 2007,
     summary: "Mini-transaction abstraction on top of shared memory nodes for building distributed applications."
   },
-
   {
     id: "apple-foundationdb",
     title: "FoundationDB: A Distributed Unbundled Transactional Key Value Store",
@@ -794,7 +773,6 @@ window.ARTICLES = [
     year: 2021,
     summary: "Strictly serializable, distributed KV store used as the backbone for CloudKit and other Apple services."
   },
-
   {
     id: "highscalability-uber",
     title: "Uber's Big Data Platform: 100+ Petabytes with Minute Latency",
@@ -848,5 +826,230 @@ window.ARTICLES = [
     tags: ["book", "distributed", "databases", "foundational"],
     year: 2017,
     summary: "Martin Kleppmann's essential guide to storage engines, replication, partitioning, and stream processing."
+  },
+  {
+    id: "google-colossus",
+    title: "A peek behind Colossus, Google's file system",
+    url: "https://cloud.google.com/blog/products/storage-data-transfer/a-peek-behind-colossus-googles-file-system",
+    company: "Google",
+    tags: ["storage", "distributed", "infrastructure", "article"],
+    year: 2021,
+    summary: "Overview of Colossus, the successor to GFS that underpins Google Cloud storage — disaggregation, metadata, and reliability at exabyte scale."
+  },
+  {
+    id: "linkedin-log-unifying",
+    title: "The Log: What Every Software Engineer Should Know About Real-Time Data's Unifying Abstraction",
+    url: "https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying",
+    company: "LinkedIn",
+    tags: ["streaming", "distributed", "messaging", "article", "foundational"],
+    year: 2013,
+    summary: "Jay Kreps on logs as the universal primitive: databases, replication, stream processing, and Kafka all unified through the append-only log abstraction."
+  },
+  {
+    id: "netflix-realtime-infra",
+    title: "The Four Innovation Phases of Netflix's Trillions Scale Real-time Data Infrastructure",
+    url: "https://zhenzhongxu.com/the-four-innovation-phases-of-netflixs-trillions-scale-real-time-data-infrastructure-2370938d7f01",
+    company: "Netflix",
+    tags: ["streaming", "real-time", "infrastructure", "article"],
+    year: 2022,
+    summary: "How Netflix's real-time data infrastructure evolved across four phases from 2015–2021, covering Kafka, Flink, and the Keystone platform."
+  },
+  {
+    id: "meta-log-time-denorm",
+    title: "Using Log-Time Denormalization for Data Wrangling at Meta",
+    url: "https://medium.com/meta-analytics/using-log-time-denormalization-for-data-wrangling-at-meta-3b6fc050268a",
+    company: "Meta",
+    tags: ["analytics", "data-platform", "performance", "article"],
+    year: 2023,
+    summary: "Meta's technique of pre-joining and denormalizing datasets at log time to reduce query latency across their analytics infrastructure."
+  },
+  {
+    id: "uber-deepeta",
+    title: "DeepETA: How Uber Predicts Arrival Times Using Deep Learning",
+    url: "https://eng.uber.com/deepeta-how-uber-predicts-arrival-times/",
+    company: "Uber",
+    tags: ["ml", "infrastructure", "real-time", "article"],
+    year: 2022,
+    summary: "Uber's deep learning model layered on top of routing graph ETAs, combining real-time signals with historical data for more accurate arrival time predictions."
+  },
+  {
+    id: "uber-two-tower",
+    title: "Innovative Recommendation Applications Using Two Tower Embeddings at Uber",
+    url: "https://www.uber.com/en-IN/blog/innovative-recommendation-applications-using-two-tower-embeddings/",
+    company: "Uber",
+    tags: ["ml", "search", "infrastructure", "article"],
+    year: 2022,
+    summary: "Replacing 1,035 city-specific DeepMF models with a single global Two-Tower embedding model, drastically cutting training time while improving quality."
+  },
+  {
+    id: "netflix-personalized-homepage",
+    title: "Learning a Personalized Homepage",
+    url: "https://netflixtechblog.com/learning-a-personalized-homepage-aa8ec670359a",
+    company: "Netflix",
+    tags: ["ml", "architecture", "article"],
+    year: 2017,
+    summary: "How Netflix's homepage ranking system personalizes the layout of rows and row members for each member using contextual bandits."
+  },
+  {
+    id: "instagram-explore-recsys",
+    title: "Powered by AI: Instagram's Explore Recommender System",
+    url: "https://ai.meta.com/blog/powered-by-ai-instagrams-explore-recommender-system/",
+    company: "Meta",
+    tags: ["ml", "search", "infrastructure", "article"],
+    year: 2019,
+    summary: "Instagram's two-stage retrieval and ranking pipeline for Explore, handling billions of candidate media items with FAISS and neural rankers."
+  },
+  {
+    id: "meta-building-threads",
+    title: "Building Meta's Threads App (Real-World Engineering Challenges)",
+    url: "https://newsletter.pragmaticengineer.com/p/building-the-threads-app",
+    company: "Meta",
+    tags: ["infrastructure", "scalability", "architecture", "article"],
+    year: 2023,
+    summary: "How Meta launched Threads to 100M users in its first week — architecture decisions, ActivityPub integration, and scaling surprises."
+  },
+  {
+    id: "amazon-inside-engineering",
+    title: "Inside Amazon's Engineering Culture",
+    url: "https://newsletter.pragmaticengineer.com/p/amazon",
+    company: "Amazon",
+    tags: ["architecture", "infrastructure", "article"],
+    year: 2023,
+    summary: "Deep dive into Amazon's engineering culture: two-pizza teams, working backwards, operational reviews, and how the org structure shapes system design."
+  },
+  {
+    id: "uber-master-green",
+    title: "Keeping Master Green at Scale",
+    url: "https://dl.acm.org/doi/pdf/10.1145/3302424.3303970",
+    company: "Uber",
+    tags: ["infrastructure", "ci-cd", "scalability", "paper"],
+    year: 2019,
+    summary: "Uber's system for maintaining a green master branch across hundreds of engineers committing simultaneously — probabilistic testing and merge queues."
+  },
+  {
+    id: "notion-data-model",
+    title: "Exploring Notion's Data Model: A Block-Based Architecture",
+    url: "https://www.notion.so/blog/data-model-behind-notion",
+    company: "Notion",
+    tags: ["database", "architecture", "article"],
+    year: 2021,
+    summary: "Notion's universal block model — how every piece of content is a typed block stored in a single table, enabling flexible document structure without schema migrations."
+  },
+  {
+    id: "algolia-search-arch",
+    title: "Evolution of Search Engines Architecture — Algolia New Search Architecture",
+    url: "http://highscalability.com/blog/2021/8/2/evolution-of-search-engines-architecture-algolia-new-search.html",
+    company: "Algolia",
+    tags: ["search", "architecture", "distributed", "article"],
+    year: 2021,
+    summary: "Algolia's evolution from a single-node search engine to a distributed, replicated architecture capable of sub-10ms global queries."
+  },
+  {
+    id: "cloudflare-ecc",
+    title: "A (Relatively Easy To Understand) Primer on Elliptic Curve Cryptography",
+    url: "https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/",
+    company: "Cloudflare",
+    tags: ["networking", "security", "article"],
+    year: 2013,
+    summary: "How ECC works under the hood — point multiplication on curves, why it's efficient, and how Cloudflare deploys it across millions of TLS connections."
+  },
+  {
+    id: "etsy-deep-learning-search",
+    title: "Deep Learning for Search Ranking at Etsy",
+    url: "https://www.etsy.com/codeascraft/deep-learning-for-search-ranking-at-etsy",
+    company: "Etsy",
+    tags: ["search", "ml", "infrastructure", "article"],
+    year: 2020,
+    summary: "Etsy's migration from gradient-boosted trees to deep learning for search ranking, including training infrastructure and serving latency challenges."
+  },
+  {
+    id: "etsy-dl-platform",
+    title: "Improving Support for Deep Learning in Etsy's ML Platform",
+    url: "https://www.etsy.com/codeascraft/improving-support-for-deep-learning-in-etsy39s-ml-platform",
+    company: "Etsy",
+    tags: ["ml", "infrastructure", "article"],
+    year: 2021,
+    summary: "How Etsy extended their ML platform to support GPU training, experiment tracking, and model serving for deep learning workloads."
+  },
+  {
+    id: "google-rules-of-ml",
+    title: "Rules of Machine Learning: Best Practices for ML Engineering",
+    url: "https://developers.google.com/machine-learning/guides/rules-of-ml",
+    company: "Google",
+    tags: ["ml", "infrastructure", "article"],
+    year: 2018,
+    summary: "Martin Zinkevich's 43 rules for productive ML engineering: when to use ML, feature engineering, training-serving skew, and evaluation pitfalls."
+  },
+  {
+    id: "snap-ad-ranking",
+    title: "Machine Learning for Snapchat Ad Ranking",
+    url: "https://eng.snap.com/machine-learning-snap-ad-ranking",
+    company: "Snap",
+    tags: ["ml", "infrastructure", "article"],
+    year: 2022,
+    summary: "Snap's multi-stage ad ranking pipeline: candidate retrieval, feature engineering, click/install prediction models, and real-time serving at scale."
+  },
+  {
+    id: "howcomplexsystemsfail",
+    title: "How Complex Systems Fail",
+    url: "https://how.complexsystems.fail/",
+    company: "Academic",
+    tags: ["reliability", "architecture", "foundational", "article"],
+    year: 1998,
+    summary: "Richard Cook's 18 observations on failure in complex systems — latent conditions, defense layers, and why practitioners are always operating near failure."
+  },
+  {
+    id: "anthropic-building-agents",
+    title: "Building Effective Agents",
+    url: "https://www.anthropic.com/engineering/building-effective-agents",
+    company: "Anthropic",
+    tags: ["ml", "architecture", "article"],
+    year: 2024,
+    summary: "Anthropic's framework for building reliable AI agents: workflows vs. agents, tool use patterns, multi-agent architectures, and safety considerations."
+  },
+  {
+    id: "hnsw-pinecone",
+    title: "Hierarchical Navigable Small Worlds (HNSW)",
+    url: "https://www.pinecone.io/learn/series/faiss/hnsw/",
+    company: "Pinecone",
+    tags: ["search", "algorithms", "ml", "article"],
+    year: 2021,
+    summary: "How HNSW builds a layered graph index for approximate nearest-neighbor search — the algorithm behind most production vector databases."
+  },
+  {
+    id: "knightmare-devops",
+    title: "Knightmare: A DevOps Cautionary Tale",
+    url: "https://dougseven.com/2014/04/17/knightmare-a-devops-cautionary-tale/",
+    company: "Knight Capital",
+    tags: ["reliability", "infrastructure", "article"],
+    year: 2014,
+    summary: "How a faulty deployment at Knight Capital sent $397M of erroneous orders in 45 minutes — a case study in deployment safety and rollback procedures."
+  },
+  {
+    id: "puffer-streaming",
+    title: "Puffer: Stanford's Adaptive Bitrate Video Streaming Research",
+    url: "https://puffer.stanford.edu/faq/",
+    company: "Academic",
+    tags: ["networking", "infrastructure", "article"],
+    year: 2019,
+    summary: "Stanford's live TV streaming system using ML-based adaptive bitrate algorithms, deployed in the wild to study real network conditions."
+  },
+  {
+    id: "systems-design-explains-world",
+    title: "Systems Design Explains the World: Volume 1",
+    url: "https://apenwarr.ca/log/20201227",
+    company: "Academic",
+    tags: ["architecture", "distributed", "article"],
+    year: 2020,
+    summary: "Avery Pennarun on systems design patterns that recur across disciplines: CAP theorem analogies, queueing theory, and why bureaucracy looks like cache invalidation."
+  },
+  {
+    id: "community-notes-ranking",
+    title: "How Are Community Notes Ranked?",
+    url: "https://communitynotes.x.com/guide/en/under-the-hood/ranking-notes",
+    company: "Twitter",
+    tags: ["algorithms", "ml", "article"],
+    year: 2023,
+    summary: "The open-source matrix factorization algorithm that surfaces notes with cross-partisan agreement — bridging-based ranking to resist polarization."
   },
 ];

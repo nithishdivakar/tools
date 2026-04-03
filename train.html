@@ -36,7 +36,7 @@
         
         input, textarea, select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         textarea { height: 70px; font-size: 14px; margin-top: 5px; resize: none; }
-        label { font-size: 11px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 10px; }
+        label { font-size: 11px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block;}
 
         button.save-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; }
         .secondary-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; padding-bottom: 40px; }
@@ -83,36 +83,36 @@
 
     <div v-if="selection.exercise">
         <div style="display:flex; justify-content: space-between; align-items: center;">
-            <label v-if="mode === 'split'">Sets ( L W | L Rps | R W | R Rps)</label>
-            <label v-else>Sets (Weight | Reps)</label>
+            <label v-if="mode === 'bi'">Sets (Weight | Reps)</label>
+            <label v-else>Sets (L W | L Rps | R W | R Rps)</label>
+
             <select v-model="mode" style="width: auto; padding: 4px; font-size: 11px;">
-                <option value="std">Standard</option>
-                <option value="split">Split</option>
-                <option value="bw">BW +/-</option>
+                <option value="bi">Bi (both together)</option>
+                <option value="uni">Uni (one at a time)</option>
+                <option value="iso">Iso (each independently)</option>
             </select>
         </div>
 
-        <div v-for="n in 5" :key="n" class="set-row" :class="{ 'split-row': mode === 'split' }">
+        <div v-for="n in 5" :key="n" class="set-row" :class="{ 'split-row': mode !== 'bi' }">
             <span style="font-size:12px; color:#94a3b8; font-weight:bold; text-align:center;">{{n}}</span>
             
-            <template v-if="mode !== 'split'">
-                <input type="text" v-model="sets[n-1].w" :placeholder="mode === 'bw' ? 'BW +/-' : 'Weight'">
+            <template v-if="mode === 'bi'">
+                <input type="number" v-model.number="sets[n-1].w" placeholder="Weight">
                 <input type="number" v-model.number="sets[n-1].r" placeholder="Reps">
             </template>
 
             <template v-else>
-                <input type="text" v-model="sets[n-1].lw" placeholder="L W">
+                <input type="number" v-model.number="sets[n-1].lw" placeholder="L W">
                 <input type="number" v-model.number="sets[n-1].lr" placeholder="L Reps">
-                <input type="text" v-model="sets[n-1].rw" placeholder="R W">
+                <input type="number" v-model.number="sets[n-1].rw" placeholder="R W">
                 <input type="number" v-model.number="sets[n-1].rr" placeholder="R Reps">
             </template>
         </div>
         
         <label>Notes</label>
         <textarea v-model="notes" placeholder="Comments"></textarea>
-        
         <button @click="saveSet" class="save-btn">Add</button>
-    </div>
+    </div>              
 
     <div class="secondary-btns">
         <button @click="exportCSV">Export</button>
@@ -136,7 +136,7 @@ createApp({
         const db = ref(null);
         const logs = ref([]);
         const csvText = ref('');
-        const mode = ref('std');
+        const mode = ref('bi');
         const notes = ref('');
         const selection = ref({ muscle: '', functional: '', movement: '', exercise: '' });
         const sets = ref(Array.from({length: 5}, createEmptySet));
@@ -180,14 +180,17 @@ createApp({
             selection.value.movement = ex.movement;
             selection.value.exercise = ex.name;
             const existing = [...logs.value].reverse().find(l => l.exercise === ex.name);
+            
             if (existing) {
-                mode.value = existing.mode || 'std';
+                // Map legacy 'std' to 'bi', otherwise use stored mode
+                mode.value = existing.mode === 'std' ? 'bi' : (existing.mode || 'bi');
                 notes.value = existing.notes || '';
                 sets.value = Array.from({length: 5}, (_, i) => {
                     const s = existing.sets[i];
                     if (!s) return createEmptySet();
                     
-                    if (existing.mode === 'split') {
+                    // If not Bi, parse the L/R split format
+                    if (mode.value !== 'bi') {
                         const rs = s.r.toString().split('/');
                         const ws = s.w.toString().split('/');
                         return { 
@@ -205,9 +208,9 @@ createApp({
             }
         };
 
-        const saveSet = () => {
+const saveSet = () => {
             let valid = [];
-            if (mode.value === 'split') {
+            if (mode.value !== 'bi') {
                 valid = sets.value.filter(s => (s.lr !== null && s.lw !== '') || (s.rr !== null && s.rw !== ''));
             } else {
                 valid = sets.value.filter(s => s.r !== null && s.w !== '');
@@ -216,14 +219,12 @@ createApp({
             if(!valid.length) return;
 
             const processedSets = valid.map(s => {
-                if (mode.value === 'split') {
+                // Save Uni/Iso with the "/" separator for CSV compatibility
+                if (mode.value !== 'bi') {
                     return {
                         r: `${s.lr || 0}/${s.rr || 0}`,
                         w: `${s.lw || 0}/${s.rw || 0}`
                     };
-                } else if (mode.value === 'bw') {
-                    const weight = s.w.toString().toLowerCase().startsWith('bw') ? s.w : `bw${s.w}`;
-                    return { r: s.r, w: weight.trim() };
                 } else {
                     return { r: s.r, w: s.w };
                 }

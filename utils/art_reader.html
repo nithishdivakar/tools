@@ -84,7 +84,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg);
 .topic-chip:hover { border-color: var(--blue); color: var(--blue); border-style: solid; }
 .topic-chip.tf    { border-color: var(--blue); color: var(--blue); border-style: solid; }
 .topic-chip-debug{
-  font-size: 4pt;
+    font-size: 4pt;
 }
 
 .badge { font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
@@ -217,6 +217,21 @@ body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg);
 </div>
 
 </div>
+<!-- Source loader: ?src=N or localStorage key "reader_src". Add new files to SOURCES. -->
+<script>
+(function() {
+  var SOURCES = { '1': 'articles.js', '2': 'articles2.js' };
+  var DEFAULT = '1';
+  var SK = 'reader_src';
+  var params = new URLSearchParams(location.search);
+  var fromUrl = params.get('src');
+  if (fromUrl && SOURCES[fromUrl]) localStorage.setItem(SK, fromUrl);
+  var key = localStorage.getItem(SK) || DEFAULT;
+  var file = SOURCES[key] || SOURCES[DEFAULT];
+  document.title = 'READ \xb7 ' + file.replace('.js','');
+  document.write('<scr' + 'ipt src="' + file + '"><\/scr' + 'ipt>');
+})();
+</script>
 <script src="app.js"></script>
 </body>
 </html>

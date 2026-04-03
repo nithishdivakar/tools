@@ -9,39 +9,40 @@
     <style>
         :root { --accent: #2563eb; --dot-off: #cbd5e1; --success: #22c55e; --bg: #f8fafc; --muted: #f1f5f9; }
         body { font-family: -apple-system, system-ui, sans-serif; padding: 12px; margin: 0; background: var(--bg); color: #1e293b; line-height: 1.4; }
-        
-        .matrix-container { overflow-x: auto; margin-bottom: 20px; background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        #app {display: flex;flex-direction: column;gap: 20px 0;}
+        .matrix-container { overflow-x: auto;  background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .matrix { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
         .matrix-row { display: flex; align-items: center; gap: 8px; }
         .matrix-label-cell { width: 90px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: #475569; }
         .matrix-data-cell { width: 45px; flex-shrink: 0; display: flex; justify-content: center; }
         .matrix-header { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; text-align: center; overflow-wrap: break-word; word-break: break-all;}
-        
+
         .dot-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--dot-off); background: transparent; cursor: pointer; transition: 0.2s; position: relative; }
         .dot-btn.active { background: var(--success); border-color: var(--success); }
         .dot-btn.selected { border-color: var(--accent); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
         .dot-btn:disabled { background: var(--muted); border-color: #e2e8f0; cursor: not-allowed; opacity: 0.3; }
 
-        .selection-info { margin: 10px 0; font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+        .selection-info {font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
 
-        .exercise-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .exercise-list { display: flex; flex-direction: column; gap: 8px;}
         .ex-btn { display: flex; flex-direction: column; padding: 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-align: left; cursor: pointer; row-gap: 4px;}
         .ex-btn.selected { border-color: var(--accent); background: #eff6ff; }
         .ex-btn.done { border-left: 5px solid var(--success); }
         .ex-btn .meta { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
 
-        /* Updated Set Row Grid */
-        .set-row { display: grid; grid-template-columns: 30px 1fr 1.5fr; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .set-row.split-row { grid-template-columns: 30px 1fr 1fr 1fr 1fr; }
-        
+        /* Refactored Set Row using Flex */
+        .set-row { display: flex; gap: 8px; align-items: center; }
+        .set-row > span { width: 30px; flex-shrink: 0; font-size: 12px; color: #94a3b8; font-weight: bold; text-align: center; }
+        .set-row input { flex: 1; min-width: 0; }
+
         input, textarea, select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        textarea { height: 70px; font-size: 14px; margin-top: 5px; resize: none; }
+        textarea { height: 70px; font-size: 14px; resize: none; }
         label { font-size: 11px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block;}
 
-        button.save-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; }
-        .secondary-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; padding-bottom: 40px; }
-        .secondary-btns button { flex: 1 1 45%; padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; color: #64748b; }
-        .csv-box { width: 100%; height: 120px; font-family: monospace; font-size: 10px; margin-top: 10px; border-color: #cbd5e1; background: #fff; }
+        button.save-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .secondary-btns { padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; color: #64748b; }
+        .csv-box { width: 100%; height: 120px; font-family: monospace; font-size: 10px; border-color: #cbd5e1; background: #fff; }
+        .section {display: flex; flex-direction: column; gap: 8px 0px;}
     </style>
 </head>
 <body>
@@ -56,7 +57,7 @@
             <div v-for="m in uniqueMuscles" :key="m" class="matrix-row">
                 <div class="matrix-label-cell">{{m}}</div>
                 <div v-for="f in uniqueFunctionals" :key="f" class="matrix-data-cell">
-                    <button class="dot-btn" 
+                    <button class="dot-btn"
                         :disabled="!isAvailable(m, f)"
                         :class="{ active: isCategoryDone(m, f), selected: selection.muscle === m && selection.functional === f }"
                         @click="selectFromGrid(m, f)">
@@ -66,7 +67,7 @@
         </div>
     </div>
 
-    <div v-if="selection.muscle && selection.functional">
+    <div v-if="selection.muscle && selection.functional" class="section">
         <div class="selection-info">{{selection.muscle}} / {{selection.functional}}</div>
         <div class="exercise-list">
             <button v-for="ex in availableExercises" :key="ex.name" class="ex-btn"
@@ -81,7 +82,7 @@
         </div>
     </div>
 
-    <div v-if="selection.exercise">
+    <div v-if="selection.exercise" class="section">
         <div style="display:flex; justify-content: space-between; align-items: center;">
             <label v-if="mode === 'bi'">Sets (Weight | Reps)</label>
             <label v-else>Sets (L W | L Rps | R W | R Rps)</label>
@@ -93,9 +94,9 @@
             </select>
         </div>
 
-        <div v-for="n in 5" :key="n" class="set-row" :class="{ 'split-row': mode !== 'bi' }">
-            <span style="font-size:12px; color:#94a3b8; font-weight:bold; text-align:center;">{{n}}</span>
-            
+        <div v-for="n in 5" :key="n" class="set-row">
+            <span>{{n}}</span>
+
             <template v-if="mode === 'bi'">
                 <input type="number" v-model.number="sets[n-1].w" placeholder="Weight">
                 <input type="number" v-model.number="sets[n-1].r" placeholder="Reps">
@@ -108,16 +109,18 @@
                 <input type="number" v-model.number="sets[n-1].rr" placeholder="R Reps">
             </template>
         </div>
-        
+
+    </div>
+    <div class="section" style="gap: 15px 0;">
         <label>Notes</label>
         <textarea v-model="notes" placeholder="Comments"></textarea>
         <button @click="saveSet" class="save-btn">Add</button>
-    </div>              
+    </div>
 
-    <div class="secondary-btns">
-        <button @click="exportCSV">Export</button>
-        <button @click="importCSV">Import</button>
-        <button @click="clearLogs" style="color: #dc2626">Clear DB</button>
+    <div class="section">
+        <button class="secondary-btns" @click="exportCSV">Export</button>
+        <button class="secondary-btns" @click="importCSV">Import</button>
+        <button class="secondary-btns" @click="clearLogs" style="color: #dc2626">Clear DB</button>
     </div>
     <textarea v-model="csvText" class="csv-box" placeholder="Paste CSV here to import..."></textarea>
 </div>
@@ -125,10 +128,10 @@
 <script>
 const { createApp, ref, computed, onMounted } = Vue;
 
-const createEmptySet = () => ({ 
-    r: null, w: '', 
-    lr: null, lw: '', 
-    rr: null, rw: '' 
+const createEmptySet = () => ({
+    r: null, w: '',
+    lr: null, lw: '',
+    rr: null, rw: ''
 });
 
 createApp({
@@ -164,13 +167,13 @@ createApp({
             return [...new Set(EX_DB.map(e => e.functional))].sort((a, b) => {
                 const weightA = order[a] || 99;
                 const weightB = order[b] || 99;
-                
+
                 return weightA - weightB;
             });
         });
         const isAvailable = (m, f) => EX_DB.some(e => e.muscle === m && e.functional === f);
         const availableExercises = computed(() => EX_DB.filter(e => e.muscle === selection.value.muscle && e.functional === selection.value.functional));
-        
+
         const isCategoryDone = (m, f) => logs.value.some(l => l.muscle === m && l.functional === f);
         const isExerciseDone = (name) => logs.value.some(l => l.exercise === name);
 
@@ -180,7 +183,7 @@ createApp({
             selection.value.movement = ex.movement;
             selection.value.exercise = ex.name;
             const existing = [...logs.value].reverse().find(l => l.exercise === ex.name);
-            
+
             if (existing) {
                 // Map legacy 'std' to 'bi', otherwise use stored mode
                 mode.value = existing.mode === 'std' ? 'bi' : (existing.mode || 'bi');
@@ -188,15 +191,13 @@ createApp({
                 sets.value = Array.from({length: 5}, (_, i) => {
                     const s = existing.sets[i];
                     if (!s) return createEmptySet();
-                    
-                    // If not Bi, parse the L/R split format
                     if (mode.value !== 'bi') {
                         const rs = s.r.toString().split('/');
                         const ws = s.w.toString().split('/');
-                        return { 
+                        return {
                             lr: parseInt(rs[0]) || null, rr: parseInt(rs[1]) || null,
                             lw: ws[0] || '', rw: ws[1] || '',
-                            r: null, w: '' 
+                            r: null, w: ''
                         };
                     } else {
                         return { r: s.r, w: s.w, lr: null, lw: '', rr: null, rw: '' };
@@ -208,14 +209,14 @@ createApp({
             }
         };
 
-const saveSet = () => {
+        const saveSet = () => {
             let valid = [];
             if (mode.value !== 'bi') {
                 valid = sets.value.filter(s => (s.lr !== null && s.lw !== '') || (s.rr !== null && s.rw !== ''));
             } else {
                 valid = sets.value.filter(s => s.r !== null && s.w !== '');
             }
-            
+
             if(!valid.length) return;
 
             const processedSets = valid.map(s => {
@@ -231,9 +232,9 @@ const saveSet = () => {
             });
 
             const entry = { ...selection.value, mode: mode.value, notes: notes.value, sets: processedSets };
-            db.value.transaction(['logs'], 'readwrite').objectStore('logs').add(entry).onsuccess = () => { 
-                loadLogs(); 
-                selection.value.exercise = ''; 
+            db.value.transaction(['logs'], 'readwrite').objectStore('logs').add(entry).onsuccess = () => {
+                loadLogs();
+                selection.value.exercise = '';
                 sets.value = Array.from({length: 5}, createEmptySet);
             };
         };
@@ -252,21 +253,20 @@ const saveSet = () => {
         const importCSV = async () => {
             if (!csvText.value) return;
             const lines = csvText.value.split('\n').filter(line => line.trim() !== '');
-            lines.shift(); // Remove header
-            
+            lines.shift();
+
             const grouped = {};
             lines.forEach(line => {
                 const parts = line.match(/(".*?"|[^,]+)/g).map(p => p.replace(/^"|"$/g, '').replace(/""/g, '"'));
                 const [muscle, functional, movement, name, setNo, reps, weight, note] = parts;
-                
                 if (!grouped[name]) {
                     let inferredMode = 'std';
                     if (reps.includes('/')) inferredMode = 'split';
                     else if (weight.toLowerCase().includes('bw')) inferredMode = 'bw';
 
-                    grouped[name] = { 
-                        muscle, functional, movement, exercise: name, 
-                        sets: [], notes: note || "", mode: inferredMode 
+                    grouped[name] = {
+                        muscle, functional, movement, exercise: name,
+                        sets: [], notes: note || "", mode: inferredMode
                     };
                 }
                 grouped[name].sets.push({ r: reps, w: weight });

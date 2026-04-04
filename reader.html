@@ -265,7 +265,15 @@
                 {{ swipeCard.title }}
             </div>
             <div v-if="swipeCard.snippet" class="blurb">
-                {{ swipeCard.snippet.substring(0, 300) }}{{ swipeCard.snippet.length > 300 ? '…' : '' }}
+                {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 300) }}
+                <span v-if="(swipeCard.snippet_length || 300) < swipeCard.snippet.length">... </span>
+                <span class="txt-btn"
+                      v-if="(swipeCard.snippet_length || 300) < swipeCard.snippet.length"
+                      @click.stop="swipeCard.snippet_length = Math.max(300, (swipeCard.snippet_length || 300) + 300);">more</span>
+                <span class="txt-btn" v-if="swipeCard.snippet_length > 300 && swipeCard.snippet_length < swipeCard.snippet.length"> or </span>
+                <span class="txt-btn"
+                      v-if="swipeCard.snippet_length > 300"
+                      @click.stop="swipeCard.snippet_length = Math.max(160, (swipeCard.snippet_length || 300) - 300);">less</span>
             </div>
             <!-- Tags debug -->
             <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
@@ -405,7 +413,7 @@
             </div>
             <div v-else>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: var(--gray);">{{ storedTagList.length }} tags stored · saves every {{ 5 }} votes</span>
+                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 32 }} tags · saves every {{ 5 }} votes</span>
                     <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="deleteAllPrefs()">✕ clear all</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
@@ -416,8 +424,7 @@
                             {{ entry.affinity >= 0 ? '+' : '' }}{{ (entry.affinity).toFixed(2) }}
                         </span>
                         <span style="color: #1e293b;">{{ entry.tag }}</span>
-                        <span style="cursor: pointer; color: var(--gray); padding: 0 2px;"
-                              @click="deleteTagPref(entry.tag)">✕</span>
+                        <span style="cursor: pointer; color: var(--gray); padding: 0 2px;" @click="deleteTagPref(entry.tag)">✕</span>
                     </div>
                 </div>
             </div>
@@ -565,7 +572,6 @@ function extractTags(article) {
     snippetWords.forEach(w => {
         if (w.length >= 4 && !STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 1;
     });
-
     const words = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20)
@@ -634,14 +640,13 @@ createApp({
         const showDebugStats = ref(false);
 
         // ── SWIPE STATE ─────────────────────────────────────────────────────
-        const SAVE_EVERY = 5;           // persist after every N votes
+        const SAVE_EVERY = 5;
+        const MAX_TAGS = 128;
         const LS_KEY = 'reader_tag_affinity';
 
-        // Session-local raw vote accumulator (tag → weighted sum, signed)
         const tagVotes = reactive({});
         const totalVoteWeight = ref(0);
 
-        // Persisted affinity: tag → normalised float [-1, 1], EWA-merged across sessions
         const storedAffinity = reactive((() => {
             try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
             catch { return {}; }
@@ -872,7 +877,6 @@ createApp({
 
         // ── SWIPE LOGIC ──────────────────────────────────────────────────────
 
-        // Save current storedAffinity to localStorage
         const persistAffinity = () => {
             try { localStorage.setItem(LS_KEY, JSON.stringify({...storedAffinity})); }
             catch (e) { console.warn('localStorage write failed', e); }
@@ -880,26 +884,20 @@ createApp({
 
         const mergeSessionIntoStored = () => {
             if (totalVoteWeight.value === 0) return;
-            // Compute session normalised affinity for all voted tags
             const sessionNorm = {};
-            for (const [tag, votes] of Object.entries(tagVotes)) {
+            for (const [tag, votes] of Object.entries(tagVotes))
                 sessionNorm[tag] = votes / totalVoteWeight.value;
-            }
-            // Merge into storedAffinity
             const allTags = new Set([...Object.keys(storedAffinity), ...Object.keys(sessionNorm)]);
             allTags.forEach(tag => {
-                const old = storedAffinity[tag] ?? 0;
-                const fresh = sessionNorm[tag] ?? 0;
-                const merged = old * (1.0 - 0.2)+ fresh * 0.2;
-                // Prune near-zero entries to keep storage clean
-                if (Math.abs(merged) < 0.001) delete storedAffinity[tag];
+                const merged = (storedAffinity[tag] ?? 0) * 0.8 + (sessionNorm[tag] ?? 0) * 0.2;
+                if (Math.abs(merged) < 0.0001) delete storedAffinity[tag];
                 else storedAffinity[tag] = merged;
             });
+            const sorted = Object.entries(storedAffinity).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            sorted.slice(MAX_TAGS).forEach(([tag]) => delete storedAffinity[tag]);
         };
 
-        // Affinity used for scoring — storedAffinity is the source of truth
         const tagAffinity = (tag) => storedAffinity[tag] ?? 0;
-
         const tagVotesValue = (tag) => tagVotes[tag] || 0;
 
         const recencyScore = (article) => {
@@ -933,12 +931,10 @@ createApp({
             });
             totalVoteWeight.value += Math.abs(weight);
             swipeSeen.value++;
-            // Merge + persist every SAVE_EVERY votes
             if (swipeSeen.value % SAVE_EVERY === 0) {
                 mergeSessionIntoStored();
                 persistAffinity();
             }
-            // Re-sort only the unseen portion of the deck
             const seen = swipeDeck.value.slice(0, swipeIndex.value + 1);
             const remaining = swipeDeck.value.slice(swipeIndex.value + 1);
             remaining.sort((a, b) => boostedScore(b) - boostedScore(a));
@@ -963,10 +959,9 @@ createApp({
         };
 
         // ── PREFERENCE MANAGEMENT ─────────────────────────────────────────────
-        // Sorted list of stored tags for the management UI
         const storedTagList = computed(() =>
             Object.entries(storedAffinity)
-                .sort((a, b) => b[1] - a[1])  // strongest positive first
+                .sort((a, b) => b[1] - a[1])
                 .map(([tag, affinity]) => ({ tag, affinity }))
         );
 

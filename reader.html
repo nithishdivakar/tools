@@ -37,7 +37,7 @@
         .tag.stone { --accent: var(--black); }
 
         .tag-main { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-        .tag-sub { font-size: 0.6rem; opacity: 0.5; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+        .tag-sub { font-size: 0.6em; opacity: 0.5; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
         .count { font-size: 0.65rem; font-weight: 400; opacity: 0.7; }
 
         /* Controls */
@@ -114,25 +114,26 @@
         }
         .fetch-progress-fill.done { background: var(--green); }
         .fetch-progress-fill.has-errors { background: var(--red); }
-        .tag-card-container{
-            display: flex;flex-direction: column;align-items: center;
-            font-size: 0.6rem; padding: 1px 6px; border-radius: 8px; 
-            background: #f1f5f9; color: #64748b; border: 1px solid var(--border);
+        .tag-swipe-card {
+            padding: 3px 10px;
+            font-size:0.5rem;
+            border-radius: 10px
         }
-        .tag-card-head{ }
-        .tag-card-body{ font-size: 4pt; }
+        .tag-swipe-card .tag-main {
+            font-weight: 300;
+        }
         .swipe-btn {
             width: 120px;
-            height: 64px;
-            border-radius: 3pt;
+            border-radius: 5pt;
             border: 0;
-            background: var(--black);
-            color: var(--white);
-            font-size: 1.5rem;
+            background: var(--white);
+            color: var(--black);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            --swipe-btn-accent-color: var(--red);
+            border: 1px solid var(--swipe-btn-accent-color);
         }
     </style>
 </head>
@@ -150,7 +151,7 @@
             <span :class="['txt-btn', { 'selected': viewMode === 'table' }]"  @click="viewMode = 'table'">☷ TABLE</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">☰ LIST</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">⧉ CARD</span>
-            <span :class="['txt-btn', { 'selected': viewMode === 'swipe' }]" @click="enterSwipe()">⟳ SWIPE</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'swipe' }]" @click="enterSwipe()">🃅 SWIPE</span>
         </div>
     </div>
     <div class="bulk-actions">
@@ -244,8 +245,13 @@
         </div>
         <!-- Card -->
         <div style="background: var(--white); border-radius: 12px; border: 1px solid var(--border);
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;"
-             @click="swipeRead()">
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;
+                    transition: transform 0.15s ease; user-select: none;"
+             :style="swipeDragStyle"
+             @click="swipeRead()"
+             @touchstart.passive="onTouchStart"
+             @touchmove.passive="onTouchMove"
+             @touchend="onTouchEnd">
             <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
                  style="width: 100%; border-radius: 8px; object-fit: contain; border: 1px solid var(--border); margin-bottom: 12px;">
             <div class="meta" style="margin-bottom: 8px;">
@@ -263,19 +269,19 @@
             </div>
             <!-- Tags debug -->
             <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
-                <span v-for="t in swipeCard._tags" :key="t"
-                      class="tag-card-container">
-                    <span class="tag-card-head">{{ t }}</span>
-                    <span class="tag-card-body">({{ (tagVotesValue(t)).toFixed(2) }})</span>
-                </span>
+                <div v-for="t in swipeCard._tags" :key="t"
+                      class="tag tag-swipe-card success selected">
+                    <div class="tag-main">{{ t }}</div>
+                    <div class="tag-sub">({{ (tagVotesValue(t)).toFixed(2) }})</div>
+                </div>
             </div>
         </div>
         <!-- Buttons -->
         <div style="display: flex; justify-content: center; gap: 32px; margin-top: 16px;">
-            <button @click.stop="swipeVote(-0.5)" class="swipe-btn" style="background: var(--red);">
+            <button @click.stop="swipeVote(-0.5)" class="swipe-btn" style="--swipe-btn-accent-color: var(--red);">
                 −1
             </button>
-            <button @click.stop="swipeVote(1)" class="swipe-btn" style="background: var(--green);">
+            <button @click.stop="swipeVote(1)" class="swipe-btn" style="--swipe-btn-accent-color: var(--green);">
                 +1
             </button>
         </div>
@@ -889,6 +895,47 @@ createApp({
             rebuildDeck();
         };
 
+        // ── TOUCH SWIPE ──────────────────────────────────────────────────────
+        const SWIPE_THRESHOLD = 60; // px needed to trigger a vote
+        const touchStartX = ref(0);
+        const touchStartY = ref(0);
+        const touchDx = ref(0);
+        const touchActive = ref(false);
+
+        const swipeDragStyle = computed(() => {
+            if (!touchActive.value || Math.abs(touchDx.value) < 8) return {};
+            const rotate = touchDx.value * 0.04; // subtle tilt
+            const opacity = Math.max(0.6, 1 - Math.abs(touchDx.value) / 400);
+            return {
+                transform: `translateX(${touchDx.value}px) rotate(${rotate}deg)`,
+                transition: 'none',
+                opacity,
+            };
+        });
+
+        const onTouchStart = (e) => {
+            touchStartX.value = e.touches[0].clientX;
+            touchStartY.value = e.touches[0].clientY;
+            touchDx.value = 0;
+            touchActive.value = true;
+        };
+
+        const onTouchMove = (e) => {
+            touchDx.value = e.touches[0].clientX - touchStartX.value;
+        };
+
+        const onTouchEnd = (e) => {
+            touchActive.value = false;
+            const dx = touchDx.value;
+            const dy = e.changedTouches[0].clientY - touchStartY.value;
+            touchDx.value = 0;
+            // Only trigger if mostly horizontal and past threshold
+            if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                if (dx < 0) swipeVote(-0.5); // left → −1
+                else        swipeVote(1);    // right → +1
+            }
+        };
+
 
         const getFavicon = (url) => {
             try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
@@ -923,7 +970,8 @@ createApp({
             refreshSource, getFavicon, nukeCache,
             // swipe
             enterSwipe, swipeVote, swipeRead,
-            swipeCard, swipeRemaining, swipeSeen, tagAffinity, tagVotesValue,
+            swipeCard, swipeRemaining, swipeSeen, tagAffinity,
+            swipeDragStyle, onTouchStart, onTouchMove, onTouchEnd, tagVotesValue,
             // debug
             showDebugStats, debugStats, fetchLog,
         };

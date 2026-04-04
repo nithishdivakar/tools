@@ -123,17 +123,14 @@
             font-weight: 300;
         }
         .swipe-btn {
-            width: 120px;
-            border-radius: 5pt;
-            border: 0;
-            background: var(--white);
+            width: 60px;
+            height: 80px;
+            border: 1px solid var(--swipe-btn-accent-color);
             color: var(--black);
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            --swipe-btn-accent-color: var(--red);
-            border: 1px solid var(--swipe-btn-accent-color);
+            font-weight: bold;
+            background-color: transparent;
+            transition: transform 0.2s;
         }
     </style>
 </head>
@@ -285,12 +282,19 @@
             </div>
         </div>
         <!-- Buttons -->
-        <div style="display: flex; justify-content: center; gap: 32px; margin-top: 16px;">
-            <button @click.stop="swipeVote(-0.5)" class="swipe-btn" style="--swipe-btn-accent-color: var(--red);">
-                −1
+        <div style="display: flex;
+    justify-content: space-between; 
+    align-items: center;
+    position: fixed; 
+    top: 80vh; 
+    left: 0; 
+    width: 100%; 
+    pointer-events: none;">
+            <button @click.stop="swipeVote(-0.5)" class="swipe-btn" style="--swipe-btn-accent-color: var(--red);border-radius: 0 60px 60px 0;pointer-events: auto;">
+                −
             </button>
-            <button @click.stop="swipeVote(1)" class="swipe-btn" style="--swipe-btn-accent-color: var(--green);">
-                +1
+            <button @click.stop="swipeVote(1)" class="swipe-btn" style="--swipe-btn-accent-color: var(--green);border-radius: 60px 0 0 60px;pointer-events: auto;">
+                +
             </button>
         </div>
     </div>
@@ -413,7 +417,7 @@
             </div>
             <div v-else>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 32 }} tags · saves every {{ 5 }} votes</span>
+                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 128 }} tags · saves every {{ 5 }} votes</span>
                     <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="deleteAllPrefs()">✕ clear all</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">

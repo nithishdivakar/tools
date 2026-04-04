@@ -68,6 +68,7 @@
         .feed-container.card .item { display: flex; flex-direction: column; gap: 10px; flex: 1 1 300px; max-width: 400px;}
         .feed-container.card .thumb { width: 100%; /*aspect-ratio: 16 / 9;*/ border-radius: 6px; object-fit: contain; border: 1px solid var(--border); }
         .feed-container.table {display: none}
+        .feed-container.swipe-hidden { display: none; }
 
         /* Content Meta */
         .content { flex: 7; min-width: 0; display: flex; flex-direction: column; }
@@ -113,6 +114,26 @@
         }
         .fetch-progress-fill.done { background: var(--green); }
         .fetch-progress-fill.has-errors { background: var(--red); }
+        .tag-card-container{
+            display: flex;flex-direction: column;align-items: center;
+            font-size: 0.6rem; padding: 1px 6px; border-radius: 8px; 
+            background: #f1f5f9; color: #64748b; border: 1px solid var(--border);
+        }
+        .tag-card-head{ }
+        .tag-card-body{ font-size: 4pt; }
+        .swipe-btn {
+            width: 120px;
+            height: 64px;
+            border-radius: 3pt;
+            border: 0;
+            background: var(--black);
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -129,6 +150,7 @@
             <span :class="['txt-btn', { 'selected': viewMode === 'table' }]"  @click="viewMode = 'table'">☷ TABLE</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'list' }]"  @click="viewMode = 'list'">☰ LIST</span>
             <span :class="['txt-btn', { 'selected': viewMode === 'card' }]"  @click="viewMode = 'card'">⧉ CARD</span>
+            <span :class="['txt-btn', { 'selected': viewMode === 'swipe' }]" @click="enterSwipe()">⟳ SWIPE</span>
         </div>
     </div>
     <div class="bulk-actions">
@@ -213,7 +235,57 @@
     </div>
 </div>
 
-<div :class="['feed-container', viewMode]">
+<!-- SWIPE MODE -->
+<div v-if="viewMode === 'swipe'" style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0;">
+    <div v-if="swipeCard" style="width: 100%; max-width: 560px;">
+        <!-- Progress line -->
+        <div style="font-size: 0.7rem; color: #64748b; text-align: center; margin-bottom: 10px;">
+            {{ swipeSeen }} seen · {{ swipeRemaining }} remaining
+        </div>
+        <!-- Card -->
+        <div style="background: var(--white); border-radius: 12px; border: 1px solid var(--border);
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;"
+             @click="swipeRead()">
+            <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
+                 style="width: 100%; border-radius: 8px; object-fit: contain; border: 1px solid var(--border); margin-bottom: 12px;">
+            <div class="meta" style="margin-bottom: 8px;">
+                <span v-if="swipeCard.source.tags.includes('star')" class="star-icon">★</span>
+                <img :src="getFavicon(swipeCard.link)" class="source-icon" onerror="this.style.display='none'">
+                <span>{{ swipeCard.sourceName }}</span>
+                <span>•</span>
+                <span>{{ swipeCard.date.toISOString().split('T')[0] }}</span>
+            </div>
+            <div style="font-weight: 700; font-size: 1.1rem; line-height: 1.3; color: #0f172a; margin-bottom: 10px;">
+                {{ swipeCard.title }}
+            </div>
+            <div v-if="swipeCard.snippet" class="blurb">
+                {{ swipeCard.snippet.substring(0, 300) }}{{ swipeCard.snippet.length > 300 ? '…' : '' }}
+            </div>
+            <!-- Tags debug -->
+            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
+                <span v-for="t in swipeCard._tags" :key="t"
+                      class="tag-card-container">
+                    <span class="tag-card-head">{{ t }}</span>
+                    <span class="tag-card-body">({{ (tagVotesValue(t)).toFixed(2) }})</span>
+                </span>
+            </div>
+        </div>
+        <!-- Buttons -->
+        <div style="display: flex; justify-content: center; gap: 32px; margin-top: 16px;">
+            <button @click.stop="swipeVote(-0.5)" class="swipe-btn" style="background: var(--red);">
+                −1
+            </button>
+            <button @click.stop="swipeVote(1)" class="swipe-btn" style="background: var(--green);">
+                +1
+            </button>
+        </div>
+    </div>
+    <div v-else style="color: #64748b; font-size: 0.9rem; text-align: center; padding: 40px;">
+        No articles to swipe. Select a feed first.
+    </div>
+</div>
+
+<div :class="['feed-container', viewMode === 'swipe' ? 'swipe-hidden' : viewMode]">
     <template v-for="item in sortedArticles" :key="item.link">
         <div class="item">
             <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
@@ -436,6 +508,42 @@ const { createApp, ref, computed, onMounted, reactive, watch } = Vue;
 
 //  SORT HELPERS
 
+const STOPWORDS = new Set([
+    'the','and','for','are','but','not','you','all','can','had','her','was','one',
+    'our','out','day','get','has','him','his','how','man','new','now','old','see',
+    'two','way','who','its','from','that','this','they','have','with','been','when',
+    'will','more','what','said','each','which','their','time','would','make','like',
+    'into','than','them','then','some','could','other','after','first','also','just',
+    'over','such','your','even','most','these','those','where','while','about','here',
+    'very','only','both','back','good','last','long','many','come','know','take',
+    'little','before','should','through','being','still','every','never','world',
+    'next','does','going','around','says','made','may','might','much','must','need',
+    'well','year','years','week','month','report','according','said','says','amid',
+    'within','since','across','without','between','against','under','above',
+]);
+
+function extractTags(article) {
+    const titleWords = (article.title || '').toLowerCase().split(/[^a-z]+/);
+    const snippetWords = (article.snippet || '').toLowerCase().split(/[^a-z]+/).slice(0, 100);
+    const freq = {};
+    titleWords.forEach(w => {
+        if (w.length >= 4 && !STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 3;
+    });
+    snippetWords.forEach(w => {
+        if (w.length >= 4 && !STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 1;
+    });
+    return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([w]) => w);
+}
+
+// Boost config: tag → multiplier (default 1 for all tags)
+const TAG_BOOST =  { 'ai': 2, 'sports': 0.5 }
+const defaultBoost = (tag) => TAG_BOOST[tag] ?? 1;
+
+
+
 const ordScore = (article) => {
     const day = Math.floor(article.date.getTime() / 86400000) * 86400000;
     return [-day, article.ingestedAt];
@@ -488,6 +596,13 @@ createApp({
         const src_search = ref(false);
         const cachedCount = ref(0);
         const showDebugStats = ref(false);
+
+        // ── SWIPE STATE ─────────────────────────────────────────────────────
+        const tagVotes = reactive({});   // tag → raw vote sum (float)
+        const totalVoteWeight = ref(0);  // sum of |votes| for normalisation
+        const swipeIndex = ref(0);       // index into swipeDeck
+        const swipeDeck = ref([]);       // ordered array rebuilt after each vote
+        const swipeSeen = ref(0);
 
         // Debug tracking
         const fetchLog = reactive([]); // { url, cacheHit, strategy, duration, itemCount, error }
@@ -708,6 +823,73 @@ createApp({
 
         const nukeCache = async () => { await CacheDB.nuke(); location.reload(); };
 
+        // ── SWIPE LOGIC ──────────────────────────────────────────────────────
+
+        const tagAffinity = (tag) => {
+            if (totalVoteWeight.value === 0) return 0;
+            return (tagVotes[tag] || 0) / totalVoteWeight.value;
+        };
+        
+        const tagVotesValue = (tag) => {
+            return (tagVotes[tag] || 0)
+        };
+
+        const recencyScore = (article) => {
+            return 1 / (Math.floor(article.date.getTime() / 86400000) || 1);
+        };
+
+        const boostedScore = (article) => {
+            let multiplier = 1;
+            (article._tags || []).forEach(tag => {
+                multiplier *= (1 + defaultBoost(tag) * tagAffinity(tag));
+            });
+            return recencyScore(article) * multiplier;
+        };
+
+        const rebuildDeck = () => {
+            const pool = sortedArticles.value.map(a => {
+                if (!a._tags) a._tags = extractTags(a);
+                return a;
+            });
+            swipeDeck.value = [...pool].sort((a, b) => boostedScore(b) - boostedScore(a));
+        };
+
+        const swipeCard = computed(() => swipeDeck.value[swipeIndex.value] || null);
+        const swipeRemaining = computed(() => Math.max(0, swipeDeck.value.length - swipeIndex.value));
+
+        const applyVotes = (weight) => {
+            const card = swipeCard.value;
+            if (!card) return;
+            (card._tags || []).forEach(tag => {
+                tagVotes[tag] = (tagVotes[tag] || 0) + weight;
+            });
+            totalVoteWeight.value += Math.abs(weight);
+            swipeSeen.value++;
+            // Re-sort only the unseen portion of the deck
+            const seen = swipeDeck.value.slice(0, swipeIndex.value + 1);
+            const remaining = swipeDeck.value.slice(swipeIndex.value + 1);
+            remaining.sort((a, b) => boostedScore(b) - boostedScore(a));
+            swipeDeck.value = [...seen, ...remaining];
+            swipeIndex.value++;
+        };
+
+        const swipeVote = (weight) => applyVotes(weight);
+
+        const swipeRead = () => {
+            const card = swipeCard.value;
+            if (!card) return;
+            window.open(card.link, '_blank');
+            applyVotes(1);
+        };
+
+        const enterSwipe = () => {
+            viewMode.value = 'swipe';
+            swipeIndex.value = 0;
+            swipeSeen.value = 0;
+            rebuildDeck();
+        };
+
+
         const getFavicon = (url) => {
             try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
             catch (e) { return ''; }
@@ -739,6 +921,9 @@ createApp({
             // actions
             selectTag, toggleSource, isolateSource, setDatePreset,
             refreshSource, getFavicon, nukeCache,
+            // swipe
+            enterSwipe, swipeVote, swipeRead,
+            swipeCard, swipeRemaining, swipeSeen, tagAffinity, tagVotesValue,
             // debug
             showDebugStats, debugStats, fetchLog,
         };

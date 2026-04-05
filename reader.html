@@ -115,9 +115,11 @@
         .fetch-progress-fill.done { background: var(--green); }
         .fetch-progress-fill.has-errors { background: var(--red); }
         .tag-swipe-card {
-            padding: 3px 10px;
-            font-size:0.5rem;
-            border-radius: 10px
+            padding: 0px 6px;
+            font-size: 0.5rem;
+            border-radius: 8px;
+            flex-direction: row;
+            height: 15px;
         }
         .tag-swipe-card .tag-main {
             font-weight: 300;
@@ -134,6 +136,23 @@
             backdrop-filter: blur(1px);
             border: 0;
         }
+
+        /* Tag preferences */
+        .tp-section { margin-top: 10px; font-size: 0.75rem; }
+        .tp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .tp-muted { color: var(--gray); }
+        .tp-empty { color: var(--gray); padding: 6px 0; }
+        .tp-btn-red { --accent: var(--red); color: var(--red); }
+        .tp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tp-tag-chip { display: flex; align-items: center; gap: 4px; background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; }
+        .tp-affinity { font-weight: 600; min-width: 38px; text-align: right; }
+        .tp-affinity.pos { color: var(--green); }
+        .tp-affinity.neg { color: var(--red); }
+        .tp-session { font-weight: 600; min-width: 38px; text-align: right; }
+        .tp-session.pos { color: var(--blue); }
+        .tp-session.neg { color: var(--yellow); }
+        .tp-tag-name { color: #1e293b; }
+        .tp-remove { cursor: pointer; color: var(--gray); padding: 0 2px; }
     </style>
 </head>
 <body>
@@ -272,6 +291,10 @@
             </div>
             <!-- Tags debug -->
             <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
+                <div class="tag tag-swipe-card stone selected">
+                    <div class="tag-main">⚡ {{ boostedScore(swipeCard).toFixed(3) }}</div>
+                    <div class="tag-sub">score</div>
+                </div>
                 <div v-for="t in swipeCard._tags" :key="t"
                       class="tag tag-swipe-card success selected">
                     <div class="tag-main">{{ t }}</div>
@@ -352,34 +375,31 @@
 </template>
     <details style="margin-top: 8px;">
         <summary>tag preferences</summary>
-        <div style="margin-top: 10px; font-size: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: var(--gray);">{{ bfCount }} articles filtered (seen)</span>
-                <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="resetSeen()">↺ reset seen</span>
+        <div class="tp-section">
+            <div class="tp-row">
+                <span class="tp-muted">{{ bfCount }} articles filtered (seen)</span>
+                <span class="txt-btn tp-btn-red" @click="resetSeen()">↺ reset seen</span>
             </div>
-            <div v-if="storedTagList.length === 0" style="color: var(--gray); padding: 6px 0;">
+            <div v-if="storedTagList.length === 0" class="tp-empty">
                 No preferences stored yet. Start swiping.
             </div>
             <div v-else>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 64 }} tags · saving in {{ SAVE_EVERY - (swipeSeen % SAVE_EVERY) }} votes</span>
-                    <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="deleteAllPrefs()">✕ clear all</span>
+                <div class="tp-row">
+                    <span class="tp-muted">{{ storedTagList.length }}/{{ 64 }} tags · saving in {{ SAVE_EVERY - (swipeSeen % SAVE_EVERY) }} votes</span>
+                    <span class="txt-btn tp-btn-red" @click="deleteAllPrefs()">✕ clear all</span>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                    <div v-for="entry in storedTagList" :key="entry.tag"
-                         style="display: flex; align-items: center; gap: 4px; background: var(--white);
-                                border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px;">
-                        <span :style="{ color: entry.affinity >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
-                              title="stored">
+                <div class="tp-tag-list">
+                    <div v-for="entry in storedTagList" :key="entry.tag" class="tp-tag-chip">
+                        <span :class="['tp-affinity', entry.affinity >= 0 ? 'pos' : 'neg']" title="stored">
                             {{ entry.affinity >= 0 ? '+' : '' }}{{ (entry.affinity).toFixed(2) }}
                         </span>
                         <span v-if="entry.session !== null"
-                              :style="{ color: entry.session >= 0 ? 'var(--blue)' : 'var(--yellow)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
+                              :class="['tp-session', entry.session >= 0 ? 'pos' : 'neg']"
                               title="this session">
                             {{ entry.session >= 0 ? '+' : '' }}{{ (entry.session).toFixed(2) }}
                         </span>
-                        <span style="color: #1e293b;">{{ entry.tag }}</span>
-                        <span style="cursor: pointer; color: var(--gray); padding: 0 2px;" @click="deleteTagPref(entry.tag)">✕</span>
+                        <span class="tp-tag-name">{{ entry.tag }}</span>
+                        <span class="tp-remove" @click="deleteTagPref(entry.tag)">✕</span>
                     </div>
                 </div>
             </div>
@@ -972,16 +992,21 @@ createApp({
         const tagAffinity = (tag) => storedAffinity[tag] ?? 0;
         const tagVotesValue = (tag) => tagVotes[tag] || 0;
 
-        const recencyScore = (article) => {
-            return 1 / (Math.floor(article.date.getTime() / 86400000) || 1);
+        const liveAffinity = (tag) => {
+            const stored = storedAffinity[tag] ?? 0;
+            const sessionScore = totalVoteWeight.value > 0 ? (tagVotes[tag] || 0) / totalVoteWeight.value : 0;
+            return Math.max(0, stored * 0.8 + sessionScore * 0.2);
         };
 
         const boostedScore = (article) => {
             let multiplier = 1;
             (article._tags || []).forEach(tag => {
-                multiplier *= (1 + defaultBoost(tag) * tagAffinity(tag));
+                const isSource = tag === article.sourceName;
+                const affinity = liveAffinity(tag);
+                const boost = defaultBoost(tag) * (isSource ? 2 : 1);
+                multiplier *= (1 + boost * affinity);
             });
-            return recencyScore(article) * multiplier;
+            return multiplier;
         };
 
         const rebuildDeck = () => {
@@ -1095,7 +1120,7 @@ createApp({
             // swipe
             SAVE_EVERY,
             enterSwipe, swipeVote, swipeRead,
-            swipeCard, swipeRemaining, swipeSeen, tagAffinity,
+            swipeCard, swipeRemaining, swipeSeen, tagAffinity, boostedScore,
             tagVotesValue,
             bfCount,
             // preference management

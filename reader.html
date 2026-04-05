@@ -707,6 +707,7 @@ createApp({
         const resetSeen = () => {
             bfReset();
             bfCount.value = 0;
+            swipeIndex.value = 0;
             if (viewMode.value === 'swipe') rebuildDeck();
         };
 
@@ -984,7 +985,9 @@ createApp({
         };
 
         const rebuildDeck = () => {
-            const pool = sortedArticles.value.map(a => {
+            const pool = sortedArticles.value
+                .filter(a => !bfHas(a.link))
+                .map(a => {
                 if (!a._tags) a._tags = extractTags(a);
                 return a;
             });

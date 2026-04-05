@@ -417,15 +417,21 @@
             </div>
             <div v-else>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 128 }} tags · saves every {{ 5 }} votes</span>
+                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 128 }} tags · saving in {{ SAVE_EVERY - (swipeSeen % SAVE_EVERY) }} votes</span>
                     <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="deleteAllPrefs()">✕ clear all</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     <div v-for="entry in storedTagList" :key="entry.tag"
                          style="display: flex; align-items: center; gap: 4px; background: var(--white);
                                 border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px;">
-                        <span :style="{ color: entry.affinity >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, minWidth: '42px', textAlign: 'right' }">
+                        <span :style="{ color: entry.affinity >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
+                              title="stored">
                             {{ entry.affinity >= 0 ? '+' : '' }}{{ (entry.affinity).toFixed(2) }}
+                        </span>
+                        <span v-if="entry.session !== null"
+                              :style="{ color: entry.session >= 0 ? 'var(--blue)' : 'var(--yellow)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
+                              title="this session">
+                            {{ entry.session >= 0 ? '+' : '' }}{{ (entry.session).toFixed(2) }}
                         </span>
                         <span style="color: #1e293b;">{{ entry.tag }}</span>
                         <span style="cursor: pointer; color: var(--gray); padding: 0 2px;" @click="deleteTagPref(entry.tag)">✕</span>
@@ -553,33 +559,37 @@ const { createApp, ref, computed, onMounted, reactive, watch, nextTick } = Vue;
 //  SORT HELPERS
 
 const STOPWORDS = new Set([
-    'the','and','for','are','but','not','you','all','can','had','her','was','one',
-    'our','out','day','get','has','him','his','how','man','new','now','old','see',
-    'two','way','who','its','from','that','this','they','have','with','been','when',
-    'will','more','what','said','each','which','their','time','would','make','like',
-    'into','than','them','then','some','could','other','after','first','also','just',
-    'over','such','your','even','most','these','those','where','while','about','here',
-    'very','only','both','back','good','last','long','many','come','know','take',
-    'little','before','should','through','being','still','every','never','world',
-    'next','does','going','around','says','made','may','might','much','must','need',
-    'well','year','years','week','month','report','according','said','says','amid',
-    'within','since','across','without','between','against','under','above','tion'
+    'the','a','an','in','on','at','by','for','of','to','is','it','as','be',
+    'its','was','are','has','had','but','not','that','this','with','from',
+    'have','been','they','will','who','his','her','their','our','your','we',
+    'he','she','also','just','than','then','when','where','which','what',
+    'after','before','during','about','over','into','onto','upon','amid',
+    'new','says','said','according','report','reports','year','years','week',
+    'month','months','could','would','should','may','might','must','can',
+    'more','most','some','such','other','first','last','next','each',
 ]);
 
 function extractTags(article) {
-    const titleWords = (article.title || '').toLowerCase().split(/[^a-z]+/);
-    const snippetWords = (article.snippet || '').toLowerCase().split(/[^a-z]+/).slice(0, 100);
+    const text = (article.title || '') + ' ' + (article.snippet || '');
+    // Extract runs of word characters, keeping original case
+    const tokens = text.match(/[A-Za-z][a-zA-Z'-]*/g) || [];
     const freq = {};
-    titleWords.forEach(w => {
-        if (w.length >= 4 && !STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 3;
+    const titleTokens = new Set((article.title || '').match(/[A-Za-z][a-zA-Z'-]*/g) || []);
+
+    tokens.forEach(tok => {
+        // Only keep tokens that start with a capital letter
+        if (tok[0] !== tok[0].toUpperCase() || tok[0] === tok[0].toLowerCase()) return;
+        if (STOPWORDS.has(tok.toLowerCase())) return;
+        if (tok.length < 2) return;
+        const weight = titleTokens.has(tok) ? 3 : 1;
+        freq[tok] = (freq[tok] || 0) + weight;
     });
-    snippetWords.forEach(w => {
-        if (w.length >= 4 && !STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 1;
-    });
+
     const words = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20)
         .map(([w]) => w);
+
     if (article.sourceName) words.push(article.sourceName);
     return words;
 }
@@ -966,7 +976,11 @@ createApp({
         const storedTagList = computed(() =>
             Object.entries(storedAffinity)
                 .sort((a, b) => b[1] - a[1])
-                .map(([tag, affinity]) => ({ tag, affinity }))
+                .map(([tag, affinity]) => ({
+                    tag,
+                    affinity,
+                    session: totalVoteWeight.value > 0 ? (tagVotes[tag] || 0) / totalVoteWeight.value : null,
+                }))
         );
 
         const deleteTagPref = (tag) => {
@@ -1056,6 +1070,7 @@ createApp({
             selectTag, toggleSource, isolateSource, setDatePreset,
             refreshSource, getFavicon, nukeCache,
             // swipe
+            SAVE_EVERY,
             enterSwipe, swipeVote, swipeRead,
             swipeCard, swipeRemaining, swipeSeen, tagAffinity,
             swipeDragStyle, onTouchStart, onTouchMove, onTouchEnd, tagVotesValue,

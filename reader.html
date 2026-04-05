@@ -125,12 +125,14 @@
         .swipe-btn {
             width: 60px;
             height: 80px;
-            border: 1px solid var(--swipe-btn-accent-color);
-            color: var(--black);
+            color: var(--gray);
             cursor: pointer;
             font-weight: bold;
-            background-color: transparent;
             transition: transform 0.2s;
+            background: rgb(from var(--swipe-btn-accent-color) r g b / 0.1);
+            -webkit-backdrop-filter: blur(1px);
+            backdrop-filter: blur(1px);
+            border: 0;
         }
     </style>
 </head>
@@ -360,15 +362,21 @@
             </div>
             <div v-else>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 128 }} tags · saving in {{ SAVE_EVERY - (swipeSeen % SAVE_EVERY) }} votes</span>
+                    <span style="color: var(--gray);">{{ storedTagList.length }}/{{ 64 }} tags · saving in {{ SAVE_EVERY - (swipeSeen % SAVE_EVERY) }} votes</span>
                     <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="deleteAllPrefs()">✕ clear all</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     <div v-for="entry in storedTagList" :key="entry.tag"
                          style="display: flex; align-items: center; gap: 4px; background: var(--white);
                                 border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px;">
-                        <span :style="{ color: entry.affinity >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, minWidth: '42px', textAlign: 'right' }">
+                        <span :style="{ color: entry.affinity >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
+                              title="stored">
                             {{ entry.affinity >= 0 ? '+' : '' }}{{ (entry.affinity).toFixed(2) }}
+                        </span>
+                        <span v-if="entry.session !== null"
+                              :style="{ color: entry.session >= 0 ? 'var(--blue)' : 'var(--yellow)', fontWeight: 600, minWidth: '38px', textAlign: 'right' }"
+                              title="this session">
+                            {{ entry.session >= 0 ? '+' : '' }}{{ (entry.session).toFixed(2) }}
                         </span>
                         <span style="color: #1e293b;">{{ entry.tag }}</span>
                         <span style="cursor: pointer; color: var(--gray); padding: 0 2px;" @click="deleteTagPref(entry.tag)">✕</span>
@@ -704,7 +712,7 @@ createApp({
 
         // ── SWIPE STATE ─────────────────────────────────────────────────────
         const SAVE_EVERY = 5;
-        const MAX_TAGS = 128;
+        const MAX_TAGS = 64;
         const LS_KEY = 'reader_tag_affinity';
 
         const tagVotes = reactive({});
@@ -1030,7 +1038,11 @@ createApp({
         const storedTagList = computed(() =>
             Object.entries(storedAffinity)
                 .sort((a, b) => b[1] - a[1])
-                .map(([tag, affinity]) => ({ tag, affinity }))
+                .map(([tag, affinity]) => ({
+                    tag,
+                    affinity,
+                    session: totalVoteWeight.value > 0 ? (tagVotes[tag] || 0) / totalVoteWeight.value : null,
+                }))
         );
 
         const deleteTagPref = (tag) => {

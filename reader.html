@@ -58,7 +58,7 @@
         .txt-btn.ph:hover { text-decoration: none; }
 
         /* Feed Layouts */
-        .feed-container { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; justify-content: space-between;}
+        .feed-container { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; justify-content: space-between;min-height: 50vh;}
         .item { background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%;}
         .item:hover { border-color: var(--border); }
 
@@ -190,7 +190,7 @@
 <!-- ═══════════════════════════════════════════════════════════
      SWIPE MODE
      ════════════════════════════════════════════════════════ -->
-<div v-if="viewMode === 'swipe'" style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0;">
+<div v-if="viewMode === 'swipe'" style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0;min-height: 50vh;">
     <div v-if="swipeCard" style="width: 100%; max-width: 560px;">
         <div style="font-size: 0.7rem; color: #64748b; text-align: center; margin-bottom: 10px;">
             {{ swipeSeen }} opened &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
@@ -303,8 +303,24 @@
 <!-- ═══════════════════════════════════════════════════════════
      FOOTER
      ════════════════════════════════════════════════════════ -->
-<details style="margin-top: 8px;">
-    <summary>seen &amp; bloom filter</summary>
+
+
+<div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    <div class="tag error" @click="nukeCache" title="Wipes IndexedDB cache and reloads">
+        <div class="tag-main">CLEAR CACHE</div>
+        <div class="tag-sub">{{ cachedCount }} items stored</div>
+    </div>
+    <div class="tag error" @click="showBloomFilterStats = !showBloomFilterStats">
+        <div class="tag-main">{{ showDebugStats ? '&#9650;' : '&#9660;' }} SEEN</div>
+        <div class="tag-sub">and Bloom Filter</div>
+    </div>
+    <div class="tag muted" @click="showDebugStats = !showDebugStats">
+        <div class="tag-main">{{ showDebugStats ? '&#9650;' : '&#9660;' }} DEBUG STATS</div>
+        <div class="tag-sub">strategy &middot; cache &middot; timing</div>
+    </div>
+</div>
+
+<div v-if="showBloomFilterStats" style="margin-top: 12px; font-family: monospace; font-size: 0.75rem; background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 14px;">
     <div style="margin-top: 10px; font-size: 0.75rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="color: var(--gray);">{{ bfCount }} articles marked seen &middot; resets in {{ bfExpiresIn }}</span>
@@ -316,60 +332,7 @@
             <span class="pill">capacity ~2000 @ 1% FP</span>
         </div>
     </div>
-</details>
-
-<details style="margin-top: 30px;">
-    <summary>debug</summary>
-    <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
-        <tbody>
-            <template v-for="source in sortedSources" :key="source.url">
-                <tr>
-                    <td class="tb" style="max-width:100px"> {{ source.displayName }}</td>
-                    <td> V{{ visibleCountBySource[source.url] || 0 }}</td>
-                    <td> T{{ source.count.total }}</td>
-                    <td> {{ source.status }}</td>
-                    <td class="tb"> {{ source.url }}</td>
-                    <td> {{ source.tags }}</td>
-                </tr>
-            </template>
-        </tbody>
-    </table>
-    <div class="debug-grid">
-        <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">
-          <template v-for="sel in ['selected', 'not selected']" :key="sel">
-            <template v-for="hasStar in [true, false]" :key="hasStar">
-              <div v-for="hasCount in [true, false]" :key="hasCount"
-                   class="tag" :class="[state, { 'selected': sel === 'selected', 'star': hasStar }]">
-                <div class="tag-main">
-                  <span v-if="hasStar" class="star-icon">&#9733;</span>
-                  <span>{{ state }}</span>
-                  <span v-if="hasCount" class="count">(2)</span>
-                </div>
-                <div class="tag-sub">{{ sel }} {{ hasStar ? '+ star' : '' }} {{ hasCount ? '+ count' : '' }}</div>
-              </div>
-            </template>
-          </template>
-        </template>
-        <br>
-        <code style="font-size:xx-small;">
-            <template v-for="entry in articlesCount" :key="entry.month">
-                {{ entry.month }}:{{ entry.count }} |
-            </template>
-        </code>
-    </div>
-</details>
-
-<div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-    <div class="tag error" @click="nukeCache" title="Wipes IndexedDB cache and reloads">
-        <div class="tag-main">CLEAR CACHE</div>
-        <div class="tag-sub">{{ cachedCount }} items stored</div>
-    </div>
-    <div class="tag muted" @click="showDebugStats = !showDebugStats">
-        <div class="tag-main">{{ showDebugStats ? '&#9650;' : '&#9660;' }} DEBUG STATS</div>
-        <div class="tag-sub">strategy &middot; cache &middot; timing</div>
-    </div>
 </div>
-
 <div v-if="showDebugStats" style="margin-top: 12px; font-family: monospace; font-size: 0.75rem; background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 14px;">
     <div>
         <div style="font-weight: 700; margin-bottom: 6px; font-size: 0.8rem;">&#9201; Session</div>
@@ -457,7 +420,46 @@
         </table>
     </details>
 </div>
-
+<details style="margin-top: 30px;">
+    <summary>debug</summary>
+    <table style="width: 100%; border-collapse: collapse; font-size: x-small; background: var(--white);">
+        <tbody>
+            <template v-for="source in sortedSources" :key="source.url">
+                <tr>
+                    <td class="tb" style="max-width:100px"> {{ source.displayName }}</td>
+                    <td> V{{ visibleCountBySource[source.url] || 0 }}</td>
+                    <td> T{{ source.count.total }}</td>
+                    <td> {{ source.status }}</td>
+                    <td class="tb"> {{ source.url }}</td>
+                    <td> {{ source.tags }}</td>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+    <div class="debug-grid">
+        <template v-for="state in ['default', 'success', 'error', 'waiting', 'muted']" :key="state">
+          <template v-for="sel in ['selected', 'not selected']" :key="sel">
+            <template v-for="hasStar in [true, false]" :key="hasStar">
+              <div v-for="hasCount in [true, false]" :key="hasCount"
+                   class="tag" :class="[state, { 'selected': sel === 'selected', 'star': hasStar }]">
+                <div class="tag-main">
+                  <span v-if="hasStar" class="star-icon">&#9733;</span>
+                  <span>{{ state }}</span>
+                  <span v-if="hasCount" class="count">(2)</span>
+                </div>
+                <div class="tag-sub">{{ sel }} {{ hasStar ? '+ star' : '' }} {{ hasCount ? '+ count' : '' }}</div>
+              </div>
+            </template>
+          </template>
+        </template>
+        <br>
+        <code style="font-size:xx-small;">
+            <template v-for="entry in articlesCount" :key="entry.month">
+                {{ entry.month }}:{{ entry.count }} |
+            </template>
+        </code>
+    </div>
+</details>
 </div><!-- /#app -->
 
 <script>
@@ -699,6 +701,7 @@ createApp({
         const src_search       = ref(false);
         const cachedCount      = ref(0);
         const showDebugStats   = ref(false);
+        const showBloomFilterStats   = ref(false);
 
         // Reactive wrappers over SeenStore (polled every 10 s — cheap)
         const bfCount     = ref(SeenStore.estimatedCount);
@@ -1014,7 +1017,7 @@ createApp({
             // seen
             isSeen, bfCount, bfExpiresIn,
             // debug
-            showDebugStats, debugStats, fetchLog,
+            showDebugStats, showBloomFilterStats, debugStats, fetchLog,
         };
     },
 }).mount('#app');

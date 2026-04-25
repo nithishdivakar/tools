@@ -185,6 +185,9 @@
              :style="{ width: ((statusCounts.success + statusCounts.error) / (filters.selectedSources.size || sourceStates.length) * 100) + '%' }">
         </div>
     </div>
+    <div style="font-size: 0.7rem; color: #64748b; text-align: center;">
+        {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
+    </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -245,7 +248,7 @@
      ════════════════════════════════════════════════════════ -->
 <div :class="['feed-container', viewMode === 'swipe' ? 'swipe-hidden' : viewMode]">
     <template v-for="item in sortedArticles" :key="item.link">
-        <div class="item">
+        <div class="item" :data-url="item.link">
             <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
             <div class="content">
                 <div class="meta">
@@ -998,6 +1001,46 @@ createApp({
                 _advance();
             }, 50); 
         });
+
+
+        // Inside setup() in reader.html
+        const visibilityTimers = new Map();
+
+        const observeVisibility = () => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const url = entry.target.getAttribute('data-url');
+                    
+                    if (entry.isIntersecting) {
+                        // Start a 3-second timer if 50% visible
+                        const timer = setTimeout(() => {
+                            if (!FeedStore.isSeen(url)) {
+                                FeedStore.markSeen(url);
+                                // Optional: trigger a UI refresh if needed
+                                bfCount.value = SeenStore.estimatedCount;
+                            }
+                        }, 2000);
+                        visibilityTimers.set(url, timer);
+                    } else {
+                        // Cancel timer if the user scrolls away before 3 seconds
+                        if (visibilityTimers.has(url)) {
+                            clearTimeout(visibilityTimers.get(url));
+                            visibilityTimers.delete(url);
+                        }
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            // Attach observer to all article items
+            document.querySelectorAll('.item').forEach(el => observer.observe(el));
+        };
+
+        // Trigger after DOM updates
+        watch(sortedArticles, () => {
+            nextTick(() => observeVisibility());
+        });
+
+
 
         return {
             // constants (for debug UI)

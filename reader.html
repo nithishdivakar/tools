@@ -196,8 +196,7 @@
             {{ swipeSeen }} opened &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
         </div>
         <div style="background: var(--white); border-radius: 12px; border: 1px solid var(--border);
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;"
-             @click="swipeRead()">
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;">
             <!-- Seen indicator -->
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
                 <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"></span>
@@ -213,7 +212,7 @@
                 <span>{{ swipeCard.date.toISOString().split('T')[0] }}</span>
             </div>
             <div style="font-weight: 700; font-size: 1.1rem; line-height: 1.3; color: #0f172a; margin-bottom: 10px;">
-                {{ swipeCard.title }}
+                <a :href="swipeCard.link" target="_blank" class="title">{{ swipeCard.title }}</a>
             </div>
             <div v-if="swipeCard.snippet" class="blurb">
                 {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 300) }}

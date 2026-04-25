@@ -20,7 +20,11 @@ const CacheDB = {
             req.onsuccess = () => {
                 const data = req.result;
                 if (data && (Date.now() - data.timestamp < this.TTL)) {
-                    resolve(data.bundle);
+                    const bundleWithFlag = {
+                        ...data.bundle,
+                        fromCache: true
+                    };
+                    resolve(bundleWithFlag);
                 } else {
                     resolve(null); // Expired or missing
                 }

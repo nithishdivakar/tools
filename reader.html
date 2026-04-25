@@ -162,7 +162,7 @@
             <div class="tag-sub">SEARCH</div>
         </div>
         <div v-for="source in sortedSources" :key="source.url"
-             :class="['tag', source.status, { selected: filters.selectedSources.has(source.url), star: source.tags.includes('star') }]">
+            :class="['tag', source.status, { selected: filters.selectedSources.includes(source.url), star: source.tags.includes('star') }]">
             <div class="tag-main" @click="toggleSource(source.url)">
                 <span v-if="source.tags.includes('star')" class="star-icon">&#9733;</span>
                 <img :src="getFavicon(source.url)" class="source-icon" onerror="this.style.display='none'">
@@ -179,7 +179,7 @@
                class="pill" style="width: 100%; padding: 8px; border-style: solid;">
     </div>
     <div class="fetch-progress"
-         v-if="statusCounts.success + statusCounts.error < (filters.selectedSources.size || sourceStates.length)">
+        v-if="statusCounts.success + statusCounts.error < (filters.selectedSources.length || sourceStates.length)">
         <div class="fetch-progress-fill"
              :class="{ done: statusCounts.waiting + statusCounts.fetching === 0, 'has-errors': statusCounts.error > 0 && statusCounts.waiting + statusCounts.fetching === 0 }"
              :style="{ width: ((statusCounts.success + statusCounts.error) / (filters.selectedSources.size || sourceStates.length) * 100) + '%' }">
@@ -193,18 +193,14 @@
 <div v-if="viewMode === 'swipe'" style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0;min-height: 50vh;">
     <div v-if="swipeCard" style="width: 100%; max-width: 560px;">
         <div style="font-size: 0.7rem; color: #64748b; text-align: center; margin-bottom: 10px;">
-            {{ swipeSeen }} opened &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
+            {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
         </div>
         <div style="background: var(--white); border-radius: 12px; border: 1px solid var(--border);
                     box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;">
-            <!-- Seen indicator -->
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
-                <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"></span>
-                <span style="font-size: 0.65rem; color: var(--gray);">{{ swipeCard._seen ? 'seen' : 'not seen' }}</span>
-            </div>
             <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
                  style="width: 100%; border-radius: 8px; object-fit: contain; border: 1px solid var(--border); margin-bottom: 12px;">
             <div class="meta" style="margin-bottom: 8px;">
+                <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"></span>
                 <span v-if="swipeCard.source.tags.includes('star')" class="star-icon">&#9733;</span>
                 <img :src="getFavicon(swipeCard.link)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ swipeCard.sourceName }}</span>
@@ -215,15 +211,15 @@
                 <a :href="swipeCard.link" target="_blank" class="title">{{ swipeCard.title }}</a>
             </div>
             <div v-if="swipeCard.snippet" class="blurb">
-                {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 300) }}
-                <span v-if="(swipeCard.snippet_length || 300) < swipeCard.snippet.length">... </span>
+                {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 500) }}
+                <span v-if="(swipeCard.snippet_length || 500) < swipeCard.snippet.length">... </span>
                 <span class="txt-btn"
-                      v-if="(swipeCard.snippet_length || 300) < swipeCard.snippet.length"
-                      @click.stop="swipeCard.snippet_length = Math.max(300, (swipeCard.snippet_length || 300) + 300);">more</span>
-                <span class="txt-btn" v-if="swipeCard.snippet_length > 300 && swipeCard.snippet_length < swipeCard.snippet.length"> or </span>
+                      v-if="(swipeCard.snippet_length || 500) < swipeCard.snippet.length"
+                      @click.stop="swipeCard.snippet_length = Math.max(500, (swipeCard.snippet_length || 500) + 500);">more</span>
+                <span class="txt-btn" v-if="swipeCard.snippet_length > 500 && swipeCard.snippet_length < swipeCard.snippet.length"> or </span>
                 <span class="txt-btn"
-                      v-if="swipeCard.snippet_length > 300"
-                      @click.stop="swipeCard.snippet_length = Math.max(160, (swipeCard.snippet_length || 300) - 300);">less</span>
+                      v-if="swipeCard.snippet_length > 500"
+                      @click.stop="swipeCard.snippet_length = Math.max(160, (swipeCard.snippet_length || 500) - 500);">less</span>
             </div>
         </div>
         <!-- Swipe buttons -->
@@ -240,7 +236,7 @@
         </div>
     </div>
     <div v-else style="color: #64748b; font-size: 0.9rem; text-align: center; padding: 40px;">
-        No articles to swipe. Select a feed first.
+        🃏︎ 🃟 🃏︎ 🃟 🃏︎ 🃟 🃏︎ 🃟
     </div>
 </div>
 
@@ -266,7 +262,7 @@
                     <span>&middot;</span>
                     <span @click.stop="isolateSource(item.sourceId)" style="cursor: pointer;">[:v//d]</span>
                 </div>
-                <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
+                <a :href="item.link" target="_blank" class="title">{{ item.fromCache ? '[C]':'' }} {{ item.title }}</a>
                 <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
                     {{ item.snippet.substring(0, item.snippet_length || 500) }}
                     <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
@@ -304,13 +300,13 @@
      ════════════════════════════════════════════════════════ -->
 
 
-<div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+<div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;justify-content: center;">
     <div class="tag error" @click="nukeCache" title="Wipes IndexedDB cache and reloads">
         <div class="tag-main">CLEAR CACHE</div>
         <div class="tag-sub">{{ cachedCount }} items stored</div>
     </div>
     <div class="tag error" @click="showBloomFilterStats = !showBloomFilterStats">
-        <div class="tag-main">{{ showDebugStats ? '&#9650;' : '&#9660;' }} SEEN</div>
+        <div class="tag-main">{{ showBloomFilterStats ? '&#9650;' : '&#9660;' }} SEEN</div>
         <div class="tag-sub">and Bloom Filter</div>
     </div>
     <div class="tag muted" @click="showDebugStats = !showDebugStats">
@@ -596,6 +592,7 @@ const FeedStore = (() => {
             if (_seenLinks.has(article.link)) return false;
             _seenLinks.add(article.link);
             _articles.value.push(article);
+            console.log(_articles.length)
             return true;
         },
 
@@ -691,7 +688,7 @@ createApp({
         const articles = FeedStore.all;
 
         // ── SESSION STATE ────────────────────────────────────────────────────
-        const filters          = reactive({ start: '', end: '', selectedSources: new Set() });
+        const filters          = reactive({ start: '', end: '', selectedSources: [] });
         const lastRenderTime   = ref(Date.now());
         const viewMode         = ref('list');
         const dateMode         = ref('3');
@@ -739,14 +736,15 @@ createApp({
 
         const isVisible = (item) => {
             const d = item.date.toISOString().split('T')[0];
-    
             const matchesDate = (!filters.start || d >= filters.start) && (!filters.end || d <= filters.end);
-            const matchesSource = filters.selectedSources.has(item.sourceId);
-            // for the 'seen' tag
+            
+            // Check if the source is selected OR if we are in 'all' mode
+            const matchesSource = activeTag.value === 'all' || filters.selectedSources.includes(item.sourceId);
+            
             const matchesSeenFilter = activeTag.value === 'seen' ? FeedStore.isSeen(item.link) : true;
 
             return matchesDate && matchesSource && matchesSeenFilter;
-        };  
+        };
 
         watch(filters, () => { lastRenderTime.value = Date.now(); }, { deep: true });
 
@@ -789,8 +787,8 @@ createApp({
                 );
             }
             return filtered.sort((a, b) => {
-                const aS = filters.selectedSources.has(a.url);
-                const bS = filters.selectedSources.has(b.url);
+                const aS = filters.selectedSources.includes(a.url);
+                const bS = filters.selectedSources.includes(b.url);
                 return aS === bS ? 0 : aS ? -1 : 1;
             });
         });
@@ -798,7 +796,7 @@ createApp({
         const statusCounts = computed(() => {
             const counts = { waiting: 0, success: 0, error: 0 };
             sourceStates.forEach(s => {
-                if (filters.selectedSources.size === 0 || filters.selectedSources.has(s.url))
+                if (filters.selectedSources.size === 0 || filters.selectedSources.includes(s.url))
                     if (s.status in counts) counts[s.status]++;
             });
             return counts;
@@ -825,7 +823,7 @@ createApp({
             try {
                 let bundle   = await CacheDB.get(state.url);
                 let cacheHit = !!bundle;
-                if (!bundle) {
+                if (!cacheHit) {
                     bundle = await RSSEngine.process({ url: state.url, name: state.displayName });
                     if (bundle.status === 'success') await CacheDB.set(state.url, bundle);
                 }
@@ -841,6 +839,7 @@ createApp({
                             sourceName: state.displayName,
                             source: state,
                             strategyUsed: bundle.strategyUsed,
+                            fromCache: bundle.fromCache
                         });
                         if (!ok) dupes++;
                     });
@@ -864,10 +863,11 @@ createApp({
 
         const toggleSource = (url) => {
             activeTag.value = 'custom';
-            filters.selectedSources.has(url)
-                ? filters.selectedSources.delete(url)
-                : filters.selectedSources.add(url);
-            if (filters.selectedSources.has(url)) {
+            const index = filters.selectedSources.indexOf(url);
+            if (index > -1) {
+                filters.selectedSources.splice(index, 1);
+            } else {
+                filters.selectedSources.push(url);
                 const state = stateByUrl.value[url];
                 if (state && state.status === 'waiting') fetchSource(state);
             }
@@ -875,28 +875,29 @@ createApp({
 
         const isolateSource = (url) => {
             activeTag.value = 'custom';
-            filters.selectedSources.clear();
+            filters.selectedSources = [];
             toggleSource(url);
         };
 
         const selectTag = (tag) => {
             activeTag.value = tag;
-            filters.selectedSources.clear();
+            filters.selectedSources = [];
             if (tag === 'none') return;
             
             if (tag === 'seen') {
                 articles.value.forEach(a => {
-                    if (FeedStore.isSeen(a.link)) filters.selectedSources.add(a.sourceId);
+                    if (FeedStore.isSeen(a.link)) filters.selectedSources.push(a.sourceId);
                 });
             } else {
                 sourceStates.forEach(s => {
                     if (tag === 'all' || s.tags.includes(tag)) {
-                        filters.selectedSources.add(s.url);
+                        filters.selectedSources.push(s.url);
                         if (s.status === 'waiting') fetchSource(s);
                     }
                 });
             }
         };
+
 
         const setDatePreset = (days) => {
             dateMode.value = String(days);
@@ -990,8 +991,12 @@ createApp({
                 FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i)
             )]);
             setDatePreset('1');
-            viewMode.value = 'card';
-            selectTag('none');
+            viewMode.value = 'swipe';
+            selectTag('all');
+
+            setTimeout(() => {
+                _advance();
+            }, 50); 
         });
 
         return {

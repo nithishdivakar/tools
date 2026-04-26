@@ -195,9 +195,6 @@
      ════════════════════════════════════════════════════════ -->
 <div v-if="viewMode === 'swipe'" style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0;min-height: 50vh;">
     <div v-if="swipeCard" style="width: 100%; max-width: 560px;">
-        <div style="font-size: 0.7rem; color: #64748b; text-align: center; margin-bottom: 10px;">
-            {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
-        </div>
         <div style="background: var(--white); border-radius: 12px; border: 1px solid var(--border);
                     box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px; cursor: pointer;">
             <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
@@ -323,11 +320,6 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="color: var(--gray);">{{ bfCount }} articles marked seen &middot; resets in {{ bfExpiresIn }}</span>
             <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="resetSeen()">&#8634; reset seen</span>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; font-family: monospace; color: var(--gray);">
-            <span class="pill">bits: {{ BF_BITS }}</span>
-            <span class="pill">hash fns: {{ BF_K }}</span>
-            <span class="pill">capacity ~2000 @ 1% FP</span>
         </div>
     </div>
 </div>
@@ -474,101 +466,63 @@ const { createApp, ref, computed, onMounted, reactive, watch, nextTick } = Vue;
 //    SeenStore.reset()           → void
 //    SeenStore.estimatedCount    → number (property)
 //    SeenStore.expiresIn()       → string (human-readable remaining time)
-//    SeenStore.BF_BITS, BF_K    → constants (for debug UI)
 // ════════════════════════════════════════════════════════════════════════════
 const SeenStore = (() => {
-    const BF_KEY  = 'reader_seen_bf_v2';
-    const TS_KEY  = 'reader_seen_ts';
-    const TTL_MS  = 24 * 60 * 60 * 1000;
+    const DICT_KEY = 'reader_seen_dict_v1';
+    const TTL_MS   = 24 * 60 * 60 * 1000;
+    const MAX_ITEMS = 1024; // ~150KB space maximum
 
-    // n=2000, p≈1% → m=19036 bits, k=7
-    const BF_BITS = 19036;
-    const BF_K    = 7;
-    const BYTES   = Math.ceil(BF_BITS / 8);
-
-    const fnv1a = (str, seed = 0) => {
-        let h = 2166136261 >>> 0;
-        for (let i = 0; i < str.length; i++) {
-            h ^= (str.charCodeAt(i) + seed) & 0xff;
-            h = Math.imul(h, 16777619) >>> 0;
-        }
-        return h;
-    };
-
-    const indexes = (url) => {
-        const a = fnv1a(url, 0), b = fnv1a(url, 1);
-        return Array.from({ length: BF_K }, (_, i) => ((a + i * b) >>> 0) % BF_BITS);
-    };
-
-    let createdAt = 0;
-    let bits = new Uint8Array(BYTES);
+    let seenMap = new Map();
 
     const _persist = () => {
         try {
-            let bin = '';
-            bits.forEach(b => bin += String.fromCharCode(b));
-            localStorage.setItem(BF_KEY, btoa(bin));
-            localStorage.setItem(TS_KEY, String(createdAt));
+            let entries = Array.from(seenMap.entries());
+            // Enforce size limit by dropping oldest timestamps
+            if (entries.length > MAX_ITEMS) {
+                entries.sort((a, b) => b[1] - a[1]);
+                entries = entries.slice(0, MAX_ITEMS);
+                seenMap = new Map(entries);
+            }
+            localStorage.setItem(DICT_KEY, JSON.stringify(Object.fromEntries(entries)));
         } catch {}
     };
 
     const _reset = () => {
-        bits = new Uint8Array(BYTES);
-        createdAt = Date.now();
+        seenMap.clear();
         _persist();
     };
 
-    // Initialise: load from storage if still within TTL, otherwise start fresh.
+    // Initialise: Load and automatically purge items older than TTL
     (() => {
         try {
-            const ts  = parseInt(localStorage.getItem(TS_KEY) || '0', 10);
-            const age = Date.now() - ts;
-            if (age > 0 && age < TTL_MS) {
-                const b64 = localStorage.getItem(BF_KEY);
-                if (b64) {
-                    const bin = atob(b64);
-                    const arr = new Uint8Array(BYTES);
-                    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-                    bits = arr;
-                    createdAt = ts;
-                    return;
+            const stored = localStorage.getItem(DICT_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                const now = Date.now();
+                for (const [url, ts] of Object.entries(parsed)) {
+                    if (now - ts < TTL_MS) seenMap.set(url, ts);
                 }
+                _persist(); // Save pruned version back
             }
         } catch {}
-        _reset();
     })();
 
     return {
-        BF_BITS,
-        BF_K,
-
-        has(url) {
-            return indexes(url).every(i => (bits[i >> 3] >> (i & 7)) & 1);
-        },
+        has(url) { return seenMap.has(url); },
+        get(url) { return seenMap.get(url) || null; },
 
         add(url) {
-            indexes(url).forEach(i => { bits[i >> 3] |= (1 << (i & 7)); });
+            seenMap.set(url, Date.now());
             _persist();
         },
 
         reset: _reset,
 
-        get estimatedCount() {
-            let setBits = 0;
-            for (let i = 0; i < BF_BITS; i++) if ((bits[i >> 3] >> (i & 7)) & 1) setBits++;
-            return Math.round(-BF_BITS / BF_K * Math.log(1 - setBits / BF_BITS)) || 0;
-        },
+        get estimatedCount() { return seenMap.size; },
 
-        expiresIn() {
-            const remaining = TTL_MS - (Date.now() - createdAt);
-            if (remaining <= 0) return 'expired';
-            const h = Math.floor(remaining / 3_600_000);
-            const m = Math.floor((remaining % 3_600_000) / 60_000);
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        },
+        expiresIn() { return 'auto-pruned'; },
     };
 })();
-
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: FeedStore
@@ -1043,9 +997,6 @@ createApp({
 
 
         return {
-            // constants (for debug UI)
-            BF_BITS: SeenStore.BF_BITS,
-            BF_K:    SeenStore.BF_K,
             // data
             articles,
             // session

@@ -136,6 +136,8 @@
         <span :class="['txt-btn', { 'selected': dateMode === '7' }]"      @click="setDatePreset(7)">7</span>
         <span :class="['txt-btn', { 'selected': dateMode === 'custom' }]" @click="setDatePreset('custom')">set</span>
         <span :class="['txt-btn', { 'selected': dateMode === 'ee' }]"     @click="setDatePreset('ee')">all</span>
+        <span style="margin-left: 8px; opacity: 0.3;">|</span>
+        <span :class="['txt-btn', { 'selected': hideSeen }]" @click="hideSeen = !hideSeen">hide seen</span>
     </div>
     <div v-if="dateMode === 'custom'" class="flex items-center gap-2">
         <input type="date" v-model="filters.start" class="pill">
@@ -200,7 +202,8 @@
             <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
                  style="width: 100%; border-radius: 8px; object-fit: contain; border: 1px solid var(--border); margin-bottom: 12px;">
             <div class="meta" style="margin-bottom: 8px;">
-                <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"></span>
+                <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"
+                      :title="swipeCard._seen ? 'seen: ' + getSeenTime(swipeCard.link) : 'not seen'"></span>
                 <span v-if="swipeCard.source.tags.includes('star')" class="star-icon">&#9733;</span>
                 <img :src="getFavicon(swipeCard.link)" class="source-icon" onerror="this.style.display='none'">
                 <span>{{ swipeCard.sourceName }}</span>
@@ -246,11 +249,11 @@
 <div :class="['feed-container', viewMode === 'swipe' ? 'swipe-hidden' : viewMode]">
     <template v-for="item in sortedArticles" :key="item.link">
         <div class="item" :data-url="item.link">
-            <img v-if="item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
+            <img v-if="viewMode==='card' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
             <div class="content">
                 <div class="meta">
                     <span class="seen-dot" :class="{ unseen: !isSeen(item.link) }"
-                          :title="isSeen(item.link) ? 'seen' : 'not seen'"></span>
+                          :title="isSeen(item.link) ? 'seen: ' + getSeenTime(item.link) : 'not seen'"></span>
                     <span v-if="item.source.tags.includes('star')" class="star-icon">&#9733;</span>
                     <span v-if="item.source.tags.includes('star')">&middot;</span>
                     <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
@@ -263,6 +266,7 @@
                     <span @click.stop="isolateSource(item.sourceId)" style="cursor: pointer;">[:v//d]</span>
                 </div>
                 <a :href="item.link" target="_blank" class="title">{{ item.fromCache ? '[C]':'' }} {{ item.title }}</a>
+
                 <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
                     {{ item.snippet.substring(0, item.snippet_length || 500) }}
                     <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
@@ -275,6 +279,7 @@
                           @click="item.snippet_length = Math.max(160, (item.snippet_length || 500) - 500);">less</span>
                 </div>
             </div>
+            <img v-if="viewMode==='list' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
         </div>
     </template>
 </div>
@@ -559,8 +564,9 @@ const FeedStore = (() => {
             _articles.value.forEach(a => _seenLinks.add(a.link));
         },
 
-        isSeen(url)    { return SeenStore.has(url); },
-        markSeen(url)  { SeenStore.add(url); },
+        isSeen(url)      { return SeenStore.has(url); },
+        getSeenTime(url) { return SeenStore.get(url); },
+        markSeen(url)    { SeenStore.add(url); },
 
         unseenOf(articles) {
             return articles.filter(a => !SeenStore.has(a.link));
@@ -655,6 +661,7 @@ createApp({
         const cachedCount      = ref(0);
         const showDebugStats   = ref(false);
         const showBloomFilterStats   = ref(false);
+        const hideSeen         = ref(false);
 
         // Reactive wrappers over SeenStore (polled every 10 s — cheap)
         const bfCount     = ref(SeenStore.estimatedCount);
@@ -700,7 +707,10 @@ createApp({
             
             const matchesSeenFilter = activeTag.value === 'seen' ? FeedStore.isSeen(item.link) : true;
 
-            return matchesDate && matchesSource && matchesSeenFilter;
+            const seenTs = FeedStore.getSeenTime(item.link);
+            const notHidden = !hideSeen.value || !seenTs || seenTs >= sessionStart;
+
+            return matchesDate && matchesSource && matchesSeenFilter && notHidden;
         };
 
         watch(filters, () => { lastRenderTime.value = Date.now(); }, { deep: true });
@@ -908,6 +918,10 @@ createApp({
 
         // Expose isSeen for the list/card template
         const isSeen = (url) => FeedStore.isSeen(url);
+        const getSeenTime = (url) => {
+            const ts = FeedStore.getSeenTime(url);
+            return ts ? new Date(ts).toLocaleString() : null;
+        };
 
         // ── DEBUG STATS ──────────────────────────────────────────────────────
         const debugStats = computed(() => {
@@ -948,7 +962,7 @@ createApp({
                 FEED_CONFIG.map(c => c.url).filter((url, i, urls) => urls.indexOf(url) !== i)
             )]);
             setDatePreset('1');
-            viewMode.value = 'swipe';
+            viewMode.value = 'list';
             selectTag('all');
 
             setTimeout(() => {
@@ -1013,7 +1027,7 @@ createApp({
             enterSwipe, swipeSkip, swipeRead, resetSeen,
             swipeCard, swipeSeen, swipeUnseen,
             // seen
-            isSeen, bfCount, bfExpiresIn,
+            isSeen, getSeenTime, hideSeen, bfCount, bfExpiresIn,
             // debug
             showDebugStats, showBloomFilterStats, debugStats, fetchLog,
         };

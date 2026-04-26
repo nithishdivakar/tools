@@ -214,15 +214,15 @@
                 <a :href="swipeCard.link" target="_blank" class="title">{{ swipeCard.title }}</a>
             </div>
             <div v-if="swipeCard.snippet" class="blurb">
-                {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 500) }}
-                <span v-if="(swipeCard.snippet_length || 500) < swipeCard.snippet.length">... </span>
+                {{ swipeCard.snippet.substring(0, swipeCard.snippet_length || 1024) }}
+                <span v-if="(swipeCard.snippet_length || 1024) < swipeCard.snippet.length">... </span>
                 <span class="txt-btn"
-                      v-if="(swipeCard.snippet_length || 500) < swipeCard.snippet.length"
-                      @click.stop="swipeCard.snippet_length = Math.max(500, (swipeCard.snippet_length || 500) + 500);">more</span>
-                <span class="txt-btn" v-if="swipeCard.snippet_length > 500 && swipeCard.snippet_length < swipeCard.snippet.length"> or </span>
+                      v-if="(swipeCard.snippet_length || 1024) < swipeCard.snippet.length"
+                      @click.stop="swipeCard.snippet_length = Math.max(1024, (swipeCard.snippet_length || 1024) + 1024);">more</span>
+                <span class="txt-btn" v-if="swipeCard.snippet_length > 1024 && swipeCard.snippet_length < swipeCard.snippet.length"> or </span>
                 <span class="txt-btn"
-                      v-if="swipeCard.snippet_length > 500"
-                      @click.stop="swipeCard.snippet_length = Math.max(160, (swipeCard.snippet_length || 500) - 500);">less</span>
+                      v-if="swipeCard.snippet_length > 1024"
+                      @click.stop="swipeCard.snippet_length = Math.max(160, (swipeCard.snippet_length || 1024) - 1024);">less</span>
             </div>
         </div>
         <!-- Swipe buttons -->
@@ -838,7 +838,7 @@ createApp({
                     bundle.items.forEach(item => {
                         const ok = FeedStore.ingest({
                             ...item,
-                            snippet_length: 500,
+                            snippet_length: 1024,
                             sourceName: state.displayName,
                             source: state,
                             strategyUsed: bundle.strategyUsed,

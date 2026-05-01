@@ -187,8 +187,9 @@
              :style="{ width: ((statusCounts.success + statusCounts.error) / (filters.selectedSources.size || sourceStates.length) * 100) + '%' }">
         </div>
     </div>
-    <div style="font-size: 0.7rem; color: #64748b; text-align: center;">
-        {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen (24h)
+    <div style="font-size: 0.7rem;color: rgb(100, 116, 139);text-align: center;display: flex;flex-direction: column;">
+        {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen
+        <span style="font-size: 0.3rem; color: #64748b;">v3.2.45678</span>
     </div>
 </div>
 

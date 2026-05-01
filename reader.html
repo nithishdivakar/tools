@@ -247,7 +247,7 @@
      LIST / CARD LAYOUTS
      ════════════════════════════════════════════════════════ -->
 <div :class="['feed-container', viewMode === 'swipe' ? 'swipe-hidden' : viewMode]">
-    <template v-for="item in sortedArticles" :key="item.link">
+    <template v-for="item in displayedArticles" :key="item.link">
         <div class="item" :data-url="item.link">
             <img v-if="viewMode==='card' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
             <div class="content">
@@ -283,17 +283,19 @@
         </div>
     </template>
 </div>
+<!-- Scroll sentinel: triggers loadMore() when scrolled into view -->
+<div id="feed-sentinel" style="height:1px;"></div>
 
 <!-- TABLE VIEW -->
 <template v-if="viewMode === 'table'">
     <div style="font-size: x-small; display: grid; grid-template-columns: 80px 80px 150px 30px 100px 160px; gap: 0;">
-        <template v-for="item in sortedArticles" :key="item.link">
+        <template v-for="item in displayedArticles" :key="item.link">
             <div style="display: contents;">
                 <div class="cell">{{ item.date.toISOString().split('.')[0] }}</div>
                 <div class="cell">{{ item.sourceName }}</div>
                 <div class="cell">{{ item.title }}</div>
                 <div class="cell">{{ item.ingestedAt }}</div>
-                <div class="cell">{{ item.ordScore }}</div>
+                <div class="cell">{{ item.ingestedAt }}</div>
                 <div class="cell">{{ item.strategyUsed }}</div>
             </div>
         </template>
@@ -610,36 +612,22 @@ const Scheduler = (() => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SORT / DIVERSIFY HELPERS
+//  PAGINATION CONFIG
 // ════════════════════════════════════════════════════════════════════════════
-const ordScore = (article) => {
-    const day = Math.floor(article.date.getTime() / 86400000) * 86400000;
-    return [-day, article.ingestedAt];
-};
+const PAGE_SIZE = 10;   // how many cards to load per scroll
 
-const compareTuples = (a, b) => {
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] < b[i]) return -1;
-        if (a[i] > b[i]) return 1;
+/**
+ * Draw `n` random items from `pool` (array) without replacement.
+ * Returns the drawn items; mutates pool in-place (splices chosen indices).
+ */
+const drawRandom = (pool, n) => {
+    const drawn = [];
+    const count = Math.min(n, pool.length);
+    for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        drawn.push(...pool.splice(idx, 1));
     }
-    return 0;
-};
-
-const SOURCE_COOLDOWN = 3;
-
-const diversify = (sorted) => {
-    const result = [];
-    const lastSeenAt = {};
-    for (const item of sorted) {
-        const last = lastSeenAt[item.sourceId] ?? -Infinity;
-        if (result.length - last > SOURCE_COOLDOWN) {
-            result.push(item);
-            lastSeenAt[item.sourceId] = result.length - 1;
-        }
-    }
-    const shown = new Set(result.map(a => a.id));
-    sorted.forEach(a => { if (!shown.has(a.id)) result.push(a); });
-    return result;
+    return drawn;
 };
 
 
@@ -652,7 +640,6 @@ createApp({
 
         // ── SESSION STATE ────────────────────────────────────────────────────
         const filters          = reactive({ start: '', end: '', selectedSources: [] });
-        const lastRenderTime   = ref(Date.now());
         const viewMode         = ref('list');
         const dateMode         = ref('3');
         const activeTag        = ref('star');
@@ -676,7 +663,7 @@ createApp({
         const swipeSeen = ref(0);
 
         const swipeUnseen = computed(() =>
-            swipeCard.value ? FeedStore.unseenOf(sortedArticles.value).length : 0
+            swipeCard.value ? FeedStore.unseenOf(articles.value.filter(isVisible)).length : 0
         );
 
         // ── DEBUG ────────────────────────────────────────────────────────────
@@ -713,20 +700,55 @@ createApp({
             return matchesDate && matchesSource && matchesSeenFilter && notHidden;
         };
 
-        watch(filters, () => { lastRenderTime.value = Date.now(); }, { deep: true });
+        // ── BUFFER + PAGED DISPLAY ───────────────────────────────────────────
+        /**
+         * _buffer holds articles that passed filters but haven't been drawn yet.
+         * displayedArticles is what the list/card template renders.
+         * When filters change we rebuild both from scratch.
+         */
+        const displayedArticles = ref([]);
+        let   _buffer           = [];   // mutable working copy, not reactive
 
-        const sortedArticles = computed(() => {
-            const rt  = lastRenderTime.value;
-            const visible = articles.value.filter(isVisible);
-            const cmp = (a, b) => compareTuples(ordScore(a), ordScore(b));
-            const b0  = visible.filter(a => a.ingestedAt <= rt).sort(cmp);
-            const b1  = visible.filter(a => a.ingestedAt >  rt).sort(cmp);
-            return [...diversify(b0), ...diversify(b1)];
-        });
+        /** Rebuild buffer from all articles that pass current filters, then
+         *  draw the first PAGE_SIZE cards.  Called whenever filters change. */
+        const _rebuildBuffer = () => {
+            _buffer = articles.value.filter(isVisible);
+            displayedArticles.value = drawRandom(_buffer, PAGE_SIZE);
+        };
+
+        /** Draw PAGE_SIZE more from the buffer and append. */
+        const loadMore = () => {
+            if (_buffer.length === 0) return;
+            displayedArticles.value.push(...drawRandom(_buffer, PAGE_SIZE));
+        };
+
+        // Rebuild whenever any filter changes or new articles arrive
+        watch(
+            [articles, () => filters.start, () => filters.end,
+             () => filters.selectedSources.slice(), () => activeTag.value,
+             () => hideSeen.value],
+            _rebuildBuffer,
+            { deep: false }
+        );
+
+        // Scroll sentinel: an IntersectionObserver watches a div at the bottom
+        // of the feed; when it enters view, loadMore() is called.
+        let _scrollObserver = null;
+        const _attachScrollSentinel = () => {
+            if (_scrollObserver) _scrollObserver.disconnect();
+            const sentinel = document.getElementById('feed-sentinel');
+            if (!sentinel) return;
+            _scrollObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) loadMore();
+            }, { rootMargin: '200px' });
+            _scrollObserver.observe(sentinel);
+        };
+        // Re-attach after every DOM update (sentinel may re-render)
+        watch(displayedArticles, () => nextTick(_attachScrollSentinel));
 
         const visibleCountBySource = computed(() => {
             const counts = {};
-            sortedArticles.value.forEach(a => {
+            displayedArticles.value.forEach(a => {
                 counts[a.sourceId] = (counts[a.sourceId] || 0) + 1;
             });
             return counts;
@@ -769,8 +791,9 @@ createApp({
             return counts;
         });
 
-        const totalItems    = computed(() => articles.value.length);
-        const displayedItems = computed(() => sortedArticles.value.length);
+        const totalItems     = computed(() => articles.value.length);
+        // displayed = shown cards + cards still waiting in buffer
+        const displayedItems = computed(() => displayedArticles.value.length + _buffer.length);
 
         const articlesCount = computed(() => {
             const counts = {};
@@ -882,7 +905,7 @@ createApp({
          * all navigation (enter, skip, read) funnels through here.
          */
         const _advance = () => {
-            const cards   = FeedStore.withSeenFlag(sortedArticles.value);
+            const cards   = FeedStore.withSeenFlag(articles.value.filter(isVisible));
             const context = {
                 seenLinks: new Set(cards.filter(c => c._seen).map(c => c.link)),
                 swipeSeen: swipeSeen.value,
@@ -1004,7 +1027,7 @@ createApp({
         };
 
         // Trigger after DOM updates
-        watch(sortedArticles, () => {
+        watch(displayedArticles, () => {
             nextTick(() => observeVisibility());
         });
 
@@ -1018,11 +1041,11 @@ createApp({
             // source states
             sourceStates,
             // derived
-            sortedArticles, sortedSources, allTags, statusCounts,
+            displayedArticles, sortedSources, allTags, statusCounts,
             totalItems, displayedItems, articlesCount, visibleCountBySource,
             // actions
             selectTag, toggleSource, isolateSource, setDatePreset,
-            refreshSource, getFavicon, nukeCache,
+            refreshSource, getFavicon, nukeCache, loadMore,
             // swipe
             enterSwipe, swipeSkip, swipeRead, resetSeen,
             swipeCard, swipeSeen, swipeUnseen,

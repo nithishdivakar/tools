@@ -283,7 +283,6 @@
         </div>
     </template>
 </div>
-<!-- Scroll sentinel: triggers loadMore() when scrolled into view -->
 <div id="feed-sentinel" style="height:1px;"></div>
 
 <!-- TABLE VIEW -->
@@ -612,23 +611,125 @@ const Scheduler = (() => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  PAGINATION CONFIG
+//  MODULE: Filters
+//  A registry of named predicates (Article → boolean).
+//  Each predicate is a pure function. Filters.isVisible() is the conjunction.
+//
+//  API:
+//    Filters.set(state)      → void   — update all live filter state at once
+//    Filters.isVisible(item) → boolean
+//    Filters.for(keys)       → predicate[]  — subset, e.g. for swipe deck
+//
+//  Predicate keys: 'date' | 'source' | 'seen' | 'hidden'
 // ════════════════════════════════════════════════════════════════════════════
-const PAGE_SIZE = 10;   // how many cards to load per scroll
+const Filters = (() => {
+    // Live filter state — set() updates these before any rebuild
+    let _state = {
+        start: '', end: '',
+        selectedSources: [],
+        activeTag: 'all',
+        hideSeen: false,
+        sessionStart: Date.now(),
+    };
 
-/**
- * Draw `n` random items from `pool` (array) without replacement.
- * Returns the drawn items; mutates pool in-place (splices chosen indices).
- */
-const drawRandom = (pool, n) => {
-    const drawn = [];
-    const count = Math.min(n, pool.length);
-    for (let i = 0; i < count; i++) {
-        const idx = Math.floor(Math.random() * pool.length);
-        drawn.push(...pool.splice(idx, 1));
-    }
-    return drawn;
-};
+    // Named predicates — each closes over _state only
+    const _predicates = {
+        date:   (item) => {
+            const d = item.date.toISOString().split('T')[0];
+            return (!_state.start || d >= _state.start) &&
+                   (!_state.end   || d <= _state.end);
+        },
+        source: (item) => {
+            if (_state.activeTag === 'all') return true;
+            return _state.selectedSources.includes(item.sourceId);
+        },
+        seen:   (item) => {
+            if (_state.activeTag !== 'seen') return true;
+            return FeedStore.isSeen(item.link);
+        },
+        hidden: (item) => {
+            if (!_state.hideSeen) return true;
+            const ts = FeedStore.getSeenTime(item.link);
+            return !ts || ts >= _state.sessionStart;
+        },
+    };
+
+    // Tag shorthand → source predicate override
+    // 'all'  passes everything; 'none' passes nothing; named tags filter by tag.
+    // This is handled via selectedSources being populated by selectTag() in the
+    // Vue app — _predicates.source just reads that list.
+
+    return {
+        set(state) { Object.assign(_state, state); },
+
+        isVisible(item) {
+            return Object.values(_predicates).every(p => p(item));
+        },
+
+        // Return a subset of predicates by key — used to build deck-specific filters.
+        // e.g. Filters.for(['date', 'source', 'seen']) omits 'hidden' for swipe deck.
+        for(keys) {
+            return keys.map(k => _predicates[k]);
+        },
+    };
+})();
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MODULE: Deck
+//  A filtered, randomly-drawable window over FeedStore.
+//  Two singleton instances: Deck.main (list/card) and Deck.swipe.
+//
+//  API:
+//    Deck.main.drawn       → Vue ref<Article[]>  — the rendered window
+//    Deck.main.remaining   → number              — articles left in buffer
+//    Deck.main.rebuild()   → void                — re-filter + reset draw
+//    Deck.main.drawMore()  → void                — pull PAGE_SIZE more
+//
+//    Deck.swipe.*          — same API, unbounded draw (full pool for Scheduler)
+// ════════════════════════════════════════════════════════════════════════════
+const Deck = (() => {
+    const PAGE_SIZE = 16;
+
+    const _drawRandom = (buffer, n) => {
+        const out = [];
+        const k   = Math.min(n, buffer.length);
+        for (let i = 0; i < k; i++) {
+            const idx = Math.floor(Math.random() * buffer.length);
+            out.push(...buffer.splice(idx, 1));
+        }
+        return out;
+    };
+
+    const _create = (predicates, pageSize) => {
+        const drawn   = ref([]);
+        let   _buffer = [];
+
+        return {
+            get drawn()     { return drawn; },
+            get remaining() { return _buffer.length; },
+
+            rebuild() {
+                _buffer     = FeedStore.all.value.filter(
+                    item => predicates.every(p => p(item))
+                );
+                drawn.value = _drawRandom(_buffer, pageSize);
+            },
+
+            drawMore() {
+                if (_buffer.length === 0) return;
+                drawn.value.push(..._drawRandom(_buffer, pageSize));
+            },
+        };
+    };
+
+    return {
+        // list + card: all 4 predicates, paged
+        main:  _create(Filters.for(['date', 'source', 'seen', 'hidden']), PAGE_SIZE),
+        // swipe: no 'hidden' predicate, unbounded so Scheduler has the full pool
+        swipe: _create(Filters.for(['date', 'source', 'seen']), Infinity),
+    };
+})();
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -639,16 +740,17 @@ createApp({
         const articles = FeedStore.all;
 
         // ── SESSION STATE ────────────────────────────────────────────────────
-        const filters          = reactive({ start: '', end: '', selectedSources: [] });
-        const viewMode         = ref('list');
-        const dateMode         = ref('3');
-        const activeTag        = ref('star');
-        const src_search_query = ref('');
-        const src_search       = ref(false);
-        const cachedCount      = ref(0);
-        const showDebugStats   = ref(false);
+        const filters                = reactive({ start: '', end: '', selectedSources: [] });
+        const viewMode               = ref('list');
+        const dateMode               = ref('3');
+        const activeTag              = ref('star');
+        const src_search_query       = ref('');
+        const src_search             = ref(false);
+        const cachedCount            = ref(0);
+        const showDebugStats         = ref(false);
         const showBloomFilterStats   = ref(false);
-        const hideSeen         = ref(false);
+        const hideSeen               = ref(false);
+        const sessionStart           = Date.now();
 
         // Reactive wrappers over SeenStore (polled every 10 s — cheap)
         const bfCount     = ref(SeenStore.estimatedCount);
@@ -659,16 +761,14 @@ createApp({
         }, 10_000);
 
         // ── SWIPE STATE ──────────────────────────────────────────────────────
-        const swipeCard = ref(null);
-        const swipeSeen = ref(0);
-
+        const swipeCard   = ref(null);
+        const swipeSeen   = ref(0);
         const swipeUnseen = computed(() =>
-            swipeCard.value ? FeedStore.unseenOf(articles.value.filter(isVisible)).length : 0
+            swipeCard.value ? FeedStore.unseenOf(Deck.swipe.drawn.value).length : 0
         );
 
         // ── DEBUG ────────────────────────────────────────────────────────────
         const fetchLog    = reactive([]);
-        const sessionStart = Date.now();
 
         // ── SOURCE STATES ────────────────────────────────────────────────────
         const sourceStates = reactive(FEED_CONFIG.map(config => ({
@@ -683,72 +783,50 @@ createApp({
             Object.fromEntries(sourceStates.map(s => [s.url, s]))
         );
 
-        // ── DERIVED VIEWS ────────────────────────────────────────────────────
-
-        const isVisible = (item) => {
-            const d = item.date.toISOString().split('T')[0];
-            const matchesDate = (!filters.start || d >= filters.start) && (!filters.end || d <= filters.end);
-            
-            // Check if the source is selected OR if we are in 'all' mode
-            const matchesSource = activeTag.value === 'all' || filters.selectedSources.includes(item.sourceId);
-            
-            const matchesSeenFilter = activeTag.value === 'seen' ? FeedStore.isSeen(item.link) : true;
-
-            const seenTs = FeedStore.getSeenTime(item.link);
-            const notHidden = !hideSeen.value || !seenTs || seenTs >= sessionStart;
-
-            return matchesDate && matchesSource && matchesSeenFilter && notHidden;
+        // ── FILTER SYNC + DECK REBUILD ───────────────────────────────────────
+        // Push current reactive state into Filters, then rebuild both decks.
+        // This is the single place that connects Vue reactivity to the modules.
+        const _syncAndRebuild = () => {
+            Filters.set({
+                start:           filters.start,
+                end:             filters.end,
+                selectedSources: filters.selectedSources,
+                activeTag:       activeTag.value,
+                hideSeen:        hideSeen.value,
+                sessionStart,
+            });
+            Deck.main.rebuild();
+            Deck.swipe.rebuild();
         };
 
-        // ── BUFFER + PAGED DISPLAY ───────────────────────────────────────────
-        /**
-         * _buffer holds articles that passed filters but haven't been drawn yet.
-         * displayedArticles is what the list/card template renders.
-         * When filters change we rebuild both from scratch.
-         */
-        const displayedArticles = ref([]);
-        let   _buffer           = [];   // mutable working copy, not reactive
-
-        /** Rebuild buffer from all articles that pass current filters, then
-         *  draw the first PAGE_SIZE cards.  Called whenever filters change. */
-        const _rebuildBuffer = () => {
-            _buffer = articles.value.filter(isVisible);
-            displayedArticles.value = drawRandom(_buffer, PAGE_SIZE);
-        };
-
-        /** Draw PAGE_SIZE more from the buffer and append. */
-        const loadMore = () => {
-            if (_buffer.length === 0) return;
-            displayedArticles.value.push(...drawRandom(_buffer, PAGE_SIZE));
-        };
-
-        // Rebuild whenever any filter changes or new articles arrive
         watch(
-            [articles, () => filters.start, () => filters.end,
-             () => filters.selectedSources.slice(), () => activeTag.value,
+            [articles,
+             () => filters.start, () => filters.end,
+             () => filters.selectedSources.slice(),
+             () => activeTag.value,
              () => hideSeen.value],
-            _rebuildBuffer,
+            _syncAndRebuild,
             { deep: false }
         );
 
-        // Scroll sentinel: an IntersectionObserver watches a div at the bottom
-        // of the feed; when it enters view, loadMore() is called.
+        // ── SCROLL SENTINEL ──────────────────────────────────────────────────
         let _scrollObserver = null;
         const _attachScrollSentinel = () => {
             if (_scrollObserver) _scrollObserver.disconnect();
             const sentinel = document.getElementById('feed-sentinel');
             if (!sentinel) return;
-            _scrollObserver = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) loadMore();
-            }, { rootMargin: '200px' });
+            _scrollObserver = new IntersectionObserver(
+                (entries) => { if (entries[0].isIntersecting) Deck.main.drawMore(); },
+                { rootMargin: '200px' }
+            );
             _scrollObserver.observe(sentinel);
         };
-        // Re-attach after every DOM update (sentinel may re-render)
-        watch(displayedArticles, () => nextTick(_attachScrollSentinel));
+        watch(Deck.main.drawn, () => nextTick(_attachScrollSentinel));
 
+        // ── DERIVED ──────────────────────────────────────────────────────────
         const visibleCountBySource = computed(() => {
             const counts = {};
-            displayedArticles.value.forEach(a => {
+            Deck.main.drawn.value.forEach(a => {
                 counts[a.sourceId] = (counts[a.sourceId] || 0) + 1;
             });
             return counts;
@@ -792,8 +870,7 @@ createApp({
         });
 
         const totalItems     = computed(() => articles.value.length);
-        // displayed = shown cards + cards still waiting in buffer
-        const displayedItems = computed(() => displayedArticles.value.length + _buffer.length);
+        const displayedItems = computed(() => Deck.main.drawn.value.length + Deck.main.remaining);
 
         const articlesCount = computed(() => {
             const counts = {};
@@ -873,7 +950,7 @@ createApp({
             activeTag.value = tag;
             filters.selectedSources = [];
             if (tag === 'none') return;
-            
+
             if (tag === 'seen') {
                 articles.value.forEach(a => {
                     if (FeedStore.isSeen(a.link)) filters.selectedSources.push(a.sourceId);
@@ -888,7 +965,6 @@ createApp({
             }
         };
 
-
         const setDatePreset = (days) => {
             dateMode.value = String(days);
             if (days === 'custom') return;
@@ -900,12 +976,9 @@ createApp({
         };
 
         // ── SWIPE ACTIONS ────────────────────────────────────────────────────
-        /**
-         * Ask Scheduler for the next card. This is the single call-site —
-         * all navigation (enter, skip, read) funnels through here.
-         */
+        // _advance asks Scheduler to pick from Deck.swipe's full pool.
         const _advance = () => {
-            const cards   = FeedStore.withSeenFlag(articles.value.filter(isVisible));
+            const cards   = FeedStore.withSeenFlag(Deck.swipe.drawn.value);
             const context = {
                 seenLinks: new Set(cards.filter(c => c._seen).map(c => c.link)),
                 swipeSeen: swipeSeen.value,
@@ -919,14 +992,11 @@ createApp({
             nextTick(_advance);
         };
 
-        // Skip: move to next card without marking seen.
         const swipeSkip = () => _advance();
 
-        // Read: open link, mark seen, advance.
         const swipeRead = () => {
             const card = swipeCard.value;
             if (!card) return;
-            // window.open(card.link, '_blank');
             FeedStore.markSeen(card.link);
             bfCount.value = SeenStore.estimatedCount;
             swipeSeen.value++;
@@ -939,7 +1009,6 @@ createApp({
             if (viewMode.value === 'swipe') _advance();
         };
 
-        // Expose isSeen for the list/card template
         const isSeen = (url) => FeedStore.isSeen(url);
         const getSeenTime = (url) => {
             const ts = FeedStore.getSeenTime(url);
@@ -987,33 +1056,25 @@ createApp({
             setDatePreset('1');
             viewMode.value = 'list';
             selectTag('all');
-
-            setTimeout(() => {
-                _advance();
-            }, 50); 
+            setTimeout(() => _advance(), 50);
         });
 
-
-        // Inside setup() in reader.html
+        // ── VISIBILITY OBSERVER (mark seen on scroll) ────────────────────────
         const visibilityTimers = new Map();
 
         const observeVisibility = () => {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const url = entry.target.getAttribute('data-url');
-                    
                     if (entry.isIntersecting) {
-                        // Start a 3-second timer if 50% visible
                         const timer = setTimeout(() => {
                             if (!FeedStore.isSeen(url)) {
                                 FeedStore.markSeen(url);
-                                // Optional: trigger a UI refresh if needed
                                 bfCount.value = SeenStore.estimatedCount;
                             }
                         }, 2000);
                         visibilityTimers.set(url, timer);
                     } else {
-                        // Cancel timer if the user scrolls away before 3 seconds
                         if (visibilityTimers.has(url)) {
                             clearTimeout(visibilityTimers.get(url));
                             visibilityTimers.delete(url);
@@ -1021,17 +1082,10 @@ createApp({
                     }
                 });
             }, { threshold: 0.5 });
-
-            // Attach observer to all article items
             document.querySelectorAll('.item').forEach(el => observer.observe(el));
         };
 
-        // Trigger after DOM updates
-        watch(displayedArticles, () => {
-            nextTick(() => observeVisibility());
-        });
-
-
+        watch(Deck.main.drawn, () => nextTick(() => observeVisibility()));
 
         return {
             // data
@@ -1041,11 +1095,12 @@ createApp({
             // source states
             sourceStates,
             // derived
-            displayedArticles, sortedSources, allTags, statusCounts,
+            displayedArticles: Deck.main.drawn,
+            sortedSources, allTags, statusCounts,
             totalItems, displayedItems, articlesCount, visibleCountBySource,
             // actions
             selectTag, toggleSource, isolateSource, setDatePreset,
-            refreshSource, getFavicon, nukeCache, loadMore,
+            refreshSource, getFavicon, nukeCache,
             // swipe
             enterSwipe, swipeSkip, swipeRead, resetSeen,
             swipeCard, swipeSeen, swipeUnseen,

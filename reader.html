@@ -72,13 +72,17 @@
 
         /* Content Meta */
         .content { flex: 7; min-width: 0; display: flex; flex-direction: column; }
-        .meta { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 500; }
+        .meta { margin-bottom: 4px; display: flex; align-items: flex-start; gap: 4px; justify-content: space-between; width:100%}
+        .meta-left { font-size: 0.7rem; color: #64748b; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 500; }
+        .meta-right { font-size: 0.7rem; color: #64748b;  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 500; }
         .source-icon { width: 12px; height: 12px; border-radius: 2px; }
         .star-icon { color: var(--yellow); }
         .title { font-weight: 700; text-decoration: none; color: #0f172a; font-size: 1.05rem; margin-bottom: 6px; line-height: 1.3; }
         .title:visited { color: #64748b; }
         .blurb { font-size: 0.85rem; color: #475569; line-height: 1.4; word-break: break-word; }
-
+        .rows {display: flex; flex-direction: column;}
+        .cols {display: flex; flex-direction: row;}
+        
         .logo { color: #0f172a; }
         .debug-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
         .pill { border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; }
@@ -189,7 +193,7 @@
     </div>
     <div style="font-size: 0.7rem;color: rgb(100, 116, 139);text-align: center;display: flex;flex-direction: column;">
         {{ swipeSeen }} seen (session) &middot; {{ swipeUnseen }} unseen &middot; {{ bfCount }} seen
-        <span style="font-size: 0.3rem; color: #64748b;">v3.2.45678</span>
+        <span style="font-size: 0.3rem; color: #64748b;">v4.1.0023</span>
     </div>
 </div>
 
@@ -203,13 +207,15 @@
             <img v-if="swipeCard.image" :src="swipeCard.image" loading="lazy" onerror="this.style.display='none'"
                  style="width: 100%; border-radius: 8px; object-fit: contain; border: 1px solid var(--border); margin-bottom: 12px;">
             <div class="meta" style="margin-bottom: 8px;">
-                <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"
-                      :title="swipeCard._seen ? 'seen: ' + getSeenTime(swipeCard.link) : 'not seen'"></span>
-                <span v-if="swipeCard.source.tags.includes('star')" class="star-icon">&#9733;</span>
-                <img :src="getFavicon(swipeCard.link)" class="source-icon" onerror="this.style.display='none'">
-                <span>{{ swipeCard.sourceName }}</span>
-                <span>&middot;</span>
-                <span>{{ swipeCard.date.toISOString().split('T')[0] }}</span>
+                <div class="meta-left">
+                    <span class="seen-dot" :class="{ unseen: !swipeCard._seen }"
+                          :title="swipeCard._seen ? 'seen: ' + getSeenTime(swipeCard.link) : 'not seen'"></span>
+                    <span v-if="swipeCard.source.tags.includes('star')" class="star-icon">&#9733;</span>
+                    <img :src="getFavicon(swipeCard.link)" class="source-icon" onerror="this.style.display='none'">
+                    <span>{{ swipeCard.sourceName }}</span>
+                    <span>&middot;</span>
+                    <span>{{ swipeCard.date.toISOString().split('T')[0] }}</span>
+                </div>
             </div>
             <div style="font-weight: 700; font-size: 1.1rem; line-height: 1.3; color: #0f172a; margin-bottom: 10px;">
                 <a :href="swipeCard.link" target="_blank" class="title">{{ swipeCard.title }}</a>
@@ -249,38 +255,45 @@
      ════════════════════════════════════════════════════════ -->
 <div :class="['feed-container', viewMode === 'swipe' ? 'swipe-hidden' : viewMode]">
     <template v-for="item in displayedArticles" :key="item.link">
-        <div class="item" :data-url="item.link">
+        <div class="item rows" :data-url="item.link">
             <img v-if="viewMode==='card' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
-            <div class="content">
-                <div class="meta">
-                    <span class="seen-dot" :class="{ unseen: !isSeen(item.link) }"
-                          :title="isSeen(item.link) ? 'seen: ' + getSeenTime(item.link) : 'not seen'"></span>
-                    <span v-if="item.source.tags.includes('star')" class="star-icon">&#9733;</span>
-                    <span v-if="item.source.tags.includes('star')">&middot;</span>
-                    <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
-                    <span>{{ item.sourceName }}</span>
-                    <span>&middot;</span>
-                    <span>{{ item.date.toISOString().split('T')[0] }}</span>
-                    <span>&middot;</span>
-                    <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
-                    <span>&middot;</span>
-                    <span @click.stop="isolateSource(item.sourceId)" style="cursor: pointer;">[:v//d]</span>
-                </div>
-                <a :href="item.link" target="_blank" class="title">{{ item.fromCache ? '[C]':'' }} {{ item.title }}</a>
+            <div class="meta">
+                    <div class="meta-left">
+                        <span class="seen-dot" :class="{ unseen: !isSeen(item.link) }"
+                              :title="isSeen(item.link) ? 'seen: ' + getSeenTime(item.link) : 'not seen'"></span>
+                        <span v-if="item.source.tags.includes('star')" class="star-icon">&#9733;</span>
+                        <span v-if="item.source.tags.includes('star')">&middot;</span>
+                        <img :src="getFavicon(item.link)" class="source-icon" onerror="this.style.display='none'">
+                        <span>{{ item.sourceName }}</span>
+                        <span>&middot;</span>
+                        <span>{{ item.date.toISOString().split('T')[0] }}</span>
+                    </div>
+                    <div class="meta-right">
+                        <span v-if="item.fromCache">[cache] &middot;</span>
+                        <span @click.stop="toggleSource(item.sourceId)" style="cursor: pointer;">[:g//d]</span>
+                        <span>&middot;</span>
+                        <span @click.stop="isolateSource(item.sourceId)" style="cursor: pointer;">[:v//d]</span>
 
-                <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
-                    {{ item.snippet.substring(0, item.snippet_length || 500) }}
-                    <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
-                    <span class="txt-btn"
-                          v-if="(item.snippet_length || 500) < item.snippet.length"
-                          @click="item.snippet_length = Math.max(500, (item.snippet_length || 500) + 500);">more</span>
-                    <span class="txt-btn" v-if="item.snippet_length > 500 && item.snippet_length < item.snippet.length"> or </span>
-                    <span class="txt-btn"
-                          v-if="item.snippet_length > 500"
-                          @click="item.snippet_length = Math.max(160, (item.snippet_length || 500) - 500);">less</span>
-                </div>
+                    </div>
             </div>
-            <img v-if="viewMode==='list' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
+            <div class="cols" style="gap: 0 4px;width: 100%;align-items: flex-start;">
+                <div class="content">    
+                    <a :href="item.link" target="_blank" class="title">{{ item.title }}</a>
+
+                    <div class="blurb" style="margin-top: 4px;" v-if="item.snippet && item.snippet.length > 0">
+                        {{ item.snippet.substring(0, item.snippet_length || 500) }}
+                        <span v-if="(item.snippet_length || 500) < item.snippet.length">... </span>
+                        <span class="txt-btn"
+                              v-if="(item.snippet_length || 500) < item.snippet.length"
+                              @click="item.snippet_length = Math.max(500, (item.snippet_length || 500) + 500);">more</span>
+                        <span class="txt-btn" v-if="item.snippet_length > 500 && item.snippet_length < item.snippet.length"> or </span>
+                        <span class="txt-btn"
+                              v-if="item.snippet_length > 500"
+                              @click="item.snippet_length = Math.max(160, (item.snippet_length || 500) - 500);">less</span>
+                    </div>
+                </div>
+                <img v-if="viewMode==='list' && item.image" :src="item.image" class="thumb" loading="lazy" onerror="this.style.display='none'">
+            </div>
         </div>
     </template>
 </div>
@@ -325,7 +338,7 @@
 <div v-if="showBloomFilterStats" style="margin-top: 12px; font-family: monospace; font-size: 0.75rem; background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 14px;">
     <div style="margin-top: 10px; font-size: 0.75rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="color: var(--gray);">{{ bfCount }} articles marked seen &middot; resets in {{ bfExpiresIn }}</span>
+            <span style="color: var(--gray);">{{ bfCount }} articles marked seen</span>
             <span class="txt-btn" style="--accent: var(--red); color: var(--red);" @click="resetSeen()">&#8634; reset seen</span>
         </div>
     </div>
@@ -464,27 +477,27 @@ const { createApp, ref, computed, onMounted, reactive, watch, nextTick } = Vue;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: SeenStore
-//  Bloom filter with 24-hour TTL stored in localStorage.
-//  On load: if the stored timestamp is older than 24 h, wipe and start fresh.
+//  Persistent 24h seen-URL registry backed by localStorage.
+//  Exposes a Vue ref (count) so consumers are reactive with no polling.
 //
 //  API:
-//    SeenStore.has(url)          → boolean
-//    SeenStore.add(url)          → void   (persists automatically)
-//    SeenStore.reset()           → void
-//    SeenStore.estimatedCount    → number (property)
-//    SeenStore.expiresIn()       → string (human-readable remaining time)
+//    SeenStore.count         → Vue ref<number>  (reactive)
+//    SeenStore.has(url)      → boolean
+//    SeenStore.get(url)      → timestamp | null
+//    SeenStore.add(url)      → void
+//    SeenStore.reset()       → void
 // ════════════════════════════════════════════════════════════════════════════
 const SeenStore = (() => {
-    const DICT_KEY = 'reader_seen_dict_v1';
-    const TTL_MS   = 24 * 60 * 60 * 1000;
-    const MAX_ITEMS = 1024; // ~150KB space maximum
+    const DICT_KEY  = 'reader_seen_dict_v1';
+    const TTL_MS    = 24 * 60 * 60 * 1000;
+    const MAX_ITEMS = 1024;
 
-    let seenMap = new Map();
+    let seenMap    = new Map();
+    const count    = ref(0);   // reactive — Vue computeds that read this update automatically
 
     const _persist = () => {
         try {
             let entries = Array.from(seenMap.entries());
-            // Enforce size limit by dropping oldest timestamps
             if (entries.length > MAX_ITEMS) {
                 entries.sort((a, b) => b[1] - a[1]);
                 entries = entries.slice(0, MAX_ITEMS);
@@ -494,56 +507,38 @@ const SeenStore = (() => {
         } catch {}
     };
 
-    const _reset = () => {
-        seenMap.clear();
-        _persist();
-    };
-
-    // Initialise: Load and automatically purge items older than TTL
+    // Init: load and prune expired entries
     (() => {
         try {
             const stored = localStorage.getItem(DICT_KEY);
             if (stored) {
-                const parsed = JSON.parse(stored);
                 const now = Date.now();
-                for (const [url, ts] of Object.entries(parsed)) {
+                for (const [url, ts] of Object.entries(JSON.parse(stored)))
                     if (now - ts < TTL_MS) seenMap.set(url, ts);
-                }
-                _persist(); // Save pruned version back
+                _persist();
             }
         } catch {}
     })();
+    count.value = seenMap.size;
 
     return {
-        has(url) { return seenMap.has(url); },
-        get(url) { return seenMap.get(url) || null; },
-
-        add(url) {
-            seenMap.set(url, Date.now());
-            _persist();
-        },
-
-        reset: _reset,
-
-        get estimatedCount() { return seenMap.size; },
-
-        expiresIn() { return 'auto-pruned'; },
+        count,                                      // Vue ref — read directly in templates
+        has(url)  { return seenMap.has(url); },
+        get(url)  { return seenMap.get(url) || null; },
+        add(url)  { seenMap.set(url, Date.now()); count.value = seenMap.size; _persist(); },
+        reset()   { seenMap.clear();               count.value = 0;           _persist(); },
     };
 })();
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: FeedStore
-//  Single source of truth for all ingested articles.
-//  Wraps SeenStore for seen/unseen queries.
+//  Append-only article log. Single source of truth. Deduplicates on ingest.
+//  Seen state lives entirely in SeenStore — FeedStore does not touch it.
 //
 //  API:
-//    FeedStore.all                      → Vue ref to Article[]  (read-only)
+//    FeedStore.all                      → Vue ref<Article[]>  (read-only)
 //    FeedStore.ingest(article)          → boolean  (false = duplicate, skipped)
 //    FeedStore.removeBySource(sourceId) → void
-//    FeedStore.isSeen(url)              → boolean
-//    FeedStore.markSeen(url)            → void
-//    FeedStore.unseenOf(articles)       → Article[]  (filter: not seen)
-//    FeedStore.withSeenFlag(articles)   → Article[]  (each gets ._seen bool)
 // ════════════════════════════════════════════════════════════════════════════
 const FeedStore = (() => {
     const _articles  = ref([]);
@@ -556,7 +551,6 @@ const FeedStore = (() => {
             if (_seenLinks.has(article.link)) return false;
             _seenLinks.add(article.link);
             _articles.value.push(article);
-            console.log(_articles.length)
             return true;
         },
 
@@ -565,211 +559,73 @@ const FeedStore = (() => {
             _seenLinks.clear();
             _articles.value.forEach(a => _seenLinks.add(a.link));
         },
-
-        isSeen(url)      { return SeenStore.has(url); },
-        getSeenTime(url) { return SeenStore.get(url); },
-        markSeen(url)    { SeenStore.add(url); },
-
-        unseenOf(articles) {
-            return articles.filter(a => !SeenStore.has(a.link));
-        },
-
-        withSeenFlag(articles) {
-            return articles.map(a => ({ ...a, _seen: SeenStore.has(a.link) }));
-        },
     };
 })();
 
 
-// ════════════════════════════════════════════════════════════════════════════
-//  MODULE: Scheduler
-//  Decides which card to show next in swipe mode.
-//  To implement your own algorithm, replace Scheduler.pickNext.
-//
-//  Contract:
-//    pickNext(cards, context) → Article | null
-//
-//    cards   — ALL visible articles with ._seen flag already set.
-//    context — { seenLinks: Set<string>, swipeSeen: number }
-//              (reserved for your algorithm — add whatever you need)
-//
-//  The rest of the app never looks inside Scheduler.
-// ════════════════════════════════════════════════════════════════════════════
-const Scheduler = (() => {
-    /**
-     * Default: random unseen card. Falls back to random any card.
-     * Replace this entire function with your algorithm.
-     */
-    const pickNext = (cards, context) => {
-        if (!cards.length) return null;
-        const pool = cards.filter(c => !c._seen);
-        const source = pool.length > 0 ? pool : cards;
-        return source[Math.floor(Math.random() * source.length)];
-    };
-
-    return { pickNext };
-})();
-
-
-// ════════════════════════════════════════════════════════════════════════════
-//  MODULE: Filters
-//  A registry of named predicates (Article → boolean).
-//  Each predicate is a pure function. Filters.isVisible() is the conjunction.
-//
-//  API:
-//    Filters.set(state)      → void   — update all live filter state at once
-//    Filters.isVisible(item) → boolean
-//    Filters.for(keys)       → predicate[]  — subset, e.g. for swipe deck
-//
-//  Predicate keys: 'date' | 'source' | 'seen' | 'hidden'
-// ════════════════════════════════════════════════════════════════════════════
-const Filters = (() => {
-    // Live filter state — set() updates these before any rebuild
-    let _state = {
-        start: '', end: '',
-        selectedSources: [],
-        activeTag: 'all',
-        hideSeen: false,
-        sessionStart: Date.now(),
-    };
-
-    // Named predicates — each closes over _state only
-    const _predicates = {
-        date:   (item) => {
-            const d = item.date.toISOString().split('T')[0];
-            return (!_state.start || d >= _state.start) &&
-                   (!_state.end   || d <= _state.end);
-        },
-        source: (item) => {
-            if (_state.activeTag === 'all') return true;
-            return _state.selectedSources.includes(item.sourceId);
-        },
-        seen:   (item) => {
-            if (_state.activeTag !== 'seen') return true;
-            return FeedStore.isSeen(item.link);
-        },
-        hidden: (item) => {
-            if (!_state.hideSeen) return true;
-            const ts = FeedStore.getSeenTime(item.link);
-            return !ts || ts >= _state.sessionStart;
-        },
-    };
-
-    // Tag shorthand → source predicate override
-    // 'all'  passes everything; 'none' passes nothing; named tags filter by tag.
-    // This is handled via selectedSources being populated by selectTag() in the
-    // Vue app — _predicates.source just reads that list.
+const Pick = (() => {
+    // Algorithm: receives eligible pool, returns one article.
+    // Replace _select to change ordering everywhere at once.
+    const _select = (pool) =>
+        pool[Math.floor(Math.random() * pool.length)];
 
     return {
-        set(state) { Object.assign(_state, state); },
-
-        isVisible(item) {
-            return Object.values(_predicates).every(p => p(item));
-        },
-
-        // Return a subset of predicates by key — used to build deck-specific filters.
-        // e.g. Filters.for(['date', 'source', 'seen']) omits 'hidden' for swipe deck.
-        for(keys) {
-            return keys.map(k => _predicates[k]);
+        // pick(pool, n) → Article[]
+        // pool — already filtered by the pipeline predicates.
+        // n    — 1 = swipe card, 16 = page, Infinity = all.
+        // Unseen articles are preferred; falls back to full pool when exhausted.
+        pick(pool, n = 1) {
+            if (!pool.length) return [];
+            const unseen  = pool.filter(a => !SeenStore.has(a.link));
+            const source  = unseen.length ? unseen : pool;
+            const scratch = [...source];
+            const k       = n === Infinity ? scratch.length : Math.min(n, scratch.length);
+            const results = [];
+            for (let i = 0; i < k; i++) {
+                const item = _select(scratch);
+                scratch.splice(scratch.indexOf(item), 1);
+                results.push(item);
+            }
+            return results;
         },
     };
 })();
 
-
-// ════════════════════════════════════════════════════════════════════════════
-//  MODULE: Deck
-//  A filtered, randomly-drawable window over FeedStore.
-//  Two singleton instances: Deck.main (list/card) and Deck.swipe.
-//
-//  API:
-//    Deck.main.drawn       → Vue ref<Article[]>  — the rendered window
-//    Deck.main.remaining   → number              — articles left in buffer
-//    Deck.main.rebuild()   → void                — re-filter + reset draw
-//    Deck.main.drawMore()  → void                — pull PAGE_SIZE more
-//
-//    Deck.swipe.*          — same API, unbounded draw (full pool for Scheduler)
-// ════════════════════════════════════════════════════════════════════════════
-const Deck = (() => {
-    const PAGE_SIZE = 16;
-
-    const _drawRandom = (buffer, n) => {
-        const out = [];
-        const k   = Math.min(n, buffer.length);
-        for (let i = 0; i < k; i++) {
-            const idx = Math.floor(Math.random() * buffer.length);
-            out.push(...buffer.splice(idx, 1));
-        }
-        return out;
-    };
-
-    const _create = (predicates, pageSize) => {
-        const drawn   = ref([]);
-        let   _buffer = [];
-
-        return {
-            get drawn()     { return drawn; },
-            get remaining() { return _buffer.length; },
-
-            rebuild() {
-                _buffer     = FeedStore.all.value.filter(
-                    item => predicates.every(p => p(item))
-                );
-                drawn.value = _drawRandom(_buffer, pageSize);
-            },
-
-            drawMore() {
-                if (_buffer.length === 0) return;
-                drawn.value.push(..._drawRandom(_buffer, pageSize));
-            },
-        };
-    };
-
-    return {
-        // list + card: all 4 predicates, paged
-        main:  _create(Filters.for(['date', 'source', 'seen', 'hidden']), PAGE_SIZE),
-        // swipe: no 'hidden' predicate, unbounded so Scheduler has the full pool
-        swipe: _create(Filters.for(['date', 'source', 'seen']), Infinity),
-    };
-})();
 
 
 // ════════════════════════════════════════════════════════════════════════════
 //  VUE APP
+//  Pipeline: allArticles → filtered (computed) → displayed (computed, paged)
+//  Vue tracks reactive deps inside computed automatically — no manual sync.
 // ════════════════════════════════════════════════════════════════════════════
 createApp({
     setup() {
-        const articles = FeedStore.all;
+        const PAGE_SIZE = 16;
 
-        // ── SESSION STATE ────────────────────────────────────────────────────
+        // ── STATE ────────────────────────────────────────────────────────────
+        const allArticles            = FeedStore.all;
         const filters                = reactive({ start: '', end: '', selectedSources: [] });
         const viewMode               = ref('list');
         const dateMode               = ref('3');
         const activeTag              = ref('star');
+        const hideSeen               = ref(false);
+        const sessionStart           = Date.now();
+        const pageSize               = ref(PAGE_SIZE);
         const src_search_query       = ref('');
         const src_search             = ref(false);
         const cachedCount            = ref(0);
         const showDebugStats         = ref(false);
         const showBloomFilterStats   = ref(false);
-        const hideSeen               = ref(false);
-        const sessionStart           = Date.now();
 
-        // Reactive wrappers over SeenStore (polled every 10 s — cheap)
-        const bfCount     = ref(SeenStore.estimatedCount);
-        const bfExpiresIn = ref(SeenStore.expiresIn());
-        setInterval(() => {
-            bfCount.value     = SeenStore.estimatedCount;
-            bfExpiresIn.value = SeenStore.expiresIn();
-        }, 10_000);
+        // SeenStore.count is a Vue ref — no polling needed.
+        const bfCount = SeenStore.count;
 
         // ── SWIPE STATE ──────────────────────────────────────────────────────
-        const swipeCard   = ref(null);
-        const swipeSeen   = ref(0);
-        const swipeUnseen = computed(() =>
-            swipeCard.value ? FeedStore.unseenOf(Deck.swipe.drawn.value).length : 0
-        );
+        const swipeCard = ref(null);
+        const swipeSeen = ref(0);
 
         // ── DEBUG ────────────────────────────────────────────────────────────
-        const fetchLog    = reactive([]);
+        const fetchLog = reactive([]);
 
         // ── SOURCE STATES ────────────────────────────────────────────────────
         const sourceStates = reactive(FEED_CONFIG.map(config => ({
@@ -784,31 +640,49 @@ createApp({
             Object.fromEntries(sourceStates.map(s => [s.url, s]))
         );
 
-        // ── FILTER SYNC + DECK REBUILD ───────────────────────────────────────
-        // Push current reactive state into Filters, then rebuild both decks.
-        // This is the single place that connects Vue reactivity to the modules.
-        const _syncAndRebuild = () => {
-            Filters.set({
-                start:           filters.start,
-                end:             filters.end,
-                selectedSources: filters.selectedSources,
-                activeTag:       activeTag.value,
-                hideSeen:        hideSeen.value,
-                sessionStart,
+        // ── PIPELINE ─────────────────────────────────────────────────────────
+        // Stage 1: apply all filter predicates over every ingested article.
+        // Vue tracks allArticles, filters.*, activeTag, hideSeen automatically.
+        const filtered = computed(() => {
+            const { start, end, selectedSources } = filters;
+            const tag  = activeTag.value;
+            const hide = hideSeen.value;
+            return allArticles.value.filter(a => {
+                const d = a.date.toISOString().split('T')[0];
+                if (start && d < start) return false;
+                if (end   && d > end)   return false;
+                if (!selectedSources.includes(a.sourceId)) return false;
+                if (tag === 'seen' && !SeenStore.has(a.link)) return false;
+                if (hide) {
+                    const ts = SeenStore.get(a.link);
+                    if (ts && ts < sessionStart) return false;
+                }
+                return true;
             });
-            Deck.main.rebuild();
-            Deck.swipe.rebuild();
+        });
+
+        // Stage 2: stable ordered list.
+        // Must be a ref+watch, NOT a computed: Pick.pick randomises, so any
+        // unrelated reactive change (SeenStore.count, scroll) would reshuffle
+        // the visible feed. Order is fixed until the filter actually changes;
+        // drawMore reveals more of the same stable ordered list.
+        const _orderedPool = ref([]);
+        const displayed    = ref([]);
+
+        watch(filtered, (pool) => {
+            _orderedPool.value = Pick.pick(pool, Infinity); // full stable ordering
+            displayed.value    = _orderedPool.value.slice(0, PAGE_SIZE);
+            pageSize.value     = PAGE_SIZE;
+        }, { immediate: true });
+
+        const drawMore = () => {
+            pageSize.value  += PAGE_SIZE;
+            displayed.value  = _orderedPool.value.slice(0, pageSize.value);
         };
 
-        watch(
-            [articles,
-             () => filters.start, () => filters.end,
-             () => filters.selectedSources.slice(),
-             () => activeTag.value,
-             () => hideSeen.value],
-            _syncAndRebuild,
-            { deep: false }
-        );
+        // Swipe pool — full filtered set. Pick handles seen-awareness internally.
+        const swipePool   = computed(() => filtered.value);
+        const swipeUnseen = computed(() => swipePool.value.filter(a => !SeenStore.has(a.link)).length);
 
         // ── SCROLL SENTINEL ──────────────────────────────────────────────────
         let _scrollObserver = null;
@@ -817,17 +691,20 @@ createApp({
             const sentinel = document.getElementById('feed-sentinel');
             if (!sentinel) return;
             _scrollObserver = new IntersectionObserver(
-                (entries) => { if (entries[0].isIntersecting) Deck.main.drawMore(); },
+                (entries) => { if (entries[0].isIntersecting) drawMore(); },
                 { rootMargin: '200px' }
             );
             _scrollObserver.observe(sentinel);
         };
-        watch(Deck.main.drawn, () => nextTick(_attachScrollSentinel));
+        watch(displayed, () => nextTick(_attachScrollSentinel));
 
         // ── DERIVED ──────────────────────────────────────────────────────────
+        const totalItems           = computed(() => allArticles.value.length);
+        const displayedItems       = computed(() => filtered.value.length);
+
         const visibleCountBySource = computed(() => {
             const counts = {};
-            Deck.main.drawn.value.forEach(a => {
+            filtered.value.forEach(a => {
                 counts[a.sourceId] = (counts[a.sourceId] || 0) + 1;
             });
             return counts;
@@ -843,18 +720,18 @@ createApp({
 
         const sortedSources = computed(() => {
             const seed = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            let filtered = [...sourceStates].sort((a, b) => {
+            let result = [...sourceStates].sort((a, b) => {
                 const hA = [...(a.url + seed)].reduce((acc, c) => acc + c.charCodeAt(0), 0);
                 const hB = [...(b.url + seed)].reduce((acc, c) => acc + c.charCodeAt(0), 0);
                 return hA - hB;
             });
             if (src_search_query.value.trim()) {
                 const q = src_search_query.value.toLowerCase();
-                filtered = filtered.filter(s =>
+                result = result.filter(s =>
                     s.displayName.toLowerCase().includes(q) || s.url.toLowerCase().includes(q)
                 );
             }
-            return filtered.sort((a, b) => {
+            return result.sort((a, b) => {
                 const aS = filters.selectedSources.includes(a.url);
                 const bS = filters.selectedSources.includes(b.url);
                 return aS === bS ? 0 : aS ? -1 : 1;
@@ -870,12 +747,9 @@ createApp({
             return counts;
         });
 
-        const totalItems     = computed(() => articles.value.length);
-        const displayedItems = computed(() => Deck.main.drawn.value.length + Deck.main.remaining);
-
         const articlesCount = computed(() => {
             const counts = {};
-            articles.value.forEach(item => {
+            allArticles.value.forEach(item => {
                 const m = item.date.toISOString().slice(0, 7);
                 counts[m] = (counts[m] || 0) + 1;
             });
@@ -907,7 +781,7 @@ createApp({
                             sourceName: state.displayName,
                             source: state,
                             strategyUsed: bundle.strategyUsed,
-                            fromCache: bundle.fromCache
+                            fromCache: bundle.fromCache,
                         });
                         if (!ok) dupes++;
                     });
@@ -929,41 +803,37 @@ createApp({
             fetchSource(state);
         };
 
+        // setSources: the one place that mutates the active source list.
+        // All tag/toggle/isolate actions compute the desired list and call this.
+        const setSources = (urls) => { filters.selectedSources = urls; };
+
+        const selectTag = (tag) => {
+            activeTag.value = tag;
+            if (tag === 'none') return setSources([]);
+            if (tag === 'seen') return setSources(
+                allArticles.value.filter(a => SeenStore.has(a.link)).map(a => a.sourceId)
+            );
+            const matching = sourceStates.filter(s => tag === 'all' || s.tags.includes(tag));
+            matching.forEach(s => { if (s.status === 'waiting') fetchSource(s); });
+            setSources(matching.map(s => s.url));
+        };
+
         const toggleSource = (url) => {
             activeTag.value = 'custom';
-            const index = filters.selectedSources.indexOf(url);
-            if (index > -1) {
-                filters.selectedSources.splice(index, 1);
-            } else {
-                filters.selectedSources.push(url);
+            const next = new Set(filters.selectedSources);
+            next.has(url) ? next.delete(url) : next.add(url);
+            if (!filters.selectedSources.includes(url)) {
                 const state = stateByUrl.value[url];
-                if (state && state.status === 'waiting') fetchSource(state);
+                if (state?.status === 'waiting') fetchSource(state);
             }
+            setSources([...next]);
         };
 
         const isolateSource = (url) => {
             activeTag.value = 'custom';
-            filters.selectedSources = [];
-            toggleSource(url);
-        };
-
-        const selectTag = (tag) => {
-            activeTag.value = tag;
-            filters.selectedSources = [];
-            if (tag === 'none') return;
-
-            if (tag === 'seen') {
-                articles.value.forEach(a => {
-                    if (FeedStore.isSeen(a.link)) filters.selectedSources.push(a.sourceId);
-                });
-            } else {
-                sourceStates.forEach(s => {
-                    if (tag === 'all' || s.tags.includes(tag)) {
-                        filters.selectedSources.push(s.url);
-                        if (s.status === 'waiting') fetchSource(s);
-                    }
-                });
-            }
+            setSources([url]);
+            const state = stateByUrl.value[url];
+            if (state?.status === 'waiting') fetchSource(state);
         };
 
         const setDatePreset = (days) => {
@@ -977,14 +847,8 @@ createApp({
         };
 
         // ── SWIPE ACTIONS ────────────────────────────────────────────────────
-        // _advance asks Scheduler to pick from Deck.swipe's full pool.
         const _advance = () => {
-            const cards   = FeedStore.withSeenFlag(Deck.swipe.drawn.value);
-            const context = {
-                seenLinks: new Set(cards.filter(c => c._seen).map(c => c.link)),
-                swipeSeen: swipeSeen.value,
-            };
-            swipeCard.value = Scheduler.pickNext(cards, context);
+            swipeCard.value = Pick.pick(swipePool.value, 1)[0] ?? null;
         };
 
         const enterSwipe = () => {
@@ -998,21 +862,19 @@ createApp({
         const swipeRead = () => {
             const card = swipeCard.value;
             if (!card) return;
-            FeedStore.markSeen(card.link);
-            bfCount.value = SeenStore.estimatedCount;
+            SeenStore.add(card.link);   // SeenStore.count ref updates automatically
             swipeSeen.value++;
             _advance();
         };
 
         const resetSeen = () => {
-            SeenStore.reset();
-            bfCount.value = 0;
+            SeenStore.reset();          // SeenStore.count ref updates automatically
             if (viewMode.value === 'swipe') _advance();
         };
 
-        const isSeen = (url) => FeedStore.isSeen(url);
+        const isSeen      = (url) => SeenStore.has(url);
         const getSeenTime = (url) => {
-            const ts = FeedStore.getSeenTime(url);
+            const ts = SeenStore.get(url);
             return ts ? new Date(ts).toLocaleString() : null;
         };
 
@@ -1062,17 +924,13 @@ createApp({
 
         // ── VISIBILITY OBSERVER (mark seen on scroll) ────────────────────────
         const visibilityTimers = new Map();
-
         const observeVisibility = () => {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const url = entry.target.getAttribute('data-url');
                     if (entry.isIntersecting) {
                         const timer = setTimeout(() => {
-                            if (!FeedStore.isSeen(url)) {
-                                FeedStore.markSeen(url);
-                                bfCount.value = SeenStore.estimatedCount;
-                            }
+                            if (!SeenStore.has(url)) SeenStore.add(url);
                         }, 2000);
                         visibilityTimers.set(url, timer);
                     } else {
@@ -1085,20 +943,21 @@ createApp({
             }, { threshold: 0.5 });
             document.querySelectorAll('.item').forEach(el => observer.observe(el));
         };
-
-        watch(Deck.main.drawn, () => nextTick(() => observeVisibility()));
+        watch(displayed, () => nextTick(() => observeVisibility()));
 
         return {
-            // data
-            articles,
-            // session
-            filters, viewMode, dateMode, activeTag, src_search_query, src_search, cachedCount,
+            // state
+            filters, viewMode, dateMode, activeTag, hideSeen,
+            src_search_query, src_search, cachedCount,
+            showDebugStats, showBloomFilterStats,
             // source states
             sourceStates,
-            // derived
-            displayedArticles: Deck.main.drawn,
+            // pipeline outputs
+            displayedArticles: displayed,
+            totalItems, displayedItems,
+            visibleCountBySource, articlesCount,
+            // source UI
             sortedSources, allTags, statusCounts,
-            totalItems, displayedItems, articlesCount, visibleCountBySource,
             // actions
             selectTag, toggleSource, isolateSource, setDatePreset,
             refreshSource, getFavicon, nukeCache,
@@ -1106,9 +965,9 @@ createApp({
             enterSwipe, swipeSkip, swipeRead, resetSeen,
             swipeCard, swipeSeen, swipeUnseen,
             // seen
-            isSeen, getSeenTime, hideSeen, bfCount, bfExpiresIn,
+            isSeen, getSeenTime, bfCount,
             // debug
-            showDebugStats, showBloomFilterStats, debugStats, fetchLog,
+            debugStats, fetchLog,
         };
     },
 }).mount('#app');

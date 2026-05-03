@@ -10,7 +10,7 @@
     <script src="rss-engine.js"></script>
     <style>
         * { margin: 0; }
-        body {font-size:16px; }
+        body {font-size:16px; word-wrap: break-word; margin: 0.5rem;}
         .rows {display: flex; flex-direction: column;}
         .cols {display: flex; flex-direction: row;}
         .gapx {gap:0 0.5rem;}
@@ -18,44 +18,46 @@
     </style>
 </head>
 <body>
-<div id="app" class="rows gapy">
-    <h2>READ</h2>
-    <div>{{ status }}</div>
-    <div class="cols gapx">
-        <div>
-            Tags:
-            <ul>
-                <li>
-                    <span @click="set_active_tag(null)">all</span>
-                </li>
-                <li v-for="tag in all_tags">
-                    <span @click="set_active_tag(tag)">{{ tag }}</span>
-                </li>
-            </ul>
-        </div>
-        <div>
-            Days:
-            <ul>
-                <li @click="set_date_preset(1)">1d</li>
-                <li @click="set_date_preset(3)">3d</li>
-                <li @click="set_date_preset(7)">7d</li>
-                <li @click="set_date_preset(128)">all</li>
-            </ul>
-        </div>
+<div id="app" class="rows" style="gap: 1rem 0;">
+    <h1>READ</h1>
+    <div>{{ status }} -- {{b0_out.length}} injested</div>
+    <div class="rows gapy">
+        <h2>Predicates</h3>
+        <ul>
+            <li>
+                <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
+                    <span>Tags:</span>
+                    <a href="#" @click="set_active_tag(null)">all</a>
+                    <template v-for="tag in all_tags">
+                        <a href="#" @click="set_active_tag(tag)">{{ tag }}</a>
+                    </template>
+                </div>
+            </li>
+            <li>
+                <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
+                    <span>Days:</span>
+                    <a href="#" @click="set_date_preset(1)">1d</a>
+                    <a href="#" @click="set_date_preset(3)">3d</a>
+                    <a href="#" @click="set_date_preset(7)">7d</a>
+                    <a href="#" @click="set_date_preset(128)">all</a>
+                </div>
+            </li>
+        </ul>
     </div>
 
-    <div class="cols gapx">
-        <div class="rows">
-            <h3> B2: {{b2_out.length}}</h3>
+    <div class="rows gapy">
+            <h2> Filtered Buffer : {{b2_out.length}}</h2>
             <div>
-              Visible tags: {{ visible_tags.join(', ') }}
+               <blockquote>
+                    Visible tags: {{ visible_tags.join(', ') }}
+                </blockquote>
             </div>
-            <ul>
-                <li v-for="a in b2_out">
-                    <article-et :a="a"></article-et>
-                </li>
-            </ul>
-        </div>
+            <div class="rows gapy">
+                
+                    <div v-for="a in b2_out" :key="a.link">
+                        <article-et :a="a"></article-et>
+                    </div>
+            </div>
     </div>
 </div>
 <script>
@@ -98,7 +100,7 @@ const app = createApp({
                 b.set_p('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
         };
 
-        const set_active_tag = (b, tag) => {
+        const set_active_tag_t = (b, tag) => {
             if (tag === null) {
                 b.set_p('tag_filter', () => true);
             } else {
@@ -107,10 +109,6 @@ const app = createApp({
                 );
             }
         };
-
-        // const set_date_preset = (days) => {
-        //     set_date_preset_gen(b2, days);
-        // };
 
         async function fetch_source(config) {
             try {
@@ -128,7 +126,6 @@ const app = createApp({
                         source: config,
                         from_cache:  bundle.fromCache,
                     }));
-                    config.source.tags.forEach(tag => all_tags.value.add(tag));
                 }
             } catch (e) {
                 console.error('fetch error', config.url, e);
@@ -137,7 +134,7 @@ const app = createApp({
 
         onMounted(async () => {
             await CacheDB.cleanup();
-            status.value = `fetching ${FEED_CONFIG.length} sources…`;
+            status.value = `fetching ${FEED_CONFIG.length} sources`;
             set_date_preset(b1, 30);
             set_date_preset(b2, 1);
             await Promise.allSettled(FEED_CONFIG.map(fetch_source));
@@ -147,12 +144,12 @@ const app = createApp({
         const all_tags = get_unique_tags(b1);
         const visible_tags = get_unique_tags(b2); 
 
-        // Only expose refs/computeds to the template, never the buffer objects
         return { 
             status, 
             b0_out: b0.out, b1_out: b1.out, b2_out: b2.out, 
+            b2,
             set_date_preset: (days) => set_date_preset(b2, days),
-            set_active_tag: (tag) => set_active_tag(b2, tag),
+            set_active_tag: (tag) => set_active_tag_t(b2, tag),
             all_tags,
             visible_tags
         };
@@ -162,13 +159,17 @@ const app = createApp({
 app.component('article-et', {
     props: ['a'],
     template: `
-        <a href="{{a.link}}">{{a.title}}</a> 
-        <ul>
-            <li>{{ a.source_name }}</li>
-            <li>{{ a.source.tags}} {{ a.source.tags.join(', ') }}</li>
-            <li>{{a.date}}</li>
-        </ul>
-        `
+        <div>
+            <a :href="a.link" target="_blank">{{ a.title }}</a> 
+            <ul style="padding-inline-start: 2rem;">
+                <li>{{ a.source_name }} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }}</li>
+                <li>{{ a.source.tags ? a.source.tags.join(', ') : 'none' }}</li>
+                <li>
+                    <small>{{ a.snippet.substring(0, 600) }}</small>
+                </li>
+            </ul>
+        </div>
+    `
 });
 
 app.mount('#app');

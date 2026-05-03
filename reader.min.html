@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>READ simple</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="feed-config.js"></script>
+    <script src="cache-db.js"></script>
+    <script src="rss-engine.js"></script>
+    <style>
+        * { margin: 0; }
+        body {font-size:12px; }
+        .rows {display: flex; flex-direction: column;}
+        .cols {display: flex; flex-direction: row;}
+        .gapx {gap:0 0.5rem;}
+        .gapy {gap:0.5rem 0;}
+    </style>
+</head>
+<body>
+<div id="app" class="rows gapy">
+    <h2>READ</h2>
+    <div>{{ status }}</div>
+    <div class="cols gapx">
+        <div>
+            Tags:
+            <ul>
+                <li>
+                    <span @click="set_active_tag(null)">all</span>
+                </li>
+                <li v-for="tag in all_tags">
+                    <span @click="set_active_tag(tag)">{{ tag }}</span>
+                </li>
+            </ul>
+        </div>
+        <div>
+            Days:
+            <ul>
+                <li @click="set_date_preset(1)">1d</li>
+                <li @click="set_date_preset(3)">3d</li>
+                <li @click="set_date_preset(7)">7d</li>
+                <li @click="set_date_preset(128)">all</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="cols gapx">
+        <div class="rows">
+            <h3> B2: {{b2_out.length}}</h3>
+            <div>
+              Visible tags: {{ visible_tags.join(', ') }}
+            </div>
+            <ul>
+                <li v-for="a in b2_out">
+                    <article-et :a="a"></article-et>
+                </li>
+            </ul>
+        </div>
+        <div class="rows">
+            <h3> B1: {{b1_out.length}}</h3>
+            <ul>
+                <li v-for="a in b1_out">
+                    <article-et :a="a"></article-et>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<script>
+const { createApp, ref, computed, reactive, onMounted } = Vue;
+
+function make_buffer(source = null) {
+    const _store     = source ? null : ref([]);
+    const predicates = ref({});
+
+    const all = source ? source : _store;  // source is already a computed ref
+
+    const out = computed(() =>
+        all.value.filter(a => Object.values(predicates.value).every(p => p(a)))
+    );
+
+    function ingest(article)   { if (_store) _store.value.push(article); }
+    function set_p(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
+    function remove_p(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
+
+    return { out, ingest, set_p, remove_p };
+}
+
+const app = createApp({
+    setup() {
+        const status = ref('loading...');
+
+        const b0 = make_buffer();
+        const b1 = make_buffer(b0.out);
+        const b2 = make_buffer(b1.out);
+
+        const get_unique_tags = (buffer) => computed(() => {
+            const raw = buffer.out.value.flatMap(item => item.source?.tags || []);
+            return [...new Set(raw.filter(t => t != null))].sort();
+        });
+
+        const set_date_preset = (b, days) => {
+                const start = new Date();
+                start.setDate(start.getDate() - parseInt(days));
+                const start_str = start.toISOString().split('T')[0];
+                b.set_p('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
+        };
+
+        const set_active_tag = (b, tag) => {
+            if (tag === null) {
+                b.set_p('tag_filter', () => true);
+            } else {
+                b.set_p('tag_filter', a => 
+                    Array.isArray(a.source?.tags) && a.source.tags.includes(tag)
+                );
+            }
+        };
+
+        // const set_date_preset = (days) => {
+        //     set_date_preset_gen(b2, days);
+        // };
+
+        async function fetch_source(config) {
+            try {
+                let bundle = await CacheDB.get(config.url);
+                if (!bundle) {
+                    bundle = await RSSEngine.process({ url: config.url, name: config.name });
+                    if (bundle.status === 'success') await CacheDB.set(config.url, bundle);
+                }
+                if (bundle.status === 'success') {
+                    bundle.items.forEach(item => b0.ingest({
+                        ...item,
+                        date:        new Date(item.date || Date.now()),
+                        source_name: config.name || config.url,
+                        source_id:   config.url,
+                        source: config,
+                        from_cache:  bundle.fromCache,
+                    }));
+                    config.source.tags.forEach(tag => all_tags.value.add(tag));
+                }
+            } catch (e) {
+                console.error('fetch error', config.url, e);
+            }
+        }
+
+        onMounted(async () => {
+            await CacheDB.cleanup();
+            status.value = `fetching ${FEED_CONFIG.length} sources…`;
+            set_date_preset(b1, 30);
+            set_date_preset(b2, 1);
+            await Promise.allSettled(FEED_CONFIG.map(fetch_source));
+            status.value = `done — ${b0.out.value.length} total, ${b2.out.value.length} filtered`;
+        });
+
+        const all_tags = get_unique_tags(b1);
+        const visible_tags = get_unique_tags(b2); 
+
+        // Only expose refs/computeds to the template, never the buffer objects
+        return { 
+            status, 
+            b0_out: b0.out, b1_out: b1.out, b2_out: b2.out, 
+            set_date_preset: (days) => set_date_preset(b2, days),
+            set_active_tag: (tag) => set_active_tag(b2, tag),
+            all_tags,
+            visible_tags
+        };
+    }
+});
+
+app.component('article-et', {
+    props: ['a'],
+    template: `
+        <a href="{{a.link}}">{{a.title}}</a> -- {{ a.source_name }} -- {{a.source.tags}} -- {{a.date}}
+        `
+});
+
+app.mount('#app');
+</script>
+</body>
+</html>

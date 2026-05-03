@@ -207,7 +207,7 @@ const FEED_CONFIG = [
     { name: "Melting Asphalt", url: "https://meltingasphalt.com/feed", tags: ["star", "people"] },
     { name: "Embedded in Academia", url: "https://blog.regehr.org/feed", tags: ["people"] },
     { name: "without.boats", url: "https://without.boats/index.xml", tags: ["people"] },
-    { name: "Works in Progress", url: "https://www.worksinprogress.news/feed", tags: ["star", "people"] },
+    { name: "Works in Progress", url: "https://www.worksinprogress.news/feed", tags: ["people"] },
     { name: "Roots of Progress", url: "https://rootsofprogress.org/feed", tags: ["star", "people"] },
     { name: "HN Classic", url: "https://hnrss.org/classic", tags: ["tech"] },
     { name: "Interconnects", url: "https://www.interconnects.ai/feed", tags: ["star", "people"] },

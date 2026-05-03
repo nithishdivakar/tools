@@ -15,6 +15,7 @@
         .cols {display: flex; flex-direction: row;}
         .gapx {gap:0 0.5rem;}
         .gapy {gap:0.5rem 0;}
+        .snippet {color: #01335b;font-size: small;}
     </style>
 </head>
 <body>
@@ -46,18 +47,17 @@
     </div>
 
     <div class="rows gapy">
-            <h2> Filtered Buffer : {{b2_out.length}}</h2>
-            <div>
-               <blockquote>
-                    Visible tags: {{ visible_tags.join(', ') }}
-                </blockquote>
+        <h2> Filtered Buffer : {{b2_out.length}}</h2>
+        <div>
+           <blockquote>
+                Visible tags: {{ visible_tags.join(', ') }}
+            </blockquote>
+        </div>
+        <div class="rows" style="gap:1em 0;">
+            <div v-for="a in b2_out" :key="a.link">
+                <art :a="a"></art>
             </div>
-            <div class="rows gapy">
-                
-                    <div v-for="a in b2_out" :key="a.link">
-                        <article-et :a="a"></article-et>
-                    </div>
-            </div>
+        </div>
     </div>
 </div>
 <script>
@@ -100,7 +100,7 @@ const app = createApp({
                 b.set_p('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
         };
 
-        const set_active_tag_t = (b, tag) => {
+        const set_active_tag = (b, tag) => {
             if (tag === null) {
                 b.set_p('tag_filter', () => true);
             } else {
@@ -143,34 +143,35 @@ const app = createApp({
 
         const all_tags = get_unique_tags(b1);
         const visible_tags = get_unique_tags(b2); 
+        const today = new Date().toISOString().split('T')[0];
 
         return { 
             status, 
-            b0_out: b0.out, b1_out: b1.out, b2_out: b2.out, 
+            b0_out: b0.out, 
+            // b1_out: b1.out, 
+            b2_out: b2.out,
             b2,
             set_date_preset: (days) => set_date_preset(b2, days),
-            set_active_tag: (tag) => set_active_tag_t(b2, tag),
+            set_active_tag: (tag) => set_active_tag(b2, tag),
             all_tags,
             visible_tags
         };
     }
 });
 
-app.component('article-et', {
+app.component('art', {
     props: ['a'],
     template: `
-        <div>
-            <a :href="a.link" target="_blank">{{ a.title }}</a> 
-            <ul style="padding-inline-start: 2rem;">
-                <li>{{ a.source_name }} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }}</li>
-                <li>{{ a.source.tags ? a.source.tags.join(', ') : 'none' }}</li>
-                <li>
-                    <small>{{ a.snippet.substring(0, 600) }}</small>
-                </li>
-            </ul>
+        <div class="rows">
+            <small> {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}</small> 
+            <big><a :href="a.link" target="_blank">{{ a.title }}</a> </big>
+            <div class="snippet">
+                {{ a.snippet.substring(0, 600) }}
+            </div>
         </div>
     `
 });
+
 
 app.mount('#app');
 </script>

@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>READ simple</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>READ min</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="feed-config.js"></script>
     <script src="cache-db.js"></script>
     <script src="rss-engine.js"></script>
     <style>
         * { margin: 0; }
-        body {font-size:12px; }
+        body {font-size:16px; }
         .rows {display: flex; flex-direction: column;}
         .cols {display: flex; flex-direction: row;}
         .gapx {gap:0 0.5rem;}
@@ -51,14 +52,6 @@
             </div>
             <ul>
                 <li v-for="a in b2_out">
-                    <article-et :a="a"></article-et>
-                </li>
-            </ul>
-        </div>
-        <div class="rows">
-            <h3> B1: {{b1_out.length}}</h3>
-            <ul>
-                <li v-for="a in b1_out">
                     <article-et :a="a"></article-et>
                 </li>
             </ul>
@@ -169,7 +162,12 @@ const app = createApp({
 app.component('article-et', {
     props: ['a'],
     template: `
-        <a href="{{a.link}}">{{a.title}}</a> -- {{ a.source_name }} -- {{a.source.tags}} -- {{a.date}}
+        <a href="{{a.link}}">{{a.title}}</a> 
+        <ul>
+            <li>{{ a.source_name }}</li>
+            <li>{{ a.source.tags}} {{ a.source.tags.join(', ') }}</li>
+            <li>{{a.date}}</li>
+        </ul>
         `
 });
 

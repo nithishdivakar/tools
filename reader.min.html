@@ -54,7 +54,7 @@
             </blockquote>
         </div>
         <div class="rows" style="gap:1em 0;">
-            <div v-for="a in b2_out" :key="a.link">
+            <div v-for="(a, i) in b2_out" :key="a.link + i">
                 <art :a="a"></art>
             </div>
         </div>
@@ -63,22 +63,42 @@
 <script>
 const { createApp, ref, computed, reactive, onMounted } = Vue;
 
-function make_buffer(source = null) {
+// function make_buffer(source = null) {
+//     const _store     = source ? null : ref([]);
+//     const predicates = ref({});
+
+//     const all = source ? source : _store;  // source is already a computed ref
+
+//     const out = computed(() =>
+//         all.value.filter(a => Object.values(predicates.value).every(p => p(a)))
+//     );
+
+//     function ingest(article)   { if (_store) _store.value.push(article); }
+//     function set_p(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
+//     function remove_p(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
+
+//     return { out, ingest, set_p, remove_p };
+// }
+
+function make_buffer(source = null, sort_fn = null) {
     const _store     = source ? null : ref([]);
     const predicates = ref({});
+    const all = source ? source : _store;
 
-    const all = source ? source : _store;  // source is already a computed ref
+    const out = computed(() => {
+        const filtered = all.value.filter(
+            a => Object.values(predicates.value).every(p => p(a))
+        );
+        return sort_fn ? [...filtered].sort(sort_fn) : filtered;
+    });
 
-    const out = computed(() =>
-        all.value.filter(a => Object.values(predicates.value).every(p => p(a)))
-    );
+    function ingest(article) { if (_store) _store.value.push(article); }
+    function set_predicate(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
+    function remove_predicate(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
 
-    function ingest(article)   { if (_store) _store.value.push(article); }
-    function set_p(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
-    function remove_p(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
-
-    return { out, ingest, set_p, remove_p };
+    return { out, ingest, set_predicate, remove_predicate };
 }
+
 
 const app = createApp({
     setup() {
@@ -86,7 +106,8 @@ const app = createApp({
 
         const b0 = make_buffer();
         const b1 = make_buffer(b0.out);
-        const b2 = make_buffer(b1.out);
+        // const b2 = make_buffer(b1.out);
+        const b2 = make_buffer(b1.out, (a, b) => a._salt - b._salt);
 
         const get_unique_tags = (buffer) => computed(() => {
             const raw = buffer.out.value.flatMap(item => item.source?.tags || []);
@@ -94,17 +115,17 @@ const app = createApp({
         });
 
         const set_date_preset = (b, days) => {
-                const start = new Date();
-                start.setDate(start.getDate() - parseInt(days));
-                const start_str = start.toISOString().split('T')[0];
-                b.set_p('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
+            const start = new Date();
+            start.setDate(start.getDate() - parseInt(days));
+            const start_str = start.toISOString().split('T')[0];
+            b.set_predicate('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
         };
 
-        const set_active_tag = (b, tag) => {
+        const set_active_tag_g = (b, tag) => {
             if (tag === null) {
-                b.set_p('tag_filter', () => true);
+                b.set_predicate('tag_filter', () => true);
             } else {
-                b.set_p('tag_filter', a => 
+                b.set_predicate('tag_filter', a => 
                     Array.isArray(a.source?.tags) && a.source.tags.includes(tag)
                 );
             }
@@ -120,6 +141,7 @@ const app = createApp({
                 if (bundle.status === 'success') {
                     bundle.items.forEach(item => b0.ingest({
                         ...item,
+                        _salt: Math.random(),
                         date:        new Date(item.date || Date.now()),
                         source_name: config.name || config.url,
                         source_id:   config.url,
@@ -152,7 +174,7 @@ const app = createApp({
             b2_out: b2.out,
             b2,
             set_date_preset: (days) => set_date_preset(b2, days),
-            set_active_tag: (tag) => set_active_tag(b2, tag),
+            set_active_tag: (tag) => set_active_tag_g(b2, tag),
             all_tags,
             visible_tags
         };
@@ -164,7 +186,9 @@ app.component('art', {
     template: `
         <div class="rows">
             <small> {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}</small> 
-            <big><a :href="a.link" target="_blank">{{ a.title }}</a> </big>
+            <span style="font-size: larger;">
+                <a :href="a.link" target="_blank">{{ a.title }}</a>
+            </span>
             <div class="snippet">
                 {{ a.snippet.substring(0, 600) }}
             </div>

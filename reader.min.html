@@ -16,6 +16,7 @@
         .gapx {gap:0 0.5rem;}
         .gapy {gap:0.5rem 0;}
         .snippet {color: #01335b;font-size: small;}
+        .meta {color: #01335b;font-size: x-small;}
     </style>
 </head>
 <body>
@@ -185,7 +186,9 @@ app.component('art', {
     props: ['a'],
     template: `
         <div class="rows">
-            <small> {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}</small> 
+            <span class="meta"> 
+                {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
+            </span> 
             <span style="font-size: larger;">
                 <a :href="a.link" target="_blank">{{ a.title }}</a>
             </span>
@@ -195,7 +198,6 @@ app.component('art', {
         </div>
     `
 });
-
 
 app.mount('#app');
 </script>

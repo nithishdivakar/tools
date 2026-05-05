@@ -31,7 +31,7 @@
                 <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
                     <span>Tags:</span>
                     <a href="#" @click="set_active_tag(null)">all</a>
-                    <template v-for="tag in all_tags">
+                    <template v-for="[tag, count] in all_tags">
                         <a href="#" @click="set_active_tag(tag)">{{ tag }}</a>
                     </template>
                 </div>
@@ -45,15 +45,18 @@
                     <a href="#" @click="set_date_preset(128)">all</a>
                 </div>
             </li>
+            <li><a href="#" @click="toggle_tag('seen')">Toggle seen</a>
+            </li>
         </ul>
     </div>
 
     <div class="rows gapy">
         <h2> Filtered Buffer : {{b2_out.length}}</h2>
-        <div>
-           <blockquote>
-                Visible tags: {{ visible_tags.join(', ') }}
-            </blockquote>
+        <div class="cols gapx meta">
+            --
+            <template v-for="[tag, count] in visible_tags">
+                <span>{{tag}}({{count}})</span>
+            </template>
         </div>
         <div class="rows" style="gap:1em 0;">
             <div v-for="(a, i) in b2_out" :key="a.link + i">
@@ -111,8 +114,9 @@ function make_buffer(source = null, sort_fn = null) {
     function ingest(article)           { if (_store) _store.value.push(article); }
     function set_predicate(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
     function remove_predicate(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
+    function has_predicate(key)        { return key in predicates.value; }
 
-    return { out, ingest, set_predicate, remove_predicate };
+    return { out, ingest, set_predicate, remove_predicate, has_predicate };
 }
 
 const app = createApp({
@@ -123,9 +127,14 @@ const app = createApp({
         const b1 = make_buffer(b0.out);
         const b2 = make_buffer(b1.out, (a, b) => a._salt - b._salt);
 
-        const get_unique_tags = (buffer) => computed(() => {
-            const raw = buffer.out.value.flatMap(item => item.source?.tags || []);
-            return [...new Set(raw.filter(t => t != null))].sort();
+        const tags_stats = (buffer) => computed(() => {
+            const counts = new Map();
+            buffer.out.value.forEach(item =>
+                (item.source?.tags || []).forEach(t => {
+                    if (t != null) counts.set(t, (counts.get(t) || 0) + 1);
+                })
+            );
+            return counts;
         });
 
         const set_date_preset = (b, days) => {
@@ -135,15 +144,28 @@ const app = createApp({
             b.set_predicate('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
         };
 
-        const set_active_tag_g = (b, tag) => {
-            if (tag === null) {
-                b.set_predicate('tag_filter', () => true);
-            } else {
-                b.set_predicate('tag_filter', a =>
-                    Array.isArray(a.source?.tags) && a.source.tags.includes(tag)
-                );
-            }
+        const tag_pred = (tag, include = true) => a => {
+            const match = Array.isArray(a.source?.tags) && a.source.tags.includes(tag);
+            return include ? !match : match;
         };
+
+        const set_active_tag_fn = (b, tag) => {
+            b.set_predicate('tag_filter', tag === null ? () => true : tag_pred(tag, false));
+        };
+
+        const is_tag_active_fn= (b, tag) => {
+            if (typeof tag !== 'string' || !tag) return;
+            const key = `filter_${tag}`;
+            return b.has_predicate(key)
+        };
+
+        const toggle_tag_fn = (b, tag) => {
+            if (typeof tag !== 'string' || !tag) return;
+            const key = `filter_${tag}`;
+            b.has_predicate(key) ? b.remove_predicate(key) : b.set_predicate(key, tag_pred(tag, true));
+        };
+
+
 
         async function fetch_source(config) {
             try {
@@ -185,8 +207,8 @@ const app = createApp({
             status.value = `done — ${b0.out.value.length} total, ${b2.out.value.length} filtered`;
         });
 
-        const all_tags     = get_unique_tags(b1);
-        const visible_tags = get_unique_tags(b2);
+        const all_tags     = tags_stats(b1);
+        const visible_tags = tags_stats(b2);
 
         return {
             status,
@@ -194,9 +216,11 @@ const app = createApp({
             b2_out: b2.out,
             b2,
             set_date_preset: (days) => set_date_preset(b2, days),
-            set_active_tag:  (tag)  => set_active_tag_g(b2, tag),
+            set_active_tag:  (tag)  => set_active_tag_fn(b2, tag),
+            toggle_tag:  (tag)  => toggle_tag_fn(b2, tag),
+            is_tag_active: (tag) => is_tag_active_fn(b2, tag),
             all_tags,
-            visible_tags,
+            visible_tags
         };
     }
 });

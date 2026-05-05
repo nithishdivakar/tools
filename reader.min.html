@@ -17,6 +17,7 @@
         .gapy {gap:0.5rem 0;}
         .snippet {color: #01335b;font-size: small;}
         .meta {color: #01335b;font-size: x-small;}
+        .seen { opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -217,7 +218,7 @@ app.component('art', {
         return { root };
     },
     template: `
-        <div class="rows" ref="root">
+        <div :class="['rows', { seen: a.source.tags?.includes('seen') }]" ref="root">
             <span class="meta">
                 {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
             </span>

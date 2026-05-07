@@ -18,44 +18,44 @@
         .snippet {color: #01335b;font-size: small;}
         .meta {color: #01335b;font-size: x-small;}
         .seen { opacity: 0.5; }
+        .btn_lnk{color:#0000ef;}
     </style>
 </head>
 <body>
 <div id="app" class="rows" style="gap: 1rem 0;">
     <h1>READ</h1>
-    <div>{{ status }} -- {{b0_out.length}} injested</div>
+    <div>{{ status }} -- {{b0_out.length}} items injested</div>
     <div class="rows gapy">
         <h2>Predicates</h3>
         <ul>
             <li>
                 <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
                     <span>Tags:</span>
-                    <a href="#" @click="set_active_tag(null)">all</a>
-                    <template v-for="[tag, count] in all_tags">
-                        <a href="#" @click="set_active_tag(tag)">{{ tag }}</a>
+                    <template v-for="(data, tag) in all_tags" :key="tag">
+                        <a class="btn_lnk" href="#" @click="set_active_tag(data.tag_id)">{{ tag }}</a>
                     </template>
                 </div>
             </li>
             <li>
                 <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
                     <span>Days:</span>
-                    <a href="#" @click="set_date_preset(1)">1d</a>
-                    <a href="#" @click="set_date_preset(3)">3d</a>
-                    <a href="#" @click="set_date_preset(7)">7d</a>
-                    <a href="#" @click="set_date_preset(128)">all</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(1)">1d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(3)">3d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(7)">7d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(128)">all</a>
                 </div>
             </li>
-            <li><a href="#" @click="toggle_tag('seen')">Toggle seen</a>
+            <li>Toggle <a href="#" class="btn_lnk" @click="toggle_tag('seen')">seen</a>
             </li>
         </ul>
     </div>
 
     <div class="rows gapy">
-        <h2> Filtered Buffer : {{b2_out.length}}</h2>
+        <h2> Filtered Buffer</h2>
         <div class="cols gapx meta">
             --
-            <template v-for="[tag, count] in visible_tags">
-                <span>{{tag}}({{count}})</span>
+            <template v-for="(data, tag) in visible_tags" :key="tag">
+                <span>{{ tag }}({{ data.tag_count }})</span>
             </template>
         </div>
         <div class="rows" style="gap:1em 0;">
@@ -128,13 +128,25 @@ const app = createApp({
         const b2 = make_buffer(b1.out, (a, b) => a._salt - b._salt);
 
         const tags_stats = (buffer) => computed(() => {
-            const counts = new Map();
-            buffer.out.value.forEach(item =>
-                (item.source?.tags || []).forEach(t => {
-                    if (t != null) counts.set(t, (counts.get(t) || 0) + 1);
-                })
-            );
-            return counts;
+            const stats = {
+                _all: { tag_id: null, tag_count: 0 }
+            };
+            buffer.out.value.forEach(item => {
+                const tags = item.source?.tags || [];
+                stats._all.tag_count++;
+                tags.forEach(t => {
+                    if (t != null) {
+                        if (!stats[t]) {
+                            stats[t] = {
+                                tag_id: t,
+                                tag_count: 0
+                            };
+                        }
+                        stats[t].tag_count++;
+                    }
+                });
+            });
+            return stats;
         });
 
         const set_date_preset = (b, days) => {
@@ -164,8 +176,6 @@ const app = createApp({
             const key = `filter_${tag}`;
             b.has_predicate(key) ? b.remove_predicate(key) : b.set_predicate(key, tag_pred(tag, true));
         };
-
-
 
         async function fetch_source(config) {
             try {
@@ -247,7 +257,7 @@ app.component('art', {
                 {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
             </span>
             <span style="font-size: larger;">
-                <a :href="a.link" target="_blank">{{ a.title }}</a>
+                <a :href="a.link" class="btn_lnk" target="_blank">{{ a.title }}</a>
             </span>
             <div class="snippet">
                 {{ a.snippet.substring(0, 600) }}

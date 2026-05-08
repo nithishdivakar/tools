@@ -21,7 +21,8 @@ const FEED_CONFIG = [
     { name: "EA frontpage", url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=2", tags: ["tech"] },
     { name: "EA all", url: "https://forum.effectivealtruism.org/feed.xml?view=community-rss&karmaThreshold=200", tags: ["tech"] },
     { name: "Benedict Evans", url: "http://ben-evans.com/benedictevans?format=rss", tags: ["people"] },
-    { name: "The Pragmatic Engineer", url: "https://blog.pragmaticengineer.com/rss/", tags: ["people"] },
+    { name: "Gergely Orosz", url: "https://blog.pragmaticengineer.com/rss/", tags: ["people"] },
+    { name: "ByteByteGo", url: "https://blog.bytebytego.com/feed", tags: ["tech"] },
     { name: "Spotify", url: "https://engineering.atspotify.com/feed", tags: ["companies"] },
     { name: "The Gradient", url: "https://thegradient.pub/rss/", tags: ["tech"] },
     { name: "r/MachineLearning", url: "https://www.reddit.com/r/MachineLearning/.rss", tags: ["tech"] },
@@ -204,7 +205,7 @@ const FEED_CONFIG = [
     { name: "The Morning Paper", url: "https://blog.acolyer.org/feed/", tags: ["people"] },
     { name: "Ribbonfarm", url: "https://ribbonfarm.com/feed", tags: ["star", "people"] },
     { name: "Meaningness", url: "https://meaningness.substack.com/feed", tags: ["star", "people"] },
-    { name: "Melting Asphalt", url: "https://meltingasphalt.com/feed", tags: ["star", "people"] },
+    { name: "Melting Asphalt", url: "https://meltingasphalt.com/feed", tags: ["star", "people","T"] },
     { name: "Embedded in Academia", url: "https://blog.regehr.org/feed", tags: ["people"] },
     { name: "without.boats", url: "https://without.boats/index.xml", tags: ["people"] },
     { name: "Works in Progress", url: "https://www.worksinprogress.news/feed", tags: ["people"] },
@@ -214,6 +215,8 @@ const FEED_CONFIG = [
     { name: "Freddie deBoer", url: "https://freddiedeboer.substack.com/feed", tags: ["people"] },
     { name: "Today in Tabs", url: "https://rss.beehiiv.com/feeds/ZRiesnGI0u.xml", tags: ["media"] },
     { name: "Adam Jermyn", url: "https://adamjermyn.com/index.xml", tags: ["star", "people"] },
+    { name: "Venkatesh Rao", url: "https://contraptions.venkateshrao.com/feed", tags: ["star", "people"] },
+    { url: "https://raw.githubusercontent.com/nithishdivakar/daily-nostalgia/refs/heads/main/feed.xml", tags: ["nost"]},
   ];
 
 // Export for different environments

@@ -216,7 +216,7 @@ const FEED_CONFIG = [
     { name: "Today in Tabs", url: "https://rss.beehiiv.com/feeds/ZRiesnGI0u.xml", tags: ["media"] },
     { name: "Adam Jermyn", url: "https://adamjermyn.com/index.xml", tags: ["star", "people"] },
     { name: "Venkatesh Rao", url: "https://contraptions.venkateshrao.com/feed", tags: ["star", "people"] },
-    { url: "https://raw.githubusercontent.com/nithishdivakar/daily-nostalgia/refs/heads/main/feed.xml", tags: ["nost"]},
+    { name: "Nostalgia", url: "https://raw.githubusercontent.com/nithishdivakar/daily-nostalgia/refs/heads/main/feed.xml", tags: ["nost"]},
   ];
 
 // Export for different environments

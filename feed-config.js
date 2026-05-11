@@ -217,7 +217,6 @@ const FEED_CONFIG = [
     { name: "Adam Jermyn", url: "https://adamjermyn.com/index.xml", tags: ["star", "people"] },
     { name: "Venkatesh Rao", url: "https://contraptions.venkateshrao.com/feed", tags: ["star", "people"] },
     { name: "Nostalgia", url: "https://raw.githubusercontent.com/nithishdivakar/daily-nostalgia/refs/heads/main/feed.xml", tags: ["nost"]},
-    { name: "Nostalgia", url: "https://daxpy.xyz/daily-nostalgia/feed.xml", tags: ["nost"]},
   ];
 
 // Export for different environments

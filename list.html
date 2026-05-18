@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<title>LIST</title>
+<style>
+body { font-family: "Open Sans", sans-serif; font-optical-sizing: auto; font-weight: 100; font-style: normal; font-variation-settings: "wdth" 100; }
+body { display: flex; flex-direction: column; height: 100vh; margin: 0; width: 100%; max-width: 400px;}
+nav  { display: flex; flex-wrap: wrap; gap: 0.4em; padding: 0.75em 1em; border-bottom: 1px solid #eee; font-size: 0.8em; }
+main { flex: 1; padding: 0.75em 1em; overflow-y: auto; display: flex; flex-direction: column; gap: 1em; }
+input[type=text], textarea { width: 100%; box-sizing: border-box; font: inherit; border: none;  outline: none; }
+textarea { resize: none; }
+a        { color: inherit; text-decoration: none; cursor: pointer; }
+a:hover  { opacity: 1; }
+
+.item    { display: flex; flex-direction: column; gap: 0.4em 0; }
+.meta    { display: flex; flex-wrap: wrap; gap: 0 0.5em; font-size: 0.65em; }
+.title   { display: flex; align-items: baseline; gap: 0.3em; font-size: 1em; cursor: pointer; line-height: 1.2; user-select: none; font-weight: 300;}
+.title.done { text-decoration: line-through; }
+.detail  { display: flex; flex-direction: column; gap: 0.6em; font-size: 0.8em; }
+.actions { display: flex; flex-wrap: wrap; gap: 0 0.75em; font-size: 0.75em; }
+.comment { display: flex; flex-direction: column; gap: 0.1em; padding-left: 0.75em; border-left: 2px solid #f0f0f0; }
+.comment.system { opacity: 0.38; font-style: italic; }
+.form    { display: flex; flex-direction: column; gap: 0.5em; }
+.inp     { background-color: beige; padding: 3px; border-radius: 0.3em;}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav-panel :tags="allTags" :active="store.activeTag" @select="store.activeTag = $event"></nav-panel>
+  <main>
+    <note-form @submit="createNote"></note-form>
+    <note-block
+      v-for="note in visibleNotes"
+      :key="note.id"
+      :note="note"
+      @add-comment="addComment(note.id, $event)"
+      @edit-comment="editComment(note.id, $event)"
+      @toggle-task="toggleTaskAction(note.id)"
+      @save-edit="saveEdit(note.id, $event)"
+      @delete="deleteNote(note.id)"
+    ></note-block>
+  </main>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+const { createApp, reactive, computed, defineComponent } = Vue
+
+// ─── CORE (pure functions) ────────────────────────────────────────────────────
+
+const uuid    = () => crypto.randomUUID()
+const now     = () => new Date().toISOString()
+const normTag = t  => t.trim().toLowerCase()
+const fmtTime = iso => new Date(iso).toLocaleString()
+
+const makeComment = (body, kind = 'user') =>
+  ({ id: uuid(), createdAt: now(), body, kind })
+
+const makeNote = (title, tags) => ({
+  id: uuid(), createdAt: now(), title,
+  tags: [...new Set(tags.map(normTag))],
+  comments: [],
+})
+
+const editNote       = (note, title, tags) =>
+  ({ ...note, title, tags: [...new Set(tags.map(normTag))] })
+
+const appendComment  = (note, comment) =>
+  ({ ...note, comments: [...note.comments, comment] })
+
+const replaceComment = (note, id, body) =>
+  ({ ...note, comments: note.comments.map(c => c.id === id ? { ...c, body } : c) })
+
+const addUserComment = (note, body) =>
+  appendComment(note, makeComment(body, 'user'))
+
+const isTask = note => note.tags.includes('task')
+
+const isCompleted = note => {
+  const sys = [...note.comments]
+    .filter(c => c.kind === 'system')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return sys.length > 0 && sys[0].body === 'completed'
+}
+
+const toggleTask  = note =>
+  appendComment(note, makeComment(isCompleted(note) ? 're-opened' : 'completed', 'system'))
+
+const sortNotes   = (notes, dir) =>
+  [...notes].sort((a, b) =>
+    dir === 'asc'
+      ? a.createdAt.localeCompare(b.createdAt)
+      : b.createdAt.localeCompare(a.createdAt)
+  )
+
+const filterByTag = (notes, tag) => tag ? notes.filter(n => n.tags.includes(tag)) : notes
+const allTagsFrom = notes => [...new Set(notes.flatMap(n => n.tags))].sort()
+const replaceNote = (notes, updated) => notes.map(n => n.id === updated.id ? updated : n)
+
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+
+const STORE_KEY = 'notes_v1'
+const persist   = notes => localStorage.setItem(STORE_KEY, JSON.stringify(notes))
+const loadNotes = ()    => JSON.parse(localStorage.getItem(STORE_KEY) || '[]')
+
+// ─── ATOMS ────────────────────────────────────────────────────────────────────
+
+/*
+  MetaLine — the shared muted header used by both notes and comments.
+  Renders: timestamp [ · tag tag ] [ · hint ]
+*/
+const MetaLine = defineComponent({
+  props: {
+    iso:   String,
+    tags:  { type: Array, default: () => [] },
+    hint:  { type: String, default: '' },
+  },
+  computed: { time() { return fmtTime(this.iso) } },
+  template: `
+    <div class="meta">
+      <span>{{ time }}</span>
+      <span v-if="tags">·</span>
+      <span v-for="tag in tags" :key="tag">#{{tag}}</span>
+      <span v-if="hint">· {{hint}}</span>
+    </div>`
+})
+
+/*
+  InlineEdit — text input that saves on Enter / blurs on Escape.
+  Used inside CommentBlock for editing a comment body.
+*/
+const InlineEdit = defineComponent({
+  props: ['modelValue'],
+  emits: ['save', 'cancel'],
+  template: `
+    <input type="text"
+      :value="modelValue"
+      @input="$emit('update:modelValue', $event.target.value)"
+      @keyup.enter="$emit('save')"
+      @keyup.esc="$emit('cancel')"
+      autofocus
+    />`
+})
+
+// ─── MOLECULES ────────────────────────────────────────────────────────────────
+
+/*
+  CommentBlock — uses .comment + .meta + .actions CSS primitives.
+  System comments: no edit link, muted style.
+*/
+const CommentBlock = defineComponent({
+  props: ['comment'],
+  emits: ['edit'],
+  components: { MetaLine, InlineEdit },
+  data: () => ({ editing: false, draft: '' }),
+  methods: {
+    startEdit() { this.draft = this.comment.body; this.editing = true },
+    save()      { this.$emit('edit', { id: this.comment.id, body: this.draft }); this.editing = false },
+  },
+  template: `
+    <div class="comment" :class="comment.kind === 'system' ? 'system' : ''">
+      <meta-line :iso="comment.createdAt"></meta-line>
+      <span v-if="editing">
+        <inline-edit v-model="draft" @save="save" @cancel="editing=false"></inline-edit>
+        <div class="actions"><a @click.prevent="save">save</a><a @click.prevent="editing=false">cancel</a></div>
+      </span>
+      <span v-else>
+        {{ comment.body }}
+        <div v-if="comment.kind === 'user'" class="actions"><a @click.prevent="startEdit">edit</a></div>
+      </span>
+    </div>`
+})
+
+/*
+  CommentForm — expands from a link into an input. Uses .actions.
+*/
+const CommentForm = defineComponent({
+  emits: ['submit'],
+  data: () => ({ body: '', open: false }),
+  methods: {
+    submit() {
+      if (this.body.trim()) { this.$emit('submit', this.body.trim()); this.body = ''; this.open = false }
+    }
+  },
+  template: `
+    <span>
+      <a v-if="!open" @click.prevent="open=true">+ comment</a>
+      <span v-else>
+        <input type="text" v-model="body" placeholder="comment…" @keyup.enter="submit" @keyup.esc="open=false" autofocus />
+        <div class="actions"><a @click.prevent="submit">add</a><a @click.prevent="open=false">cancel</a></div>
+      </span>
+    </span>`
+})
+
+// ─── ORGANISMS ────────────────────────────────────────────────────────────────
+
+const NavPanel = defineComponent({
+  props: ['tags', 'active'],
+  emits: ['select'],
+  template: `
+    <nav>
+      <a @click.prevent="$emit('select', null)" :style="!active ? 'opacity:1;font-weight:500' : ''">all</a>
+      <a v-for="tag in tags" :key="tag"
+         @click.prevent="$emit('select', tag)"
+         :style="active===tag ? 'opacity:1;font-weight:500' : ''"
+      >#{{tag}}</a>
+    </nav>`
+})
+
+/*
+  NoteForm — shared for create (no initial) and edit (with initial).
+  Uses .form CSS primitive.
+*/
+const NoteForm = defineComponent({
+  props: { initial: { default: null } },
+  emits: ['submit', 'cancel'],
+  data() {
+    return {
+      title: this.initial?.title           ?? '',
+      tags:  this.initial?.tags.join(', ') ?? '',
+    }
+  },
+  computed: { isEdit() { return !!this.initial } },
+  methods: {
+    submit() {
+      if (!this.title.trim()) return
+      const tags = this.tags.split(',').map(t => t.trim()).filter(Boolean)
+      this.$emit('submit', { title: this.title.trim(), tags })
+      if (!this.isEdit) { this.title = ''; this.tags = '' }
+    }
+  },
+  template: `
+    <div class="form">
+      <textarea v-model="title" placeholder="title" rows="2" class="inp"></textarea>
+      <input type="text" v-model="tags" placeholder="tags, comma separated" class="inp"/>
+      <div class="actions">
+        <a @click.prevent="submit">{{ isEdit ? 'save' : 'create note' }}</a>
+        <a v-if="isEdit" @click.prevent="$emit('cancel')">cancel</a>
+      </div>
+    </div>`
+})
+
+/*
+  NoteBlock — the main card.
+  Collapsed: MetaLine (ts · tags · N comments) + clickable title.
+  Expanded:  + comment list + actions row.
+  Title tap toggles open. Checkbox (task notes) does not toggle open.
+*/
+const NoteBlock = defineComponent({
+  props: ['note'],
+  emits: ['add-comment', 'edit-comment', 'toggle-task', 'save-edit', 'delete'],
+  components: { MetaLine, CommentBlock, CommentForm, NoteForm },
+  data: () => ({ open: false, editing: false }),
+  computed: {
+    task()      { return isTask(this.note) },
+    completed() { return isCompleted(this.note) },
+    sorted()    { return [...this.note.comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt)) },
+    hint()      { const n = this.note.comments.length; return n ? `${n} comment${n>1?'s':''}` : '' },
+  },
+  methods: {
+    saveEdit(fields) { this.$emit('save-edit', fields); this.editing = false },
+    toggle(e)        { if (e.target.type !== 'checkbox') this.open = !this.open },
+  },
+  template: `
+    <div class="item">
+      <note-form v-if="editing" :initial="note" @submit="saveEdit" @cancel="editing=false"></note-form>
+      <template v-else>
+        <meta-line :iso="note.createdAt" :tags="note.tags" :hint="hint"></meta-line>
+        <div class="title" :class="completed ? 'done' : ''" @click="toggle">
+          <input v-if="task" type="checkbox" :checked="completed" @change="$emit('toggle-task')" style="margin:0;cursor:pointer" />
+          <span>{{ note.title }}</span>
+        </div>
+        <div v-if="open" class="detail">
+          <comment-block
+            v-for="c in sorted" :key="c.id"
+            :comment="c"
+            @edit="$emit('edit-comment', $event)"
+          ></comment-block>
+          <div class="actions">
+            <comment-form @submit="$emit('add-comment', $event)"></comment-form>
+            <a @click.prevent="editing=true">edit</a>
+            <a @click.prevent="$emit('delete')">delete</a>
+          </div>
+        </div>
+      </template>
+    </div>`
+})
+
+// ─── APP (imperative shell) ───────────────────────────────────────────────────
+
+createApp({
+  components: { NavPanel, NoteBlock, NoteForm },
+  setup() {
+    const store = reactive({ notes: loadNotes(), activeTag: null, sortDir: 'desc' })
+
+    const allTags      = computed(() => allTagsFrom(store.notes))
+    const visibleNotes = computed(() =>
+      sortNotes(filterByTag(store.notes, store.activeTag), store.sortDir)
+    )
+
+    const save   = () => persist(store.notes)
+    const mutate = (id, fn) => { store.notes = replaceNote(store.notes, fn(store.notes.find(n => n.id === id))); save() }
+
+    const createNote       = ({ title, tags })       => { store.notes = [makeNote(title, tags), ...store.notes]; save() }
+    const deleteNote       = id                      => { store.notes = store.notes.filter(n => n.id !== id); save() }
+    const addComment       = (id, body)              => mutate(id, n => addUserComment(n, body))
+    const editComment      = (id, { id: cid, body }) => mutate(id, n => replaceComment(n, cid, body))
+    const saveEdit         = (id, { title, tags })   => mutate(id, n => editNote(n, title, tags))
+    const toggleTaskAction = id                      => mutate(id, toggleTask)
+
+    return { store, allTags, visibleNotes, createNote, deleteNote, addComment, editComment, saveEdit, toggleTaskAction }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

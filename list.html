@@ -30,9 +30,9 @@ body { font-family: 'Doto', monospace; font-size: 16px; font-weight: bold; paddi
 <body>
 <header>LIST</header>
 <div id="app">
-  <item-node v-for="item in roots" :key="item.id" :item="item" :items="items" @add="add" @cycle="cycle" @delete="del" @edit="edit"></item-node>
   <add-bar v-if="adding" :parent-id="null" @submit="add" @cancel="adding=false"></add-bar>
   <div v-else class="add-trigger" @click="adding=true">+ add item</div>
+  <item-node v-for="item in roots" :key="item.id" :item="item" :items="items" @add="add" @cycle="cycle" @delete="del" @edit="edit"></item-node>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

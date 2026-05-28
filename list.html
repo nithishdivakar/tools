@@ -3,305 +3,106 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
 <title>LIST</title>
 <style>
-body { font-family: "Open Sans", sans-serif; font-optical-sizing: auto; font-weight: 100; font-style: normal; font-variation-settings: "wdth" 100; }
-body { display: flex; flex-direction: column; height: 100vh; margin: 0; width: 100%; max-width: 400px;}
-nav  { display: flex; flex-wrap: wrap; gap: 0.4em; padding: 0.75em 1em; border-bottom: 1px solid #eee; font-size: 0.8em; }
-main { flex: 1; padding: 0.75em 0; overflow-y: auto; display: flex; flex-direction: column; }
-input[type=text], textarea { width: 100%; box-sizing: border-box; font: inherit; border: none;  outline: none; }
-textarea { resize: none; }
-a        { color: inherit; text-decoration: none; cursor: pointer; }
-a:hover  { opacity: 1; }
-
-.item    { display: flex; align-items: baseline; gap: 0 0.6em; padding: 0 0.75em; }
-.item:hover { background: #f9f9f9; }
-.item-cb { flex: 0 0 auto; display: flex; align-items: center; }
-.item-cb input[type=checkbox] { margin: 0; cursor: pointer; }
-.item-title { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85em; font-weight: 300; cursor: pointer; line-height: 1.2; user-select: none; border-bottom: 1px dotted black;}
-.item-title.open { white-space: normal;}
-.item-title.done { text-decoration: line-through; opacity: 0.5; }
-.item-time { flex: 0 0 auto; display: flex; align-items: flex-end; justify-content: center; gap: 0 0.2em; line-height: 1.1; }
-.item-time .dt { font-size: 0.6em; color: #999; }
-.item-time .tm { font-size: 0.6em; color: #bbb; }
-
-.detail  { display: flex; flex-direction: column; font-size: 0.8em; padding: 0.5em 1em 0.75em calc(1em + 1.4em + 0.6em); }
-.actions { display: flex; flex-wrap: wrap; gap: 0 0.75em; font-size: 0.75em; }
-.comment { display: flex; flex-direction: column; gap: 0.1em; padding-left: 0.75em; border-left: 2px solid #f0f0f0; }
-.comment.system { opacity: 0.38; font-style: italic; }
-.meta    { display: flex; flex-wrap: wrap; gap: 0 0.5em; font-size: 0.65em; color: #aaa; }
-.form    { display: flex; flex-direction: column; gap: 0.5em; padding: 0.75em 1em; }
-.inp     { background-color: #efdcf5; padding: 3px; border-radius: 0.3em;}
-.note-form-wrap { padding: 0.75em 1em; border-bottom: 1px solid #eee; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Doto', monospace; font-size: 13px; font-weight: bold; padding: 1rem; max-width: 480px; }
+.item-row { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; cursor: pointer; user-select: none; }
+.item-row:hover { opacity: 0.7; }
+.glyph { flex: 0 0 auto; width: 1.2em; }
+.title { flex: 1; word-break: break-word; line-height: 1.5; }
+.title.done { opacity: 0.4; text-decoration: line-through; }
+.ts { flex: 0 0 auto; font-size: 0.75em; color: #aaa; white-space: nowrap; padding-top: 2px; }
+.children { padding-left: 1.4em; border-left: 1px solid #eee; margin-left: 0.6em; }
+.children.done { opacity: 0.4; }
+.actions { display: flex; gap: 8px; padding-left: 1.8em; }
+.actions span { font-size: 11px; color: #aaa; cursor: pointer; }
+.actions span:hover { color: #000; }
+.add-bar { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+.add-bar input { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; }
+.add-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; }
+.add-bar button:hover { color: #000; }
+.add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
+.add-trigger:hover { color: #000; }
 </style>
 </head>
 <body>
+<header>LIST</header>
 <div id="app">
-  <nav-panel :tags="allTags" :active="store.activeTag" @select="store.activeTag = $event"></nav-panel>
-  <main>
-    <note-block
-      v-for="note in visibleNotes"
-      :key="note.id"
-      :note="note"
-      @add-comment="addComment(note.id, $event)"
-      @edit-comment="editComment(note.id, $event)"
-      @toggle-task="toggleTaskAction(note.id)"
-      @save-edit="saveEdit(note.id, $event)"
-      @delete="deleteNote(note.id)"
-    ></note-block>
-    <div class="note-form-wrap">
-      <note-form @submit="createNote"></note-form>
-    </div>
-  </main>
+  <item-node v-for="item in roots" :key="item.id" :item="item" :items="items" @add="add" @cycle="cycle" @delete="del" @edit="edit"></item-node>
+  <add-bar v-if="adding" :parent-id="null" @submit="add" @cancel="adding=false"></add-bar>
+  <div v-else class="add-trigger" @click="adding=true">+ add item</div>
 </div>
 
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
-const { createApp, reactive, computed, defineComponent } = Vue
+const { createApp, defineComponent } = Vue
 
-const uuid    = () => crypto.randomUUID()
-const now     = () => new Date().toISOString()
-const normTag = t  => t.trim().toLowerCase()
+const uuid  = () => Math.random().toString(36).slice(2,10)
+const now   = () => new Date().toISOString()
+const fmt   = iso => { const d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') }
+const cycle = g => g==='─'?'□':g==='□'?'■':'─'
 
-const fmtDate = iso => {
-  const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-const fmtTime = iso => {
-  const d = new Date(iso)
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-}
-const fmtFull = iso => new Date(iso).toLocaleString()
-
-const makeComment = (body, kind = 'user') =>
-  ({ id: uuid(), createdAt: now(), body, kind })
-
-const makeNote = (title, tags) => ({
-  id: uuid(), createdAt: now(), title,
-  tags: [...new Set(tags.map(normTag))],
-  comments: [],
+const AddBar = defineComponent({
+  props: ['parentId', 'initial'],
+  emits: ['submit','cancel'],
+  data() { return { text: this.initial||'' } },
+  template: `<div class="add-bar"><span style="color:#aaa">─</span><input v-model="text" placeholder="new item…" autofocus @keyup.enter="text.trim()&&$emit('submit',{parentId,title:text.trim()})" @keyup.esc="$emit('cancel')" /><button @click="text.trim()&&$emit('submit',{parentId,title:text.trim()})">[ok]</button><button @click="$emit('cancel')">[x]</button></div>`
 })
 
-const editNote       = (note, title, tags) =>
-  ({ ...note, title, tags: [...new Set(tags.map(normTag))] })
-
-const appendComment  = (note, comment) =>
-  ({ ...note, comments: [...note.comments, comment] })
-
-const replaceComment = (note, id, body) =>
-  ({ ...note, comments: note.comments.map(c => c.id === id ? { ...c, body } : c) })
-
-const addUserComment = (note, body) =>
-  appendComment(note, makeComment(body, 'user'))
-
-const isTask = note => note.tags.includes('task')
-
-const isCompleted = note => {
-  const sys = [...note.comments]
-    .filter(c => c.kind === 'system')
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  return sys.length > 0 && sys[0].body === 'completed'
-}
-
-const toggleTask  = note =>
-  appendComment(note, makeComment(isCompleted(note) ? 're-opened' : 'completed', 'system'))
-
-const sortNotes   = (notes, dir) =>
-  [...notes].sort((a, b) =>
-    dir === 'asc'
-      ? a.createdAt.localeCompare(b.createdAt)
-      : b.createdAt.localeCompare(a.createdAt)
-  )
-
-const filterByTag = (notes, tag) => tag ? notes.filter(n => n.tags.includes(tag)) : notes
-const allTagsFrom = notes => [...new Set(notes.flatMap(n => n.tags))].sort()
-const replaceNote = (notes, updated) => notes.map(n => n.id === updated.id ? updated : n)
-
-const STORE_KEY = 'notes_v1'
-const persist   = notes => localStorage.setItem(STORE_KEY, JSON.stringify(notes))
-const loadNotes = ()    => JSON.parse(localStorage.getItem(STORE_KEY) || '[]')
-
-const MetaLine = defineComponent({
-  props: { iso: String, tags: { type: Array, default: () => [] }, hint: { type: String, default: '' } },
-  computed: { time() { return fmtFull(this.iso) } },
-  template: `
-    <div class="meta">
-      <span>{{ time }}</span>
-      <span v-if="tags && tags.length">·</span>
-      <span v-for="tag in tags" :key="tag">#{{tag}}</span>
-      <span v-if="hint">· {{hint}}</span>
-    </div>`
-})
-
-const InlineEdit = defineComponent({
-  props: ['modelValue'],
-  emits: ['save', 'cancel'],
-  template: `
-    <input type="text"
-      :value="modelValue"
-      @input="$emit('update:modelValue', $event.target.value)"
-      @keyup.enter="$emit('save')"
-      @keyup.esc="$emit('cancel')"
-      autofocus
-    />`
-})
-
-const CommentBlock = defineComponent({
-  props: ['comment'],
-  emits: ['edit'],
-  components: { MetaLine, InlineEdit },
-  data: () => ({ editing: false, draft: '' }),
+const ItemNode = defineComponent({
+  name: 'ItemNode',
+  props: ['item','items'],
+  emits: ['add','cycle','delete','edit'],
+  components: { AddBar },
+  data: () => ({ open: false, adding: false, editing: false }),
+  computed: {
+    children() { return this.items.filter(i=>i.parentId===this.item.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) },
+    ts()       { return fmt(this.item.createdAt) },
+  },
   methods: {
-    startEdit() { this.draft = this.comment.body; this.editing = true },
-    save()      { this.$emit('edit', { id: this.comment.id, body: this.draft }); this.editing = false },
+    toggleOpen() { this.open=!this.open; if(!this.open){ this.adding=false; this.editing=false; } },
   },
   template: `
-    <div class="comment" :class="comment.kind === 'system' ? 'system' : ''">
-      <meta-line :iso="comment.createdAt"></meta-line>
-      <span v-if="editing">
-        <inline-edit v-model="draft" @save="save" @cancel="editing=false"></inline-edit>
-        <div class="actions"><a @click.prevent="save">save</a><a @click.prevent="editing=false">cancel</a></div>
-      </span>
-      <span v-else>
-        {{ comment.body }}
-        <div v-if="comment.kind === 'user'" class="actions"><a @click.prevent="startEdit">edit</a></div>
-      </span>
-    </div>`
-})
-
-const CommentForm = defineComponent({
-  emits: ['submit'],
-  data: () => ({ body: '', open: false }),
-  methods: {
-    submit() {
-      if (this.body.trim()) { this.$emit('submit', this.body.trim()); this.body = ''; this.open = false }
-    }
-  },
-  template: `
-    <span>
-      <a v-if="!open" @click.prevent="open=true">+ comment</a>
-      <span v-else>
-        <input type="text" v-model="body" placeholder="comment…" @keyup.enter="submit" @keyup.esc="open=false" autofocus />
-        <div class="actions"><a @click.prevent="submit">add</a><a @click.prevent="open=false">cancel</a></div>
-      </span>
-    </span>`
-})
-
-const NavPanel = defineComponent({
-  props: ['tags', 'active'],
-  emits: ['select'],
-  template: `
-    <nav>
-      <a @click.prevent="$emit('select', null)" :style="!active ? 'opacity:1;font-weight:500' : ''">all</a>
-      <a v-for="tag in tags" :key="tag"
-         @click.prevent="$emit('select', tag)"
-         :style="active===tag ? 'opacity:1;font-weight:500' : ''"
-      >#{{tag}}</a>
-    </nav>`
-})
-
-const NoteForm = defineComponent({
-  props: { initial: { default: null } },
-  emits: ['submit', 'cancel'],
-  data() {
-    return {
-      title: this.initial?.title           ?? '',
-      tags:  this.initial?.tags.join(', ') ?? '',
-    }
-  },
-  computed: { isEdit() { return !!this.initial } },
-  methods: {
-    submit() {
-      if (!this.title.trim()) return
-      const tags = this.tags.split(',').map(t => t.trim()).filter(Boolean)
-      this.$emit('submit', { title: this.title.trim(), tags })
-      if (!this.isEdit) { this.title = ''; this.tags = '' }
-    }
-  },
-  template: `
-    <div class="form" style="padding:0">
-      <textarea v-model="title" placeholder="title" rows="2" class="inp"></textarea>
-      <input type="text" v-model="tags" placeholder="tags, comma separated" class="inp"/>
-      <div class="actions">
-        <a @click.prevent="submit">{{ isEdit ? 'save' : 'create note' }}</a>
-        <a v-if="isEdit" @click.prevent="$emit('cancel')">cancel</a>
+    <div>
+      <div v-if="editing" class="add-bar">
+        <span style="color:#aaa">─</span>
+        <input :value="item.title" autofocus @keyup.enter="$emit('edit',{id:item.id,title:$event.target.value.trim()}||item.title);editing=false" @keyup.esc="editing=false" />
+        <button @click="editing=false">[x]</button>
+      </div>
+      <div v-else class="item-row" @click="toggleOpen">
+        <span class="glyph" @click.stop="$emit('cycle', item.id)">{{item.glyph}}</span>
+        <span class="title" :class="{done:item.glyph==='■'}">{{item.title}}</span>
+        <span class="ts">{{ts}}</span>
+      </div>
+      <div v-if="open">
+        <div class="actions">
+          <span @click="adding=!adding;editing=false">+ child</span>
+          <span @click="editing=!editing;adding=false">edit</span>
+          <span @click="$emit('delete', item.id)">delete</span>
+        </div>
+      </div>
+      <div class="children" :class="{done:item.glyph==='■'}">
+        <add-bar v-if="adding" :parent-id="item.id" @submit="$emit('add',$event);adding=false" @cancel="adding=false"></add-bar>
+        <item-node v-for="c in children" :key="c.id" :item="c" :items="items" @add="$emit('add',$event)" @cycle="$emit('cycle',$event)" @delete="$emit('delete',$event)" @edit="$emit('edit',$event)"></item-node>
       </div>
     </div>`
 })
 
-const NoteBlock = defineComponent({
-  props: ['note'],
-  emits: ['add-comment', 'edit-comment', 'toggle-task', 'save-edit', 'delete'],
-  components: { MetaLine, CommentBlock, CommentForm, NoteForm },
-  data: () => ({ open: false, editing: false }),
+const KEY = 'dm_v1'
+createApp({
+  components: { ItemNode, AddBar },
+  data() { return { items: JSON.parse(localStorage.getItem(KEY)||'[]'), adding: false } },
   computed: {
-    task()      { return isTask(this.note) },
-    completed() { return isCompleted(this.note) },
-    sorted()    { return [...this.note.comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt)) },
-    hint()      { const n = this.note.comments.length; return n ? `${n} comment${n>1?'s':''}` : '' },
-    date()      { return fmtDate(this.note.createdAt) },
-    time()      { return fmtTime(this.note.createdAt) },
+    roots() { return this.items.filter(i=>!i.parentId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) }
   },
   methods: {
-    saveEdit(fields) { this.$emit('save-edit', fields); this.editing = false },
-    toggleOpen(e)    { if (e.target.type !== 'checkbox') this.open = !this.open },
-  },
-  template: `
-    <div>
-      <note-form v-if="editing" :initial="note" @submit="saveEdit" @cancel="editing=false" style="padding:0.5em 1em"></note-form>
-      <template v-else>
-        <div class="item" @click="toggleOpen">
-          <div class="item-cb">
-            <input v-if="task" type="checkbox" :checked="completed" @change.stop="$emit('toggle-task')" />
-            <input v-else type="checkbox" disabled style="opacity:0.15" />
-          </div>
-          <div class="item-title" :class="completed ? 'done' : ''" :class="open ? 'open' : ''" >{{ note.title }}</div>
-          <div class="item-time">
-            <span class="dt">{{ date }}</span>
-            <span class="tm">{{ time }}</span>
-          </div>
-        </div>
-        <div v-if="open" class="detail">
-          <meta-line :iso="note.createdAt" :tags="note.tags" :hint="hint"></meta-line>
-          <comment-block
-            v-for="c in sorted" :key="c.id"
-            :comment="c"
-            @edit="$emit('edit-comment', $event)"
-          ></comment-block>
-          <div class="actions">
-            <comment-form @submit="$emit('add-comment', $event)"></comment-form>
-            <a @click.prevent="editing=true">edit</a>
-            <a @click.prevent="$emit('delete')">delete</a>
-          </div>
-        </div>
-      </template>
-    </div>`
-})
-
-createApp({
-  components: { NavPanel, NoteBlock, NoteForm },
-  setup() {
-    const store = reactive({ notes: loadNotes(), activeTag: null, sortDir: 'desc' })
-
-    const allTags      = computed(() => allTagsFrom(store.notes))
-    const visibleNotes = computed(() =>
-      sortNotes(filterByTag(store.notes, store.activeTag), store.sortDir)
-    )
-
-    const save   = () => persist(store.notes)
-    const mutate = (id, fn) => { store.notes = replaceNote(store.notes, fn(store.notes.find(n => n.id === id))); save() }
-
-    const createNote       = ({ title, tags })       => { store.notes = [makeNote(title, tags), ...store.notes]; save() }
-    const deleteNote       = id                      => { store.notes = store.notes.filter(n => n.id !== id); save() }
-    const addComment       = (id, body)              => mutate(id, n => addUserComment(n, body))
-    const editComment      = (id, { id: cid, body }) => mutate(id, n => replaceComment(n, cid, body))
-    const saveEdit         = (id, { title, tags })   => mutate(id, n => editNote(n, title, tags))
-    const toggleTaskAction = id                      => mutate(id, toggleTask)
-
-    return { store, allTags, visibleNotes, createNote, deleteNote, addComment, editComment, saveEdit, toggleTaskAction }
+    save()                       { localStorage.setItem(KEY, JSON.stringify(this.items)) },
+    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title, glyph:'─', createdAt:now() }); this.adding=false; this.save() },
+    cycle(id)                    { const i=this.items.find(x=>x.id===id); if(i){ i.glyph=cycle(i.glyph); this.save() } },
+    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=title; this.save() } },
+    del(id)                      { const desc=ids=>{ const c=this.items.filter(i=>ids.includes(i.parentId)).map(i=>i.id); return c.length?[...c,...desc(c)]:c }; this.items=this.items.filter(i=>i.id!==id&&!desc([id]).includes(i.id)); this.save() },
   }
 }).mount('#app')
 </script>

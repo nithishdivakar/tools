@@ -1,19 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
-<title>LIST</title>
-<style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/bitmaks/cm-web-fonts@latest/fonts.css">  
+  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@700&display=swap" rel="stylesheet">
+  <title>LIST</title>
+
+  <style>
+    @font-face {
+      font-family: 'Doto-Fallback';
+      src: local('Doto'); /* Uses the loaded Google Font */
+      font-weight: normal; /* Maps normal text... */
+      font-style: normal;
+      font-variation-settings: 'wght' 700; 
+    }
+
+    body {
+      font: 16px/1.5 'Computer Modern Concrete', 'Doto-Fallback', monospace;
+    }
+
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Doto', monospace; font-size: 16px; font-weight: bold; padding: 1rem; max-width: 480px; }
-.item-row { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; cursor: pointer; user-select: none; }
+body { padding: 1rem; max-width: 480px; }
+.item-row { display: flex; align-items: baseline; gap: 6px; cursor: pointer; user-select: none; }
 .item-row:hover { opacity: 0.7; }
 .glyph { flex: 0 0 auto; width: 1.2em; }
 .title { flex: 1; word-break: break-word; line-height: 1.5; }
 .title.done { opacity: 0.4; text-decoration: line-through; }
-.ts { flex: 0 0 auto; font-size: 0.75em; color: #aaa; white-space: nowrap; padding-top: 2px; }
+.ts { flex: 0 0 auto; font-size: 0.75em; color: #aaa; white-space: nowrap;}
 .children { padding-left: 1.4em; border-left: 1px solid #eee; margin-left: 0.6em; }
 .children.done { opacity: 0.4; }
 .actions { display: flex; gap: 8px; padding-left: 1.8em; }
@@ -29,7 +45,7 @@ body { font-family: 'Doto', monospace; font-size: 16px; font-weight: bold; paddi
 </head>
 <body>
 <header>LIST</header>
-<div id="app">
+<div id="app" style="display: flex;flex-direction: column;gap: 0.5em 0;">
   <add-bar v-if="adding" :parent-id="null" @submit="add" @cancel="adding=false"></add-bar>
   <div v-else class="add-trigger" @click="adding=true">+ add item</div>
   <item-node v-for="item in roots" :key="item.id" :item="item" :items="items" @add="add" @cycle="cycle" @delete="del" @edit="edit"></item-node>

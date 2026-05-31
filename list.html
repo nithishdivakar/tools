@@ -11,8 +11,8 @@
   <style>
     @font-face {
       font-family: 'Doto-Fallback';
-      src: local('Doto'); /* Uses the loaded Google Font */
-      font-weight: normal; /* Maps normal text... */
+      src: local('Doto');
+      font-weight: normal;
       font-style: normal;
       font-variation-settings: 'wght' 700; 
     }
@@ -23,13 +23,13 @@
 body { padding: 1rem; max-width: 480px; }
 .item-row { display: flex; align-items: baseline; gap: 6px; cursor: pointer; user-select: none; }
 .item-row:hover { opacity: 0.7; }
-.glyph { flex: 0 0 auto; width: 1.2em; }
+.glyph { flex: 0 0 auto; width: 1.2em; line-height: 0;}
 .title { flex: 1; word-break: break-word; line-height: 1.2; }
 .title.done { opacity: 0.4; text-decoration: line-through; }
-.ts { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; line-height: 0.75em; font-size: 0.75em; gap: 0.2em;}
+.ts { flex: 0 0 auto; display: flex; align-items: flex-end; white-space: nowrap; line-height: 0.75em; font-size: 0.75em; gap: 0.2em; opacity: 0.7;}
 .ts-day  { font-size: 1em; }
-.ts-time { font-size: 0.8em;  }
-.children { padding-left: 1.4em; border-left: 1px solid #eee; margin-left: 0.6em; }
+.ts-time { font-size: 1em;  }
+.children { padding-left: 1.4em; border-left: 1px solid #fff; margin-left: 0.6em; }
 .children.done { opacity: 0.4; }
 .actions { display: flex; gap: 8px; padding-left: 1.8em; }
 .actions span { font-size: 11px; color: #aaa; cursor: pointer; }
@@ -40,10 +40,51 @@ body { padding: 1rem; max-width: 480px; }
 .add-bar button:hover { color: #000; }
 .add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
 .add-trigger:hover { color: #000; }
+
+/* Setup / sync UI */
+#setup-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; flex-direction:column; gap:0.8em; padding:2rem; max-width:480px; }
+#setup-overlay h2 { font-size:1em; font-weight:normal; margin-bottom:0.5em; }
+#setup-overlay label { font-size:0.8em; color:#888; display:block; margin-bottom:2px; }
+#setup-overlay input { font-family:inherit; font-size:13px; border:none; border-bottom:1px solid #ccc; outline:none; width:100%; background:transparent; padding:2px 0; }
+#setup-overlay .err { font-size:11px; color:#c00; }
+#setup-overlay button { font-family:inherit; font-size:11px; background:none; border:none; color:#aaa; cursor:pointer; align-self:flex-start; padding:0; }
+#setup-overlay button:hover { color:#000; }
+.sync-bar { display:flex; gap:10px; align-items:center; font-size:11px; color:#aaa; padding:4px 0; }
+.sync-bar span { cursor:pointer; }
+.sync-bar span:hover { color:#000; }
+.sync-status { font-size:10px; }
 </style>
 </head>
 <body>
-<header>LIST</header>
+
+<!-- Setup overlay (shown when not configured) -->
+<div id="setup-overlay" style="display:none">
+  <h2>LIST — github sync setup</h2>
+  <div>
+    <label>personal access token (repo scope)</label>
+    <input id="inp-pat" type="password" placeholder="ghp_…" />
+  </div>
+  <div>
+    <label>repo path (owner/repo)</label>
+    <input id="inp-repo" placeholder="alice/my-notes" />
+  </div>
+  <div>
+    <label>file path in repo</label>
+    <input id="inp-file" placeholder="list.md" />
+  </div>
+  <div id="setup-err" class="err"></div>
+  <button id="setup-btn">[connect]</button>
+</div>
+
+<header style="display:flex;justify-content:space-between;align-items:baseline">
+  <span>LIST</span>
+  <div class="sync-bar">
+    <span id="sync-btn" style="display:none">↑ sync</span>
+    <span id="cfg-btn" title="reconfigure">⚙</span>
+    <span id="sync-status" class="sync-status"></span>
+  </div>
+</header>
+
 <div id="app" style="display: flex;flex-direction: column;gap: 0.5em 0;">
   <add-bar v-if="adding" :parent-id="null" @submit="add" @cancel="adding=false"></add-bar>
   <div v-else class="add-trigger" @click="adding=true">+ add item</div>
@@ -52,13 +93,218 @@ body { padding: 1rem; max-width: 480px; }
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
+// ─── Markdown serialisation ───────────────────────────────────────────────────
+// Format: INDENT- [glyph] TITLE -- HUMAN_TIMESTAMP
+// glyph: none → "─" (pending), "[ ]" → "□" (todo), "[x]" → "■" (done)
+// Indentation: 2 spaces per depth level
+
+const INDENT = '  '
+
+// Human-readable timestamp written into the file
+const fmtHuman = iso => {
+  const d = new Date(iso)
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const pad = n => String(n).padStart(2,'0')
+  return `${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Parse "May 31 2026 14:05" → ISO string
+const parseHuman = str => {
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+}
+
+const glyphToMd = g => g === '□' ? '[ ] ' : g === '■' ? '[x] ' : ''
+const mdToGlyph = m => m === '[ ] ' ? '□' : m === '[x] ' ? '■' : '─'
+
+/**
+ * Serialise items array → markdown string.
+ * Children are nested under their parent with indentation.
+ */
+function itemsToMd(items) {
+  const byParent = {}
+  for (const it of items) {
+    const pid = it.parentId || '__root__'
+    ;(byParent[pid] = byParent[pid] || []).push(it)
+  }
+  // sort: newest first (same as UI)
+  const sort = arr => [...arr].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
+
+  const lines = []
+  function walk(parentId, depth) {
+    const children = sort(byParent[parentId] || [])
+    for (const it of children) {
+      const indent = INDENT.repeat(depth)
+      const md = glyphToMd(it.glyph)
+      lines.push(`${indent}- ${md}${it.title} -- ${fmtHuman(it.createdAt)}`)
+      walk(it.id, depth + 1)
+    }
+  }
+  walk('__root__', 0)
+  return lines.join('\n') + '\n'
+}
+
+/**
+ * Parse markdown string → items array.
+ * Each line: INDENT- [glyph] TITLE -- TIMESTAMP
+ * Depth inferred from leading spaces (2 per level).
+ * Parent tracking via a depth→id stack.
+ */
+function mdToItems(md) {
+  const lines = md.split('\n').filter(l => l.trim().startsWith('-'))
+  const items = []
+  const depthStack = [] // depthStack[d] = id of last item at depth d
+
+  for (const line of lines) {
+    // Count leading spaces
+    const depth = (line.match(/^(\s*)/)[1].length) / INDENT.length | 0
+
+    // Strip leading indent + "- "
+    const rest = line.trimStart().slice(2) // remove "- "
+
+    // Detect glyph prefix
+    let glyph = '─'
+    let body = rest
+    if (rest.startsWith('[x] ')) { glyph = '■'; body = rest.slice(4) }
+    else if (rest.startsWith('[ ] ')) { glyph = '□'; body = rest.slice(4) }
+
+    // Split on " -- " (last occurrence) for timestamp
+    const sepIdx = body.lastIndexOf(' -- ')
+    let title = body, createdAt = new Date().toISOString()
+    if (sepIdx !== -1) {
+      title = body.slice(0, sepIdx).trim()
+      createdAt = parseHuman(body.slice(sepIdx + 4).trim())
+    }
+
+    const id = Math.random().toString(36).slice(2,10)
+    const parentId = depth > 0 ? (depthStack[depth - 1] || null) : null
+
+    depthStack[depth] = id
+    // Clear deeper levels
+    depthStack.splice(depth + 1)
+
+    items.push({ id, parentId, title, glyph, createdAt })
+  }
+  return items
+}
+
+// ─── GitHub API helpers ────────────────────────────────────────────────────────
+const GH_CRED_KEY = 'list_gh_v1'
+
+function loadCreds() {
+  try { return JSON.parse(localStorage.getItem(GH_CRED_KEY) || 'null') } catch { return null }
+}
+function saveCreds(c) { localStorage.setItem(GH_CRED_KEY, JSON.stringify(c)) }
+function clearCreds() { localStorage.removeItem(GH_CRED_KEY) }
+
+function ghHeaders(pat) {
+  return {
+    'Authorization': `Bearer ${pat}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json'
+  }
+}
+
+async function ghGet(pat, repo, file) {
+  const url = `https://api.github.com/repos/${repo}/contents/${file}`
+  const r = await fetch(url, { headers: ghHeaders(pat) })
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
+  const json = await r.json()
+  const content = atob(json.content.replace(/\n/g,''))
+  return { content, sha: json.sha }
+}
+
+async function ghPut(pat, repo, file, sha, content, message) {
+  const url = `https://api.github.com/repos/${repo}/contents/${file}`
+  const body = JSON.stringify({
+    message,
+    content: btoa(unescape(encodeURIComponent(content))),
+    sha
+  })
+  const r = await fetch(url, { method: 'PUT', headers: ghHeaders(pat), body })
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
+  return await r.json()
+}
+
+// ─── Setup overlay logic ───────────────────────────────────────────────────────
+const overlay   = document.getElementById('setup-overlay')
+const setupErr  = document.getElementById('setup-err')
+const setupBtn  = document.getElementById('setup-btn')
+const syncBtn   = document.getElementById('sync-btn')
+const cfgBtn    = document.getElementById('cfg-btn')
+const syncStatus = document.getElementById('sync-status')
+
+let currentSha = null  // track latest SHA for push
+
+function showOverlay(err='') {
+  const creds = loadCreds()
+  if (creds) {
+    document.getElementById('inp-pat').value  = creds.pat
+    document.getElementById('inp-repo').value = creds.repo
+    document.getElementById('inp-file').value = creds.file
+  }
+  setupErr.textContent = err
+  overlay.style.display = 'flex'
+}
+
+function hideOverlay() { overlay.style.display = 'none' }
+
+function setStatus(msg, err=false) {
+  syncStatus.textContent = msg
+  syncStatus.style.color = err ? '#c00' : '#aaa'
+  if (msg && !err) setTimeout(()=>{ if(syncStatus.textContent===msg) syncStatus.textContent='' }, 3000)
+}
+
+cfgBtn.addEventListener('click', () => showOverlay())
+
+setupBtn.addEventListener('click', async () => {
+  const pat  = document.getElementById('inp-pat').value.trim()
+  const repo = document.getElementById('inp-repo').value.trim()
+  const file = document.getElementById('inp-file').value.trim()
+  if (!pat || !repo || !file) { setupErr.textContent = 'all fields required'; return }
+  setupBtn.textContent = '[connecting…]'
+  setupErr.textContent = ''
+  try {
+    const { content, sha } = await ghGet(pat, repo, file)
+    saveCreds({ pat, repo, file })
+    currentSha = sha
+    hideOverlay()
+    syncBtn.style.display = 'inline'
+    vueApp.items = mdToItems(content)
+    setStatus('loaded ✓')
+  } catch(e) {
+    setupErr.textContent = e.message
+  } finally {
+    setupBtn.textContent = '[connect]'
+  }
+})
+
+syncBtn.addEventListener('click', async () => {
+  const creds = loadCreds()
+  if (!creds) { showOverlay('not configured'); return }
+  syncBtn.textContent = '↑ syncing…'
+  setStatus('')
+  try {
+    const md = itemsToMd(vueApp.items)
+    const data = await ghPut(creds.pat, creds.repo, creds.file, currentSha, md, 'list: sync')
+    currentSha = data.content.sha
+    setStatus('synced ✓')
+  } catch(e) {
+    setStatus(e.message, true)
+  } finally {
+    syncBtn.textContent = '↑ sync'
+  }
+})
+
+// ─── Vue app ───────────────────────────────────────────────────────────────────
 const { createApp, defineComponent } = Vue
 
-const uuid  = () => Math.random().toString(36).slice(2,10)
-const now   = () => new Date().toISOString()
-const fmtDay  = iso => { const d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) }
+const uuid    = () => Math.random().toString(36).slice(2,10)
+const now     = () => new Date().toISOString()
+const fmtDay  = iso => { const d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'2-digit'}) }
 const fmtTime = iso => { const d=new Date(iso); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') }
-const cycle = g => g==='─'?'□':g==='□'?'■':'─'
+const cycleGlyph = g => g==='─'?'□':g==='□'?'■':'─'
 
 const AddBar = defineComponent({
   props: ['parentId', 'initial'],
@@ -91,7 +337,7 @@ const ItemNode = defineComponent({
       <div v-else class="item-row" @click="toggleOpen">
         <span class="glyph" @click.stop="$emit('cycle', item.id)">{{item.glyph}}</span>
         <span class="title" :class="{done:item.glyph==='■'}">{{item.title}}</span>
-        <span class="ts"><span class="ts-day">{{tsDay}}</span><span class="ts-time">{{tsTime}}</span></span>
+        <span class="ts"><span class="ts-day">{{tsDay}}</span>, <span class="ts-time">{{tsTime}}</span></span>
       </div>
       <div v-if="open">
         <div class="actions">
@@ -107,21 +353,42 @@ const ItemNode = defineComponent({
     </div>`
 })
 
-const KEY = 'dm_v1'
-createApp({
+// No localStorage persistence for items — source of truth is GitHub.
+// Items are loaded fresh from the repo each session.
+const vueApp = createApp({
   components: { ItemNode, AddBar },
-  data() { return { items: JSON.parse(localStorage.getItem(KEY)||'[]'), adding: false } },
+  data() { return { items: [], adding: false } },
   computed: {
     roots() { return this.items.filter(i=>!i.parentId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) }
   },
   methods: {
-    save()                       { localStorage.setItem(KEY, JSON.stringify(this.items)) },
-    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title, glyph:'─', createdAt:now() }); this.adding=false; this.save() },
-    cycle(id)                    { const i=this.items.find(x=>x.id===id); if(i){ i.glyph=cycle(i.glyph); this.save() } },
-    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=title; this.save() } },
-    del(id)                      { const desc=ids=>{ const c=this.items.filter(i=>ids.includes(i.parentId)).map(i=>i.id); return c.length?[...c,...desc(c)]:c }; this.items=this.items.filter(i=>i.id!==id&&!desc([id]).includes(i.id)); this.save() },
+    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title, glyph:'─', createdAt:now() }); this.adding=false },
+    cycle(id)                    { const i=this.items.find(x=>x.id===id); if(i){ i.glyph=cycleGlyph(i.glyph) } },
+    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=title } },
+    del(id)                      { const desc=ids=>{ const c=this.items.filter(i=>ids.includes(i.parentId)).map(i=>i.id); return c.length?[...c,...desc(c)]:c }; this.items=this.items.filter(i=>i.id!==id&&!desc([id]).includes(i.id)) },
   }
 }).mount('#app')
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+;(async () => {
+  const creds = loadCreds()
+  if (!creds) {
+    showOverlay()
+    return
+  }
+  // Auto-load on page open
+  syncBtn.style.display = 'inline'
+  setStatus('loading…')
+  try {
+    const { content, sha } = await ghGet(creds.pat, creds.repo, creds.file)
+    currentSha = sha
+    vueApp.items = mdToItems(content)
+    setStatus('loaded ✓')
+  } catch(e) {
+    setStatus(e.message, true)
+    // Still show the app with empty state; user can fix creds via ⚙
+  }
+})()
 </script>
 </body>
 </html>

@@ -62,15 +62,15 @@ body { padding: 1rem; max-width: 480px; }
   <h2>LIST — github sync setup</h2>
   <div>
     <label>personal access token (repo scope)</label>
-    <input id="inp-pat" type="password" placeholder="ghp_…" />
+    <input id="inp-pat" type="password" placeholder="ghp_…" autocorrect="off" autocapitalize="off" />
   </div>
   <div>
     <label>repo path (owner/repo)</label>
-    <input id="inp-repo" placeholder="alice/my-notes" />
+    <input id="inp-repo" placeholder="alice/my-notes" autocorrect="off" autocapitalize="off" />
   </div>
   <div>
     <label>file path in repo</label>
-    <input id="inp-file" placeholder="list.md" />
+    <input id="inp-file" placeholder="list.md" autocorrect="off" autocapitalize="off" />
   </div>
   <div id="setup-err" class="err"></div>
   <button id="setup-btn">[connect]</button>
@@ -80,6 +80,7 @@ body { padding: 1rem; max-width: 480px; }
   <span>LIST</span>
   <div class="sync-bar">
     <span id="sync-btn" style="display:none">↑ sync</span>
+    <span id="pull-btn" style="display:none" title="discard local, pull from upstream">↓ pull</span>
     <span id="cfg-btn" title="reconfigure">⚙</span>
     <span id="sync-status" class="sync-status"></span>
   </div>
@@ -93,6 +94,16 @@ body { padding: 1rem; max-width: 480px; }
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
+// ─── ASCII sanitiser ───────────────────────────────────────────────────────────
+function toAscii(str) {
+  return str
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")  // curly single quotes / apostrophes
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')  // curly double quotes
+    .replace(/[\u2013\u2014]/g, '-')   // en-dash, em-dash
+    .replace(/\u2026/g, '...')         // ellipsis
+    .replace(/[^\x20-\x7E]/g, '')     // strip anything else outside printable ASCII
+}
+
 // ─── Markdown serialisation ───────────────────────────────────────────────────
 // Format: INDENT- [glyph] TITLE -- HUMAN_TIMESTAMP
 // glyph: none → "─" (pending), "[ ]" → "□" (todo), "[x]" → "■" (done)
@@ -232,6 +243,7 @@ const overlay   = document.getElementById('setup-overlay')
 const setupErr  = document.getElementById('setup-err')
 const setupBtn  = document.getElementById('setup-btn')
 const syncBtn   = document.getElementById('sync-btn')
+const pullBtn   = document.getElementById('pull-btn')
 const cfgBtn    = document.getElementById('cfg-btn')
 const syncStatus = document.getElementById('sync-status')
 
@@ -271,12 +283,31 @@ setupBtn.addEventListener('click', async () => {
     currentSha = sha
     hideOverlay()
     syncBtn.style.display = 'inline'
+    pullBtn.style.display = 'inline'
     vueApp.items = mdToItems(content)
     setStatus('loaded ✓')
   } catch(e) {
     setupErr.textContent = e.message
   } finally {
     setupBtn.textContent = '[connect]'
+  }
+})
+
+pullBtn.addEventListener('click', async () => {
+  const creds = loadCreds()
+  if (!creds) { showOverlay('not configured'); return }
+  if (!confirm('Discard all local changes and pull from upstream?')) return
+  pullBtn.textContent = '↓ pulling…'
+  setStatus('')
+  try {
+    const { content, sha } = await ghGet(creds.pat, creds.repo, creds.file)
+    currentSha = sha
+    vueApp.items = mdToItems(content)
+    setStatus('pulled ✓')
+  } catch(e) {
+    setStatus(e.message, true)
+  } finally {
+    pullBtn.textContent = '↓ pull'
   }
 })
 
@@ -310,7 +341,7 @@ const AddBar = defineComponent({
   props: ['parentId', 'initial'],
   emits: ['submit','cancel'],
   data() { return { text: this.initial||'' } },
-  template: `<div class="add-bar"><span style="color:#aaa">─</span><input v-model="text" placeholder="new item…" autofocus @keyup.enter="text.trim()&&$emit('submit',{parentId,title:text.trim()})" @keyup.esc="$emit('cancel')" /><button @click="text.trim()&&$emit('submit',{parentId,title:text.trim()})">[ok]</button><button @click="$emit('cancel')">[x]</button></div>`
+  template: `<div class="add-bar"><span style="color:#aaa">─</span><input v-model="text" placeholder="new item…" autofocus autocorrect="off" autocapitalize="off" @keyup.enter="text.trim()&&$emit('submit',{parentId,title:text.trim()})" @keyup.esc="$emit('cancel')" /><button @click="text.trim()&&$emit('submit',{parentId,title:text.trim()})">[ok]</button><button @click="$emit('cancel')">[x]</button></div>`
 })
 
 const ItemNode = defineComponent({
@@ -331,7 +362,7 @@ const ItemNode = defineComponent({
     <div>
       <div v-if="editing" class="add-bar">
         <span style="color:#aaa">─</span>
-        <input :value="item.title" autofocus @keyup.enter="$emit('edit',{id:item.id,title:$event.target.value.trim()}||item.title);editing=false" @keyup.esc="editing=false" />
+        <input :value="item.title" autofocus autocorrect="off" autocapitalize="off" @keyup.enter="$emit('edit',{id:item.id,title:$event.target.value.trim()}||item.title);editing=false" @keyup.esc="editing=false" />
         <button @click="editing=false">[x]</button>
       </div>
       <div v-else class="item-row" @click="toggleOpen">
@@ -362,9 +393,9 @@ const vueApp = createApp({
     roots() { return this.items.filter(i=>!i.parentId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) }
   },
   methods: {
-    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title, glyph:'─', createdAt:now() }); this.adding=false },
+    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title:toAscii(title), glyph:'─', createdAt:now() }); this.adding=false },
     cycle(id)                    { const i=this.items.find(x=>x.id===id); if(i){ i.glyph=cycleGlyph(i.glyph) } },
-    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=title } },
+    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=toAscii(title) } },
     del(id)                      { const desc=ids=>{ const c=this.items.filter(i=>ids.includes(i.parentId)).map(i=>i.id); return c.length?[...c,...desc(c)]:c }; this.items=this.items.filter(i=>i.id!==id&&!desc([id]).includes(i.id)) },
   }
 }).mount('#app')
@@ -378,6 +409,7 @@ const vueApp = createApp({
   }
   // Auto-load on page open
   syncBtn.style.display = 'inline'
+  pullBtn.style.display = 'inline'
   setStatus('loading…')
   try {
     const { content, sha } = await ghGet(creds.pat, creds.repo, creds.file)

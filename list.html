@@ -36,6 +36,7 @@ body { padding: 1rem; max-width: 480px; }
 .actions span:hover { color: #000; }
 .add-bar { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
 .add-bar input { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; }
+.add-bar textarea { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; resize: none; overflow: hidden; line-height: 1.4; display: block; padding: 0; overflow:scroll}
 .add-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; }
 .add-bar button:hover { color: #000; }
 .add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
@@ -360,9 +361,14 @@ const ItemNode = defineComponent({
   },
   template: `
     <div>
-      <div v-if="editing" class="add-bar">
-        <span style="color:#aaa">─</span>
-        <input :value="item.title" autofocus autocorrect="off" autocapitalize="off" @keyup.enter="$emit('edit',{id:item.id,title:$event.target.value.trim()}||item.title);editing=false" @keyup.esc="editing=false" />
+      <div v-if="editing" class="add-bar" style="align-items:flex-start">
+        <span style="color:#aaa;padding-top:2px">─</span>
+        <textarea :value="item.title" autofocus autocorrect="off" autocapitalize="off"
+          @input="$event.target.style.height='auto';$event.target.style.height=$event.target.scrollHeight+'px'"
+          @keyup.esc="editing=false"
+          @keydown.enter.exact.prevent="$emit('edit',{id:item.id,title:$event.target.value.trim()||item.title});editing=false"
+          @vue:mounted="el=>{ el.style.height='auto'; el.style.height=el.scrollHeight+'px' }"
+        ></textarea>
         <button @click="editing=false">[x]</button>
       </div>
       <div v-else class="item-row" @click="toggleOpen">

@@ -2,353 +2,221 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/bitmaks/cm-web-fonts@latest/fonts.css">
-  <title>LIST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>editor</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font: 16px/1.5 'Computer Modern Concrete', monospace; padding: 1rem; max-width: 480px; }
-
-    /* item row */
-    .item-row { display: flex; align-items: baseline; gap: 6px; cursor: pointer; user-select: none; }
-    .item-row:hover { opacity: 0.7; }
-    .glyph { flex: 0 0 auto; width: 1.2em; cursor: pointer; }
-    .title-text { flex: 1; word-break: break-word; line-height: 1.2; }
-    .title-text.done { opacity: 0.4; text-decoration: line-through; }
-    .title-text p { margin: 0; display: inline; }
-    .ts { flex: 0 0 auto; font-size: 0.75em; opacity: 0.7; white-space: nowrap; }
-
-    /* body (everything under the first line, rendered markdown) */
-    .item-body { margin: 0.2em 0 0.4em 1.8em; font-size: 0.9em; line-height: 1.5; }
-    .item-body.done { opacity: 0.4; }
-    .item-body p  { margin: 0 0 0.3em; }
-    .item-body ul, .item-body ol { padding-left: 1.4em; }
-    .item-body pre { background: #f5f5f5; padding: 0.4em 0.6em; overflow-x: auto; }
-    .item-body code { font-family: inherit; background: #f5f5f5; padding: 0 2px; }
-    .item-body pre code { background: none; padding: 0; }
-    .item-body blockquote { border-left: 2px solid #ccc; padding-left: 0.6em; opacity: 0.8; }
-
-    /* edit mode */
-    .edit-bar { display: flex; gap: 6px; align-items: flex-start; padding: 2px 0; }
-    .edit-bar textarea {
-      font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc;
-      outline: none; flex: 1; background: transparent; resize: none; overflow: hidden;
-      line-height: 1.4; padding: 0; min-height: 1.4em;
+    body {
+      font: 13px/1.2 monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 680px;
+      padding: 0.75rem 1rem;
     }
-    .edit-bar .eg { flex: 0 0 auto; font-size: 0.75em; opacity: 0.5; padding-top: 3px; min-width: 1.2em; }
-    .edit-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; padding-top: 2px; }
-    .edit-bar button:hover { color: #000; }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 11px;
+    }
+    .actions { display: flex; gap: 10px; color: #aaa; }
+    .actions span { cursor: pointer; }
+    .actions span:hover { color: #000; }
+    #status { color: #aaa; margin-left: 5px; }
+    #ot-editor { flex: 1; border-top: 1px solid #e8e8e8; }
 
-    /* add bar */
-    .add-bar { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
-    .add-bar input { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; }
-    .add-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; }
-    .add-bar button:hover { color: #000; }
-    .add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
-    .add-trigger:hover { color: #000; }
-
-    /* header / sync */
-    .sync-bar { display: flex; gap: 10px; align-items: center; font-size: 11px; color: #aaa; }
-    .sync-bar span { cursor: pointer; }
-    .sync-bar span:hover { color: #000; }
-    .sync-status { font-size: 10px; }
-
-    /* setup overlay */
-    #setup-overlay {
+    /* ── overlay setup ── */
+    #overlay {
       position: fixed; inset: 0; background: rgba(255,255,255,0.97);
-      display: flex; flex-direction: column; gap: 0.8em; padding: 2rem;
-      max-width: 480px; z-index: 100;
+      display: flex; flex-direction: column; gap: 0.8em;
+      padding: 2rem; max-width: 680px; z-index: 100;
     }
-    #setup-overlay h2 { font-size: 1em; font-weight: normal; margin-bottom: 0.5em; }
-    #setup-overlay label { font-size: 0.8em; color: #888; display: block; margin-bottom: 2px; }
-    #setup-overlay input {
-      font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc;
-      outline: none; width: 100%; background: transparent; padding: 2px 0;
+    #overlay label { font-size: 0.8em; color: #888; display: block; margin-bottom: 2px; }
+    #overlay input {
+      font-family: inherit; font-size: 13px; border: none; 
+      border-bottom: 1px solid #ccc; outline: none; width: 100%; 
+      background: transparent; padding: 2px 0;
     }
-    #setup-overlay .err { font-size: 11px; color: #c00; }
-    #setup-overlay button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; align-self: flex-start; padding: 0; }
-    #setup-overlay button:hover { color: #000; }
+    #overlay .err { font-size: 11px; color: #c00; }
+    #overlay button {
+      font-family: inherit; font-size: 11px; background: none; border: none;
+      color: #aaa; cursor: pointer; align-self: flex-start; padding: 0;
+    }
+    #overlay button:hover { color: #000; }
   </style>
 </head>
 <body>
 
-<div id="setup-overlay" style="display:none">
-  <h2>LIST — github sync setup</h2>
-  <div>
-    <label>personal access token (repo scope)</label>
-    <input id="inp-pat" type="password" placeholder="ghp_…" autocorrect="off" autocapitalize="off" />
-  </div>
-  <div>
-    <label>repo path (owner/repo)</label>
-    <input id="inp-repo" placeholder="alice/my-notes" autocorrect="off" autocapitalize="off" />
-  </div>
-  <div>
-    <label>file path in repo</label>
-    <input id="inp-file" placeholder="journal.md" autocorrect="off" autocapitalize="off" />
-  </div>
-  <div id="setup-err" class="err"></div>
-  <button id="setup-btn">[connect]</button>
-</div>
-
-<header style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem">
-  <span>LIST</span>
-  <div class="sync-bar">
-    <span id="sync-btn" style="display:none">↑ sync</span>
-    <span id="pull-btn" style="display:none" title="discard local, pull from upstream">↓ pull</span>
-    <span id="cfg-btn" title="reconfigure">⚙</span>
-    <span id="sync-status" class="sync-status"></span>
-  </div>
-</header>
-
-<div id="app" style="display:flex;flex-direction:column;gap:0.4em 0;">
-  <template v-if="adding">
-    <div class="add-bar">
-      <span style="color:#aaa">●</span>
-      <input v-model="newText" placeholder="new entry…" autofocus autocorrect="off" autocapitalize="off"
-        @keyup.enter="commitAdd" @keyup.esc="adding=false" ref="newInput" />
-      <button @click="commitAdd">[ok]</button>
-      <button @click="adding=false">[x]</button>
+  <div id="overlay" style="display:none">
+    <div>
+      <label>token</label>
+      <input id="inp-pat" type="password" autocorrect="off" autocapitalize="off" />
     </div>
-  </template>
-  <div v-else class="add-trigger" @click="startAdd">+ new entry</div>
+    <div>
+      <label>repo (owner/repo)</label>
+      <input id="inp-repo" placeholder="owner/repo" autocorrect="off" autocapitalize="off" />
+    </div>
+    <div>
+      <label>file path</label>
+      <input id="inp-file" placeholder="notes.md" autocorrect="off" autocapitalize="off" />
+    </div>
+    <div id="setup-err" class="err"></div>
+    <button id="setup-btn">[connect]</button>
+  </div>
 
-  <item-node v-for="item in sorted" :key="item.id" :item="item"
-    @cycle="cycle" @delete="del" @edit="edit"></item-node>
-</div>
+  <div class="top-bar">
+    <div class="actions">
+      <span id="btn-sync" style="display:none">↑ sync</span>
+      <span id="btn-pull" style="display:none">↓ pull</span>
+      <span id="btn-config">⚙ config</span>
+      <span id="status"></span>
+    </div>
+  </div>
 
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <div id="ot-editor"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/overtype@latest/dist/overtype.min.js"></script>
 <script>
-// ─── States ────────────────────────────────────────────────────────────────────
-const STATES = [
-  { ui: '+', md: '-',      done: false },  // 0 pending
-  { ui: '□', md: '- [ ]',  done: false },  // 1 todo
-  { ui: '▨', md: '- [-]',  done: false },  // 2 in-progress
-  { ui: '■', md: '- [x]',  done: true  },  // 3 done
-]
+const GH_KEY = 'list_gh_v1'
+let sha = null
+let otEditor = null
 
-const cycleState      = s => (s + 1) % STATES.length
-const stateUi         = s => STATES[s]?.ui  ?? STATES[0].ui
-const stateDone       = s => STATES[s]?.done ?? false
-const mdToState       = prefix => { const i = STATES.findIndex(s => s.md === prefix); return i < 0 ? 0 : i }
-// state index → the leading "- xxx" prefix including trailing space for body
-const stateToPrefix   = s => STATES[s]?.md ?? STATES[0].md
+// Elements
+const overlay = document.getElementById('overlay')
+const inpPat = document.getElementById('inp-pat')
+const inpRepo = document.getElementById('inp-repo')
+const inpFile = document.getElementById('inp-file')
+const setupErr = document.getElementById('setup-err')
+const setupBtn = document.getElementById('setup-btn')
 
-// ─── Time helpers ──────────────────────────────────────────────────────────────
-const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const pad     = n => String(n).padStart(2,'0')
-const fmtHuman = iso => { const d=new Date(iso); return `${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}` }
-const parseHuman = str => { const d=new Date(str); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString() }
-const fmtTs    = iso => { const d=new Date(iso); return `${months[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` }
+const btnSync = document.getElementById('btn-sync')
+const btnPull = document.getElementById('btn-pull')
+const btnConfig = document.getElementById('btn-config')
+const statusEl = document.getElementById('status')
 
-// ─── Markdown ↔ items ──────────────────────────────────────────────────────────
-// Each top-level "- ..." line is one item.
-// Its title is the first-line text (after state prefix + timestamp stripped).
-// Its body is all lines indented under it, dedented by 2, stored verbatim.
-// On serialise: first line = "- <state-prefix><title> -- <date>", body lines re-indented.
+function setStatus(msg, isErr = false) {
+  statusEl.textContent = msg
+  statusEl.style.color = isErr ? '#c00' : '#aaa'
+}
 
-function mdToItems(md) {
-  const lines  = md.split('\n')
-  const items  = []
-  let cur      = null
+function getCreds() {
+  try { return JSON.parse(localStorage.getItem(GH_KEY)) } catch { return null }
+}
 
-  for (const line of lines) {
-    if (/^- /.test(line)) {
-      // top-level item
-      if (cur) items.push(cur)
-      const rest = line.slice(2) // after "- "
-      // match state prefix (longest first)
-      const sorted = [...STATES].map((s,i)=>({i,body:s.md.slice(2)})).filter(x=>x.body).sort((a,b)=>b.body.length-a.body.length)
-      let state = 0, body = rest
-      for (const { i, body: pfx } of sorted) {
-        if (rest.startsWith(pfx + ' ')) { state = i; body = rest.slice(pfx.length + 1); break }
-      }
-      // strip timestamp
-      const sep = body.lastIndexOf(' -- ')
-      let title = body, createdAt = new Date().toISOString()
-      if (sep !== -1) { title = body.slice(0, sep).trim(); createdAt = parseHuman(body.slice(sep + 4).trim()) }
-      cur = { id: Math.random().toString(36).slice(2,10), state, title, body: '', createdAt }
-    } else if (cur && /^  /.test(line)) {
-      // indented — belongs to current item's body, dedent by 2
-      cur.body += (cur.body ? '\n' : '') + line.slice(2)
-    } else if (cur && line.trim() === '') {
-      // blank line — part of body if we have body already, otherwise skip
-      if (cur.body) cur.body += '\n'
-    }
-    // anything else (e.g. heading, hr) at root level — ignore or you can treat as preamble
+function updateUiVisibility() {
+  const hasCreds = !!getCreds()
+  btnSync.style.display = hasCreds ? 'inline' : 'none'
+  btnPull.style.display = hasCreds ? 'inline' : 'none'
+}
+
+function showOverlay() {
+  const c = getCreds()
+  if (c) {
+    inpPat.value = c.pat
+    inpRepo.value = c.repo
+    inpFile.value = c.file
   }
-  if (cur) items.push(cur)
-  return items
+  setupErr.textContent = ''
+  overlay.style.display = 'flex'
 }
-
-function itemsToMd(items) {
-  const sorted = [...items].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
-  return sorted.map(it => {
-    const prefix  = stateToPrefix(it.state)          // e.g. "- [ ]"
-    const firstLine = `${prefix} ${it.title} -- ${fmtHuman(it.createdAt)}`
-    if (!it.body.trim()) return firstLine
-    const indented = it.body.split('\n').map(l => '  ' + l).join('\n')
-    return firstLine + '\n' + indented
-  }).join('\n') + '\n'
-}
-
-// ─── GitHub helpers ────────────────────────────────────────────────────────────
-const GH_KEY   = 'list_gh_v1'
-const loadCreds = () => { try { return JSON.parse(localStorage.getItem(GH_KEY)||'null') } catch { return null } }
-const saveCreds = c => localStorage.setItem(GH_KEY, JSON.stringify(c))
 
 function ghHeaders(pat) {
-  return { 'Authorization':`Bearer ${pat}`, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', 'Content-Type':'application/json' }
-}
-async function ghGet(pat, repo, file) {
-  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, { headers: ghHeaders(pat) })
-  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
-  const j = await r.json()
-  return { content: atob(j.content.replace(/\n/g,'')), sha: j.sha }
-}
-async function ghPut(pat, repo, file, sha, content, message) {
-  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, {
-    method: 'PUT', headers: ghHeaders(pat),
-    body: JSON.stringify({ message, content: btoa(unescape(encodeURIComponent(content))), sha })
-  })
-  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
-  return r.json()
+  return { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' }
 }
 
-// ─── Overlay / sync wiring ─────────────────────────────────────────────────────
-const overlay    = document.getElementById('setup-overlay')
-const setupErr   = document.getElementById('setup-err')
-const setupBtn   = document.getElementById('setup-btn')
-const syncBtn    = document.getElementById('sync-btn')
-const pullBtn    = document.getElementById('pull-btn')
-const cfgBtn     = document.getElementById('cfg-btn')
-const syncStatus = document.getElementById('sync-status')
-let   currentSha = null
-
-const showOverlay = (err='') => {
-  const c = loadCreds()
-  if (c) { document.getElementById('inp-pat').value=c.pat; document.getElementById('inp-repo').value=c.repo; document.getElementById('inp-file').value=c.file }
-  setupErr.textContent = err; overlay.style.display = 'flex'
-}
-const hideOverlay = () => overlay.style.display = 'none'
-const setStatus = (msg, err=false) => {
-  syncStatus.textContent = msg; syncStatus.style.color = err ? '#c00' : '#aaa'
-  if (msg && !err) setTimeout(() => { if (syncStatus.textContent===msg) syncStatus.textContent='' }, 3000)
-}
-
-cfgBtn.addEventListener('click', showOverlay)
-
-setupBtn.addEventListener('click', async () => {
-  const pat=document.getElementById('inp-pat').value.trim(), repo=document.getElementById('inp-repo').value.trim(), file=document.getElementById('inp-file').value.trim()
-  if (!pat||!repo||!file) { setupErr.textContent='all fields required'; return }
-  setupBtn.textContent='[connecting…]'; setupErr.textContent=''
+async function loadFromGithub() {
+  const c = getCreds()
+  if (!c) return
+  setStatus('loading…')
   try {
-    const {content,sha} = await ghGet(pat,repo,file)
-    saveCreds({pat,repo,file}); currentSha=sha; hideOverlay()
-    syncBtn.style.display='inline'; pullBtn.style.display='inline'
-    vueApp.items = mdToItems(content); setStatus('loaded ✓')
-  } catch(e) { setupErr.textContent=e.message }
-  finally { setupBtn.textContent='[connect]' }
-})
-
-pullBtn.addEventListener('click', async () => {
-  const c=loadCreds(); if (!c) { showOverlay('not configured'); return }
-  if (!confirm('Discard all local changes and pull from upstream?')) return
-  pullBtn.textContent='↓ pulling…'
-  try { const {content,sha}=await ghGet(c.pat,c.repo,c.file); currentSha=sha; vueApp.items=mdToItems(content); setStatus('pulled ✓') }
-  catch(e) { setStatus(e.message,true) } finally { pullBtn.textContent='↓ pull' }
-})
-
-syncBtn.addEventListener('click', async () => {
-  const c=loadCreds(); if (!c) { showOverlay('not configured'); return }
-  syncBtn.textContent='↑ syncing…'
-  try { const data=await ghPut(c.pat,c.repo,c.file,currentSha,itemsToMd(vueApp.items),'journal: sync'); currentSha=data.content.sha; setStatus('synced ✓') }
-  catch(e) { setStatus(e.message,true) } finally { syncBtn.textContent='↑ sync' }
-})
-
-// ─── Vue ───────────────────────────────────────────────────────────────────────
-const { createApp, defineComponent, nextTick } = Vue
-
-const ItemNode = defineComponent({
-  name: 'ItemNode',
-  props: ['item'],
-  emits: ['cycle','delete','edit'],
-  data: () => ({ editing: false, editText: '' }),
-  computed: {
-    isDone()         { return stateDone(this.item.state) },
-    glyph()          { return stateUi(this.item.state) },
-    renderedTitle()  { return marked.parseInline(this.item.title) },
-    // Full item content: title line + body. Render body as block markdown if present.
-    renderedBody()   { return this.item.body.trim() ? marked.parse(this.item.body) : '' },
-    ts()             { return fmtTs(this.item.createdAt) },
-    // Raw source for editing: title\nbody (body stored verbatim, may have md)
-    rawSource()      { return this.item.body.trim() ? this.item.title + '\n' + this.item.body : this.item.title },
-  },
-  methods: {
-    startEdit() {
-      this.editText = this.rawSource
-      this.editing  = true
-      nextTick(() => { const ta=this.$refs.ta; if(ta){ta.focus();this.autosize(ta)} })
-    },
-    commitEdit() {
-      const val = this.editText.trim()
-      if (!val) {
-        if (confirm('Delete this entry?')) this.$emit('delete', this.item.id)
-        this.editing = false; return
-      }
-      // first line = title, rest = body
-      const [first, ...rest] = val.split('\n')
-      this.$emit('edit', { id: this.item.id, title: first.trim(), body: rest.join('\n') })
-      this.editing = false
-    },
-    autosize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px' },
-  },
-  template: `
-    <div style="">
-      <div v-if="editing" class="edit-bar">
-        <span class="eg">{{glyph}}</span>
-        <textarea ref="ta" v-model="editText" autocorrect="off" autocapitalize="off"
-          @input="autosize($event.target)"
-          @keydown.enter.exact.prevent="commitEdit"
-          @keyup.esc="editing=false"
-        ></textarea>
-        <button @click="commitEdit">[ok]</button>
-        <button @click="editing=false">[x]</button>
-      </div>
-      <template v-else>
-        <div class="item-row" @click.stop="startEdit">
-          <span class="glyph" @click.stop="$emit('cycle', item.id)">{{glyph}}</span>
-          <span class="title-text" :class="{done:isDone}" v-html="renderedTitle"></span>
-          <span class="ts">{{ts}}</span>
-        </div>
-        <div v-if="renderedBody" class="item-body" :class="{done:isDone}" v-html="renderedBody"></div>
-      </template>
-    </div>`
-})
-
-const vueApp = createApp({
-  components: { ItemNode },
-  data() { return { items: [], adding: false, newText: '' } },
-  computed: {
-    sorted() { return [...this.items].sort((a,b) => b.createdAt.localeCompare(a.createdAt)) }
-  },
-  methods: {
-    startAdd()       { this.adding=true; this.newText=''; nextTick(()=>this.$refs.newInput?.focus()) },
-    commitAdd()      { const t=this.newText.trim(); if(t) this.items.push({id:Math.random().toString(36).slice(2,10),state:0,title:t,body:'',createdAt:new Date().toISOString()}); this.adding=false },
-    cycle(id)        { const i=this.items.find(x=>x.id===id); if(i) i.state=cycleState(i.state) },
-    edit({id,title,body}) { const i=this.items.find(x=>x.id===id); if(i){i.title=title;i.body=body} },
-    del(id)          { this.items=this.items.filter(i=>i.id!==id) },
+    const r = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.file}`, { headers: ghHeaders(c.pat) })
+    if (!r.ok) throw new Error(`GitHub ${r.status}`)
+    const j = await r.json()
+    sha = j.sha
+    otEditor.setValue(atob(j.content.replace(/\n/g, '')))
+    setStatus('loaded ✓')
+  } catch (e) {
+    setStatus(e.message, true)
   }
-}).mount('#app')
+}
 
-// ─── Init ──────────────────────────────────────────────────────────────────────
-;(async () => {
-  const c = loadCreds()
-  if (!c) { showOverlay(); return }
-  syncBtn.style.display='inline'; pullBtn.style.display='inline'; setStatus('loading…')
-  try { const {content,sha}=await ghGet(c.pat,c.repo,c.file); currentSha=sha; vueApp.items=mdToItems(content); setStatus('loaded ✓') }
-  catch(e) { setStatus(e.message,true) }
-})()
+async function syncUp() {
+  const c = getCreds()
+  if (!c) return
+  setStatus('syncing…')
+  try {
+    const r = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.file}`, {
+      method: 'PUT',
+      headers: ghHeaders(c.pat),
+      body: JSON.stringify({ message: 'md: sync', content: btoa(unescape(encodeURIComponent(otEditor.getValue()))), sha })
+    })
+    if (!r.ok) throw new Error(`GitHub ${r.status}`)
+    const j = await r.json()
+    sha = j.content.sha
+    setStatus('synced ✓')
+  } catch (e) {
+    setStatus(e.message, true)
+  }
+}
+
+// Setup Config Submit
+setupBtn.addEventListener('click', async () => {
+  const pat = inpPat.value.trim()
+  const repo = inpRepo.value.trim()
+  const file = inpFile.value.trim()
+
+  if (!pat || !repo || !file) { setupErr.textContent = 'all fields required'; return }
+  setupBtn.textContent = '[connecting…]'; setupErr.textContent = ''
+
+  try {
+    // Validate credentials instantly by pulling metadata
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, { headers: ghHeaders(pat) })
+    if (!r.ok) throw new Error(`GitHub ${r.status}`)
+    const j = await r.json()
+    
+    // Save credentials & context
+    localStorage.setItem(GH_KEY, JSON.stringify({ pat, repo, file }))
+    sha = j.sha
+    otEditor.setValue(atob(j.content.replace(/\n/g, '')))
+    
+    overlay.style.display = 'none'
+    updateUiVisibility()
+    setStatus('loaded ✓')
+  } catch (e) {
+    setupErr.textContent = e.message
+  } finally {
+    setupBtn.textContent = '[connect]'
+  }
+})
+
+// Init Editor
+const [ot] = new OverType('#ot-editor', {
+  placeholder: 'start writing…',
+  value: '',
+  theme: 'solar',
+  fontFamily: "monospace",
+  fontSize: '13px',
+  lineHeight: 1.2,
+  autoResize: false,
+  toolbar: false,
+  spellcheck: false,
+})
+otEditor = ot
+
+// Listeners
+btnConfig.addEventListener('click', showOverlay)
+btnSync.addEventListener('click', syncUp)
+btnPull.addEventListener('click', () => { if (confirm('Discard local changes and pull?')) loadFromGithub() })
+
+// Startup
+updateUiVisibility()
+if (getCreds()) {
+  loadFromGithub()
+} else {
+  showOverlay()
+}
 </script>
 </body>
 </html>

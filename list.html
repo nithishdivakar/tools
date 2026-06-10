@@ -3,62 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/bitmaks/cm-web-fonts@latest/fonts.css">  
-  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/bitmaks/cm-web-fonts@latest/fonts.css">
   <title>LIST</title>
-
   <style>
-    @font-face {
-      font-family: 'Doto-Fallback';
-      src: local('Doto');
-      font-weight: normal;
-      font-style: normal;
-      font-variation-settings: 'wght' 700; 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font: 16px/1.5 'Computer Modern Concrete', monospace; padding: 1rem; max-width: 480px; }
+
+    /* item row */
+    .item-row { display: flex; align-items: baseline; gap: 6px; cursor: pointer; user-select: none; }
+    .item-row:hover { opacity: 0.7; }
+    .glyph { flex: 0 0 auto; width: 1.2em; cursor: pointer; }
+    .title-text { flex: 1; word-break: break-word; line-height: 1.2; }
+    .title-text.done { opacity: 0.4; text-decoration: line-through; }
+    .title-text p { margin: 0; display: inline; }
+    .ts { flex: 0 0 auto; font-size: 0.75em; opacity: 0.7; white-space: nowrap; }
+
+    /* body (everything under the first line, rendered markdown) */
+    .item-body { margin: 0.2em 0 0.4em 1.8em; font-size: 0.9em; line-height: 1.5; }
+    .item-body.done { opacity: 0.4; }
+    .item-body p  { margin: 0 0 0.3em; }
+    .item-body ul, .item-body ol { padding-left: 1.4em; }
+    .item-body pre { background: #f5f5f5; padding: 0.4em 0.6em; overflow-x: auto; }
+    .item-body code { font-family: inherit; background: #f5f5f5; padding: 0 2px; }
+    .item-body pre code { background: none; padding: 0; }
+    .item-body blockquote { border-left: 2px solid #ccc; padding-left: 0.6em; opacity: 0.8; }
+
+    /* edit mode */
+    .edit-bar { display: flex; gap: 6px; align-items: flex-start; padding: 2px 0; }
+    .edit-bar textarea {
+      font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc;
+      outline: none; flex: 1; background: transparent; resize: none; overflow: hidden;
+      line-height: 1.4; padding: 0; min-height: 1.4em;
     }
+    .edit-bar .eg { flex: 0 0 auto; font-size: 0.75em; opacity: 0.5; padding-top: 3px; min-width: 1.2em; }
+    .edit-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; padding-top: 2px; }
+    .edit-bar button:hover { color: #000; }
 
-    body { font: 16px/1.5 'Computer Modern Concrete', 'Doto-Fallback', monospace; }
+    /* add bar */
+    .add-bar { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+    .add-bar input { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; }
+    .add-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; }
+    .add-bar button:hover { color: #000; }
+    .add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
+    .add-trigger:hover { color: #000; }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { padding: 1rem; max-width: 480px; }
-.item-row { display: flex; align-items: baseline; gap: 6px; cursor: pointer; user-select: none; }
-.item-row:hover { opacity: 0.7; }
-.glyph { flex: 0 0 auto; width: 1.2em; line-height: 0;}
-.title { flex: 1; word-break: break-word; line-height: 1.2; }
-.title.done { opacity: 0.4; text-decoration: line-through; }
-.ts { flex: 0 0 auto; display: flex; align-items: flex-end; white-space: nowrap; line-height: 0.75em; font-size: 0.75em; gap: 0.2em; opacity: 0.7;}
-.ts-day  { font-size: 1em; }
-.ts-time { font-size: 1em;  }
-.children { padding-left: 1.4em; border-left: 1px solid #fff; margin-left: 0.6em; }
-.children.done { opacity: 0.4; }
-.actions { display: flex; gap: 8px; padding-left: 1.8em; }
-.actions span { font-size: 11px; color: #aaa; cursor: pointer; }
-.actions span:hover { color: #000; }
-.add-bar { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
-.add-bar input { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; }
-.add-bar textarea { font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc; outline: none; flex: 1; background: transparent; resize: none; overflow: hidden; line-height: 1.4; display: block; padding: 0; overflow:scroll}
-.add-bar button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; }
-.add-bar button:hover { color: #000; }
-.add-trigger { font-size: 11px; color: #aaa; cursor: pointer; padding: 4px 0; }
-.add-trigger:hover { color: #000; }
+    /* header / sync */
+    .sync-bar { display: flex; gap: 10px; align-items: center; font-size: 11px; color: #aaa; }
+    .sync-bar span { cursor: pointer; }
+    .sync-bar span:hover { color: #000; }
+    .sync-status { font-size: 10px; }
 
-/* Setup / sync UI */
-#setup-overlay { position:fixed; inset:0; background:rgba(255,255,255,0.97); display:flex; flex-direction:column; gap:0.8em; padding:2rem; max-width:480px; z-index: 100;}
-#setup-overlay h2 { font-size:1em; font-weight:normal; margin-bottom:0.5em; }
-#setup-overlay label { font-size:0.8em; color:#888; display:block; margin-bottom:2px; }
-#setup-overlay input { font-family:inherit; font-size:13px; border:none; border-bottom:1px solid #ccc; outline:none; width:100%; background:transparent; padding:2px 0; }
-#setup-overlay .err { font-size:11px; color:#c00; }
-#setup-overlay button { font-family:inherit; font-size:11px; background:none; border:none; color:#aaa; cursor:pointer; align-self:flex-start; padding:0; }
-#setup-overlay button:hover { color:#000; }
-.sync-bar { display:flex; gap:10px; align-items:center; font-size:11px; color:#aaa; padding:4px 0; }
-.sync-bar span { cursor:pointer; }
-.sync-bar span:hover { color:#000; }
-.sync-status { font-size:10px; }
-</style>
+    /* setup overlay */
+    #setup-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.97);
+      display: flex; flex-direction: column; gap: 0.8em; padding: 2rem;
+      max-width: 480px; z-index: 100;
+    }
+    #setup-overlay h2 { font-size: 1em; font-weight: normal; margin-bottom: 0.5em; }
+    #setup-overlay label { font-size: 0.8em; color: #888; display: block; margin-bottom: 2px; }
+    #setup-overlay input {
+      font-family: inherit; font-size: 13px; border: none; border-bottom: 1px solid #ccc;
+      outline: none; width: 100%; background: transparent; padding: 2px 0;
+    }
+    #setup-overlay .err { font-size: 11px; color: #c00; }
+    #setup-overlay button { font-family: inherit; font-size: 11px; background: none; border: none; color: #aaa; cursor: pointer; align-self: flex-start; padding: 0; }
+    #setup-overlay button:hover { color: #000; }
+  </style>
 </head>
 <body>
 
-<!-- Setup overlay (shown when not configured) -->
 <div id="setup-overlay" style="display:none">
   <h2>LIST — github sync setup</h2>
   <div>
@@ -71,13 +84,13 @@ body { padding: 1rem; max-width: 480px; }
   </div>
   <div>
     <label>file path in repo</label>
-    <input id="inp-file" placeholder="list.md" autocorrect="off" autocapitalize="off" />
+    <input id="inp-file" placeholder="journal.md" autocorrect="off" autocapitalize="off" />
   </div>
   <div id="setup-err" class="err"></div>
   <button id="setup-btn">[connect]</button>
 </div>
 
-<header style="display:flex;justify-content:space-between;align-items:baseline">
+<header style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem">
   <span>LIST</span>
   <div class="sync-bar">
     <span id="sync-btn" style="display:none">↑ sync</span>
@@ -87,345 +100,254 @@ body { padding: 1rem; max-width: 480px; }
   </div>
 </header>
 
-<div id="app" style="display: flex;flex-direction: column;gap: 0.5em 0;">
-  <add-bar v-if="adding" :parent-id="null" @submit="add" @cancel="adding=false"></add-bar>
-  <div v-else class="add-trigger" @click="adding=true">+ add item</div>
-  <item-node v-for="item in roots" :key="item.id" :item="item" :items="items" @add="add" @cycle="cycle" @delete="del" @edit="edit"></item-node>
+<div id="app" style="display:flex;flex-direction:column;gap:0.4em 0;">
+  <template v-if="adding">
+    <div class="add-bar">
+      <span style="color:#aaa">●</span>
+      <input v-model="newText" placeholder="new entry…" autofocus autocorrect="off" autocapitalize="off"
+        @keyup.enter="commitAdd" @keyup.esc="adding=false" ref="newInput" />
+      <button @click="commitAdd">[ok]</button>
+      <button @click="adding=false">[x]</button>
+    </div>
+  </template>
+  <div v-else class="add-trigger" @click="startAdd">+ new entry</div>
+
+  <item-node v-for="item in sorted" :key="item.id" :item="item"
+    @cycle="cycle" @delete="del" @edit="edit"></item-node>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-// ─── ASCII sanitiser ───────────────────────────────────────────────────────────
-function toAscii(str) {
-  return str
-    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")  // curly single quotes / apostrophes
-    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')  // curly double quotes
-    .replace(/[\u2013\u2014]/g, '-')   // en-dash, em-dash
-    .replace(/\u2026/g, '...')         // ellipsis
-    .replace(/[^\x20-\x7E]/g, '')     // strip anything else outside printable ASCII
-}
+// ─── States ────────────────────────────────────────────────────────────────────
+const STATES = [
+  { ui: '+', md: '-',      done: false },  // 0 pending
+  { ui: '□', md: '- [ ]',  done: false },  // 1 todo
+  { ui: '▨', md: '- [-]',  done: false },  // 2 in-progress
+  { ui: '■', md: '- [x]',  done: true  },  // 3 done
+]
 
-// ─── Markdown serialisation ───────────────────────────────────────────────────
-// Format: INDENT- [glyph] TITLE -- HUMAN_TIMESTAMP
-// glyph: none → "─" (pending), "[ ]" → "□" (todo), "[x]" → "■" (done)
-// Indentation: 2 spaces per depth level
+const cycleState      = s => (s + 1) % STATES.length
+const stateUi         = s => STATES[s]?.ui  ?? STATES[0].ui
+const stateDone       = s => STATES[s]?.done ?? false
+const mdToState       = prefix => { const i = STATES.findIndex(s => s.md === prefix); return i < 0 ? 0 : i }
+// state index → the leading "- xxx" prefix including trailing space for body
+const stateToPrefix   = s => STATES[s]?.md ?? STATES[0].md
 
-const INDENT = '  '
+// ─── Time helpers ──────────────────────────────────────────────────────────────
+const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const pad     = n => String(n).padStart(2,'0')
+const fmtHuman = iso => { const d=new Date(iso); return `${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}` }
+const parseHuman = str => { const d=new Date(str); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString() }
+const fmtTs    = iso => { const d=new Date(iso); return `${months[d.getMonth()]} ${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` }
 
-// Human-readable timestamp written into the file
-const fmtHuman = iso => {
-  const d = new Date(iso)
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-  const pad = n => String(n).padStart(2,'0')
-  return `${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+// ─── Markdown ↔ items ──────────────────────────────────────────────────────────
+// Each top-level "- ..." line is one item.
+// Its title is the first-line text (after state prefix + timestamp stripped).
+// Its body is all lines indented under it, dedented by 2, stored verbatim.
+// On serialise: first line = "- <state-prefix><title> -- <date>", body lines re-indented.
 
-// Parse "May 31 2026 14:05" → ISO string
-const parseHuman = str => {
-  const d = new Date(str)
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
-}
-
-const glyphToMd = g => g === '□' ? '[ ] ' : g === '■' ? '[x] ' : ''
-const mdToGlyph = m => m === '[ ] ' ? '□' : m === '[x] ' ? '■' : '─'
-
-/**
- * Serialise items array → markdown string.
- * Children are nested under their parent with indentation.
- */
-function itemsToMd(items) {
-  const byParent = {}
-  for (const it of items) {
-    const pid = it.parentId || '__root__'
-    ;(byParent[pid] = byParent[pid] || []).push(it)
-  }
-  // sort: newest first (same as UI)
-  const sort = arr => [...arr].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
-
-  const lines = []
-  function walk(parentId, depth) {
-    const children = sort(byParent[parentId] || [])
-    for (const it of children) {
-      const indent = INDENT.repeat(depth)
-      const md = glyphToMd(it.glyph)
-      lines.push(`${indent}- ${md}${it.title} -- ${fmtHuman(it.createdAt)}`)
-      walk(it.id, depth + 1)
-    }
-  }
-  walk('__root__', 0)
-  return lines.join('\n') + '\n'
-}
-
-/**
- * Parse markdown string → items array.
- * Each line: INDENT- [glyph] TITLE -- TIMESTAMP
- * Depth inferred from leading spaces (2 per level).
- * Parent tracking via a depth→id stack.
- */
 function mdToItems(md) {
-  const lines = md.split('\n').filter(l => l.trim().startsWith('-'))
-  const items = []
-  const depthStack = [] // depthStack[d] = id of last item at depth d
+  const lines  = md.split('\n')
+  const items  = []
+  let cur      = null
 
   for (const line of lines) {
-    // Count leading spaces
-    const depth = (line.match(/^(\s*)/)[1].length) / INDENT.length | 0
-
-    // Strip leading indent + "- "
-    const rest = line.trimStart().slice(2) // remove "- "
-
-    // Detect glyph prefix
-    let glyph = '─'
-    let body = rest
-    if (rest.startsWith('[x] ')) { glyph = '■'; body = rest.slice(4) }
-    else if (rest.startsWith('[ ] ')) { glyph = '□'; body = rest.slice(4) }
-
-    // Split on " -- " (last occurrence) for timestamp
-    const sepIdx = body.lastIndexOf(' -- ')
-    let title = body, createdAt = new Date().toISOString()
-    if (sepIdx !== -1) {
-      title = body.slice(0, sepIdx).trim()
-      createdAt = parseHuman(body.slice(sepIdx + 4).trim())
+    if (/^- /.test(line)) {
+      // top-level item
+      if (cur) items.push(cur)
+      const rest = line.slice(2) // after "- "
+      // match state prefix (longest first)
+      const sorted = [...STATES].map((s,i)=>({i,body:s.md.slice(2)})).filter(x=>x.body).sort((a,b)=>b.body.length-a.body.length)
+      let state = 0, body = rest
+      for (const { i, body: pfx } of sorted) {
+        if (rest.startsWith(pfx + ' ')) { state = i; body = rest.slice(pfx.length + 1); break }
+      }
+      // strip timestamp
+      const sep = body.lastIndexOf(' -- ')
+      let title = body, createdAt = new Date().toISOString()
+      if (sep !== -1) { title = body.slice(0, sep).trim(); createdAt = parseHuman(body.slice(sep + 4).trim()) }
+      cur = { id: Math.random().toString(36).slice(2,10), state, title, body: '', createdAt }
+    } else if (cur && /^  /.test(line)) {
+      // indented — belongs to current item's body, dedent by 2
+      cur.body += (cur.body ? '\n' : '') + line.slice(2)
+    } else if (cur && line.trim() === '') {
+      // blank line — part of body if we have body already, otherwise skip
+      if (cur.body) cur.body += '\n'
     }
-
-    const id = Math.random().toString(36).slice(2,10)
-    const parentId = depth > 0 ? (depthStack[depth - 1] || null) : null
-
-    depthStack[depth] = id
-    // Clear deeper levels
-    depthStack.splice(depth + 1)
-
-    items.push({ id, parentId, title, glyph, createdAt })
+    // anything else (e.g. heading, hr) at root level — ignore or you can treat as preamble
   }
+  if (cur) items.push(cur)
   return items
 }
 
-// ─── GitHub API helpers ────────────────────────────────────────────────────────
-const GH_CRED_KEY = 'list_gh_v1'
-
-function loadCreds() {
-  try { return JSON.parse(localStorage.getItem(GH_CRED_KEY) || 'null') } catch { return null }
+function itemsToMd(items) {
+  const sorted = [...items].sort((a,b) => b.createdAt.localeCompare(a.createdAt))
+  return sorted.map(it => {
+    const prefix  = stateToPrefix(it.state)          // e.g. "- [ ]"
+    const firstLine = `${prefix} ${it.title} -- ${fmtHuman(it.createdAt)}`
+    if (!it.body.trim()) return firstLine
+    const indented = it.body.split('\n').map(l => '  ' + l).join('\n')
+    return firstLine + '\n' + indented
+  }).join('\n') + '\n'
 }
-function saveCreds(c) { localStorage.setItem(GH_CRED_KEY, JSON.stringify(c)) }
-function clearCreds() { localStorage.removeItem(GH_CRED_KEY) }
+
+// ─── GitHub helpers ────────────────────────────────────────────────────────────
+const GH_KEY   = 'list_gh_v1'
+const loadCreds = () => { try { return JSON.parse(localStorage.getItem(GH_KEY)||'null') } catch { return null } }
+const saveCreds = c => localStorage.setItem(GH_KEY, JSON.stringify(c))
 
 function ghHeaders(pat) {
-  return {
-    'Authorization': `Bearer ${pat}`,
-    'Accept': 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-    'Content-Type': 'application/json'
-  }
+  return { 'Authorization':`Bearer ${pat}`, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', 'Content-Type':'application/json' }
 }
-
 async function ghGet(pat, repo, file) {
-  const url = `https://api.github.com/repos/${repo}/contents/${file}`
-  const r = await fetch(url, { headers: ghHeaders(pat) })
+  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, { headers: ghHeaders(pat) })
   if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
-  const json = await r.json()
-  const content = atob(json.content.replace(/\n/g,''))
-  return { content, sha: json.sha }
+  const j = await r.json()
+  return { content: atob(j.content.replace(/\n/g,'')), sha: j.sha }
 }
-
 async function ghPut(pat, repo, file, sha, content, message) {
-  const url = `https://api.github.com/repos/${repo}/contents/${file}`
-  const body = JSON.stringify({
-    message,
-    content: btoa(unescape(encodeURIComponent(content))),
-    sha
+  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, {
+    method: 'PUT', headers: ghHeaders(pat),
+    body: JSON.stringify({ message, content: btoa(unescape(encodeURIComponent(content))), sha })
   })
-  const r = await fetch(url, { method: 'PUT', headers: ghHeaders(pat), body })
   if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`)
-  return await r.json()
+  return r.json()
 }
 
-// ─── Setup overlay logic ───────────────────────────────────────────────────────
-const overlay   = document.getElementById('setup-overlay')
-const setupErr  = document.getElementById('setup-err')
-const setupBtn  = document.getElementById('setup-btn')
-const syncBtn   = document.getElementById('sync-btn')
-const pullBtn   = document.getElementById('pull-btn')
-const cfgBtn    = document.getElementById('cfg-btn')
+// ─── Overlay / sync wiring ─────────────────────────────────────────────────────
+const overlay    = document.getElementById('setup-overlay')
+const setupErr   = document.getElementById('setup-err')
+const setupBtn   = document.getElementById('setup-btn')
+const syncBtn    = document.getElementById('sync-btn')
+const pullBtn    = document.getElementById('pull-btn')
+const cfgBtn     = document.getElementById('cfg-btn')
 const syncStatus = document.getElementById('sync-status')
+let   currentSha = null
 
-let currentSha = null  // track latest SHA for push
-
-function showOverlay(err='') {
-  const creds = loadCreds()
-  if (creds) {
-    document.getElementById('inp-pat').value  = creds.pat
-    document.getElementById('inp-repo').value = creds.repo
-    document.getElementById('inp-file').value = creds.file
-  }
-  setupErr.textContent = err
-  overlay.style.display = 'flex'
+const showOverlay = (err='') => {
+  const c = loadCreds()
+  if (c) { document.getElementById('inp-pat').value=c.pat; document.getElementById('inp-repo').value=c.repo; document.getElementById('inp-file').value=c.file }
+  setupErr.textContent = err; overlay.style.display = 'flex'
+}
+const hideOverlay = () => overlay.style.display = 'none'
+const setStatus = (msg, err=false) => {
+  syncStatus.textContent = msg; syncStatus.style.color = err ? '#c00' : '#aaa'
+  if (msg && !err) setTimeout(() => { if (syncStatus.textContent===msg) syncStatus.textContent='' }, 3000)
 }
 
-function hideOverlay() { overlay.style.display = 'none' }
-
-function setStatus(msg, err=false) {
-  syncStatus.textContent = msg
-  syncStatus.style.color = err ? '#c00' : '#aaa'
-  if (msg && !err) setTimeout(()=>{ if(syncStatus.textContent===msg) syncStatus.textContent='' }, 3000)
-}
-
-cfgBtn.addEventListener('click', () => showOverlay())
+cfgBtn.addEventListener('click', showOverlay)
 
 setupBtn.addEventListener('click', async () => {
-  const pat  = document.getElementById('inp-pat').value.trim()
-  const repo = document.getElementById('inp-repo').value.trim()
-  const file = document.getElementById('inp-file').value.trim()
-  if (!pat || !repo || !file) { setupErr.textContent = 'all fields required'; return }
-  setupBtn.textContent = '[connecting…]'
-  setupErr.textContent = ''
+  const pat=document.getElementById('inp-pat').value.trim(), repo=document.getElementById('inp-repo').value.trim(), file=document.getElementById('inp-file').value.trim()
+  if (!pat||!repo||!file) { setupErr.textContent='all fields required'; return }
+  setupBtn.textContent='[connecting…]'; setupErr.textContent=''
   try {
-    const { content, sha } = await ghGet(pat, repo, file)
-    saveCreds({ pat, repo, file })
-    currentSha = sha
-    hideOverlay()
-    syncBtn.style.display = 'inline'
-    pullBtn.style.display = 'inline'
-    vueApp.items = mdToItems(content)
-    setStatus('loaded ✓')
-  } catch(e) {
-    setupErr.textContent = e.message
-  } finally {
-    setupBtn.textContent = '[connect]'
-  }
+    const {content,sha} = await ghGet(pat,repo,file)
+    saveCreds({pat,repo,file}); currentSha=sha; hideOverlay()
+    syncBtn.style.display='inline'; pullBtn.style.display='inline'
+    vueApp.items = mdToItems(content); setStatus('loaded ✓')
+  } catch(e) { setupErr.textContent=e.message }
+  finally { setupBtn.textContent='[connect]' }
 })
 
 pullBtn.addEventListener('click', async () => {
-  const creds = loadCreds()
-  if (!creds) { showOverlay('not configured'); return }
+  const c=loadCreds(); if (!c) { showOverlay('not configured'); return }
   if (!confirm('Discard all local changes and pull from upstream?')) return
-  pullBtn.textContent = '↓ pulling…'
-  setStatus('')
-  try {
-    const { content, sha } = await ghGet(creds.pat, creds.repo, creds.file)
-    currentSha = sha
-    vueApp.items = mdToItems(content)
-    setStatus('pulled ✓')
-  } catch(e) {
-    setStatus(e.message, true)
-  } finally {
-    pullBtn.textContent = '↓ pull'
-  }
+  pullBtn.textContent='↓ pulling…'
+  try { const {content,sha}=await ghGet(c.pat,c.repo,c.file); currentSha=sha; vueApp.items=mdToItems(content); setStatus('pulled ✓') }
+  catch(e) { setStatus(e.message,true) } finally { pullBtn.textContent='↓ pull' }
 })
 
 syncBtn.addEventListener('click', async () => {
-  const creds = loadCreds()
-  if (!creds) { showOverlay('not configured'); return }
-  syncBtn.textContent = '↑ syncing…'
-  setStatus('')
-  try {
-    const md = itemsToMd(vueApp.items)
-    const data = await ghPut(creds.pat, creds.repo, creds.file, currentSha, md, 'list: sync')
-    currentSha = data.content.sha
-    setStatus('synced ✓')
-  } catch(e) {
-    setStatus(e.message, true)
-  } finally {
-    syncBtn.textContent = '↑ sync'
-  }
+  const c=loadCreds(); if (!c) { showOverlay('not configured'); return }
+  syncBtn.textContent='↑ syncing…'
+  try { const data=await ghPut(c.pat,c.repo,c.file,currentSha,itemsToMd(vueApp.items),'journal: sync'); currentSha=data.content.sha; setStatus('synced ✓') }
+  catch(e) { setStatus(e.message,true) } finally { syncBtn.textContent='↑ sync' }
 })
 
-// ─── Vue app ───────────────────────────────────────────────────────────────────
-const { createApp, defineComponent } = Vue
-
-const uuid    = () => Math.random().toString(36).slice(2,10)
-const now     = () => new Date().toISOString()
-const fmtDay  = iso => { const d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'2-digit'}) }
-const fmtTime = iso => { const d=new Date(iso); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') }
-const cycleGlyph = g => g==='─'?'□':g==='□'?'■':'─'
-
-const AddBar = defineComponent({
-  props: ['parentId', 'initial'],
-  emits: ['submit','cancel'],
-  data() { return { text: this.initial||'' } },
-  template: `<div class="add-bar"><span style="color:#aaa">─</span><input v-model="text" placeholder="new item…" autofocus autocorrect="off" autocapitalize="off" @keyup.enter="text.trim()&&$emit('submit',{parentId,title:text.trim()})" @keyup.esc="$emit('cancel')" /><button @click="text.trim()&&$emit('submit',{parentId,title:text.trim()})">[ok]</button><button @click="$emit('cancel')">[x]</button></div>`
-})
+// ─── Vue ───────────────────────────────────────────────────────────────────────
+const { createApp, defineComponent, nextTick } = Vue
 
 const ItemNode = defineComponent({
   name: 'ItemNode',
-  props: ['item','items'],
-  emits: ['add','cycle','delete','edit'],
-  components: { AddBar },
-  data: () => ({ open: false, adding: false, editing: false }),
+  props: ['item'],
+  emits: ['cycle','delete','edit'],
+  data: () => ({ editing: false, editText: '' }),
   computed: {
-    children() { return this.items.filter(i=>i.parentId===this.item.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) },
-    tsDay()    { return fmtDay(this.item.createdAt) },
-    tsTime()   { return fmtTime(this.item.createdAt) },
+    isDone()         { return stateDone(this.item.state) },
+    glyph()          { return stateUi(this.item.state) },
+    renderedTitle()  { return marked.parseInline(this.item.title) },
+    // Full item content: title line + body. Render body as block markdown if present.
+    renderedBody()   { return this.item.body.trim() ? marked.parse(this.item.body) : '' },
+    ts()             { return fmtTs(this.item.createdAt) },
+    // Raw source for editing: title\nbody (body stored verbatim, may have md)
+    rawSource()      { return this.item.body.trim() ? this.item.title + '\n' + this.item.body : this.item.title },
   },
   methods: {
-    toggleOpen() { this.open=!this.open; if(!this.open){ this.adding=false; this.editing=false; } },
+    startEdit() {
+      this.editText = this.rawSource
+      this.editing  = true
+      nextTick(() => { const ta=this.$refs.ta; if(ta){ta.focus();this.autosize(ta)} })
+    },
+    commitEdit() {
+      const val = this.editText.trim()
+      if (!val) {
+        if (confirm('Delete this entry?')) this.$emit('delete', this.item.id)
+        this.editing = false; return
+      }
+      // first line = title, rest = body
+      const [first, ...rest] = val.split('\n')
+      this.$emit('edit', { id: this.item.id, title: first.trim(), body: rest.join('\n') })
+      this.editing = false
+    },
+    autosize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px' },
   },
   template: `
-    <div>
-      <div v-if="editing" class="add-bar" style="align-items:flex-start">
-        <span style="color:#aaa;padding-top:2px">─</span>
-        <textarea :value="item.title" autofocus autocorrect="off" autocapitalize="off"
-          @input="$event.target.style.height='auto';$event.target.style.height=$event.target.scrollHeight+'px'"
+    <div style="">
+      <div v-if="editing" class="edit-bar">
+        <span class="eg">{{glyph}}</span>
+        <textarea ref="ta" v-model="editText" autocorrect="off" autocapitalize="off"
+          @input="autosize($event.target)"
+          @keydown.enter.exact.prevent="commitEdit"
           @keyup.esc="editing=false"
-          @keydown.enter.exact.prevent="$emit('edit',{id:item.id,title:$event.target.value.trim()||item.title});editing=false"
-          @vue:mounted="el=>{ el.style.height='auto'; el.style.height=el.scrollHeight+'px' }"
         ></textarea>
+        <button @click="commitEdit">[ok]</button>
         <button @click="editing=false">[x]</button>
       </div>
-      <div v-else class="item-row" @click="toggleOpen">
-        <span class="glyph" @click.stop="$emit('cycle', item.id)">{{item.glyph}}</span>
-        <span class="title" :class="{done:item.glyph==='■'}">{{item.title}}</span>
-        <span class="ts"><span class="ts-day">{{tsDay}}</span>, <span class="ts-time">{{tsTime}}</span></span>
-      </div>
-      <div v-if="open">
-        <div class="actions">
-          <span @click="adding=!adding;editing=false">+ child</span>
-          <span @click="editing=!editing;adding=false">edit</span>
-          <span @click="$emit('delete', item.id)">delete</span>
+      <template v-else>
+        <div class="item-row" @click.stop="startEdit">
+          <span class="glyph" @click.stop="$emit('cycle', item.id)">{{glyph}}</span>
+          <span class="title-text" :class="{done:isDone}" v-html="renderedTitle"></span>
+          <span class="ts">{{ts}}</span>
         </div>
-      </div>
-      <div class="children" :class="{done:item.glyph==='■'}">
-        <add-bar v-if="adding" :parent-id="item.id" @submit="$emit('add',$event);adding=false" @cancel="adding=false"></add-bar>
-        <item-node v-for="c in children" :key="c.id" :item="c" :items="items" @add="$emit('add',$event)" @cycle="$emit('cycle',$event)" @delete="$emit('delete',$event)" @edit="$emit('edit',$event)"></item-node>
-      </div>
+        <div v-if="renderedBody" class="item-body" :class="{done:isDone}" v-html="renderedBody"></div>
+      </template>
     </div>`
 })
 
-// No localStorage persistence for items — source of truth is GitHub.
-// Items are loaded fresh from the repo each session.
 const vueApp = createApp({
-  components: { ItemNode, AddBar },
-  data() { return { items: [], adding: false } },
+  components: { ItemNode },
+  data() { return { items: [], adding: false, newText: '' } },
   computed: {
-    roots() { return this.items.filter(i=>!i.parentId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)) }
+    sorted() { return [...this.items].sort((a,b) => b.createdAt.localeCompare(a.createdAt)) }
   },
   methods: {
-    add({ parentId, title })     { this.items.push({ id:uuid(), parentId:parentId||null, title:toAscii(title), glyph:'─', createdAt:now() }); this.adding=false },
-    cycle(id)                    { const i=this.items.find(x=>x.id===id); if(i){ i.glyph=cycleGlyph(i.glyph) } },
-    edit({ id, title })          { const i=this.items.find(x=>x.id===id); if(i&&title){ i.title=toAscii(title) } },
-    del(id)                      { const desc=ids=>{ const c=this.items.filter(i=>ids.includes(i.parentId)).map(i=>i.id); return c.length?[...c,...desc(c)]:c }; this.items=this.items.filter(i=>i.id!==id&&!desc([id]).includes(i.id)) },
+    startAdd()       { this.adding=true; this.newText=''; nextTick(()=>this.$refs.newInput?.focus()) },
+    commitAdd()      { const t=this.newText.trim(); if(t) this.items.push({id:Math.random().toString(36).slice(2,10),state:0,title:t,body:'',createdAt:new Date().toISOString()}); this.adding=false },
+    cycle(id)        { const i=this.items.find(x=>x.id===id); if(i) i.state=cycleState(i.state) },
+    edit({id,title,body}) { const i=this.items.find(x=>x.id===id); if(i){i.title=title;i.body=body} },
+    del(id)          { this.items=this.items.filter(i=>i.id!==id) },
   }
 }).mount('#app')
 
 // ─── Init ──────────────────────────────────────────────────────────────────────
 ;(async () => {
-  const creds = loadCreds()
-  if (!creds) {
-    showOverlay()
-    return
-  }
-  // Auto-load on page open
-  syncBtn.style.display = 'inline'
-  pullBtn.style.display = 'inline'
-  setStatus('loading…')
-  try {
-    const { content, sha } = await ghGet(creds.pat, creds.repo, creds.file)
-    currentSha = sha
-    vueApp.items = mdToItems(content)
-    setStatus('loaded ✓')
-  } catch(e) {
-    setStatus(e.message, true)
-    // Still show the app with empty state; user can fix creds via ⚙
-  }
+  const c = loadCreds()
+  if (!c) { showOverlay(); return }
+  syncBtn.style.display='inline'; pullBtn.style.display='inline'; setStatus('loading…')
+  try { const {content,sha}=await ghGet(c.pat,c.repo,c.file); currentSha=sha; vueApp.items=mdToItems(content); setStatus('loaded ✓') }
+  catch(e) { setStatus(e.message,true) }
 })()
 </script>
 </body>

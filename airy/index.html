@@ -14,7 +14,7 @@
       margin: 0;
       background-color: #1a1a1a;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color:white;
+      position: relative;
     }
     button {
       background-color: #007aff;
@@ -34,11 +34,24 @@
       transform: scale(0.95);
       background-color: #005bb5;
     }
+    .cache-version {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #777;
+      font-size: 13px;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+    }
   </style>
 </head>
 <body>
- v1.0.1
+
   <button id="tickButton">Tick</button>
+  
+  <!-- Centered cache display element -->
+  <div id="cacheVersion" class="cache-version">Checking cache...</div>
 
   <script>
     // AudioEngine abstracted exactly as in the provided source
@@ -74,7 +87,6 @@
     };
 
     document.getElementById('tickButton').addEventListener('click', () => {
-        // CRITICAL: Initialize audio context inside the click handler[cite: 1]
         AudioEngine.resume(); 
         AudioEngine.playTick();
     });
@@ -85,6 +97,27 @@
         navigator.serviceWorker.register('sw.js');
       });
     }
+
+    // Query and display active CacheStorage names
+    async function displayCacheName() {
+      const versionElem = document.getElementById('cacheVersion');
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          if (keys.length > 0) {
+            versionElem.textContent = keys.join(', ');
+          } else {
+            versionElem.textContent = 'No active cache';
+          }
+        } catch (err) {
+          versionElem.textContent = 'Unable to fetch cache key';
+        }
+      } else {
+        versionElem.textContent = 'Cache API not supported';
+      }
+    }
+
+    displayCacheName();
   </script>
 </body>
 </html>

@@ -3,112 +3,420 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Ticker</title>
+  <title>Breath Ticker</title>
   <link rel="manifest" href="manifest.json">
   <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #ffffff;
+      --accent: #007aff;
+      --accent-stop: #ff3b30;
+      --subtext: #aaaaaa;
+      --border: #333333;
+    }
+
     body {
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin: 0 0 8px 0;
+    }
+
+    .grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .input-group {
+      background-color: var(--card-bg);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--subtext);
+      font-weight: 600;
+    }
+
+    select, input {
+      background-color: #2a2a2a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .duration-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .duration-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    .status-display {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      margin: 0;
-      background-color: #1a1a1a;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      position: relative;
     }
-    button {
-      background-color: #007aff;
+
+    .phase-text {
+      font-size: 1.6rem;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+    }
+
+    .sub-phase-text {
+      font-size: 0.9rem;
+      color: var(--subtext);
+      margin-top: 4px;
+    }
+
+    button.play-btn {
+      background-color: var(--accent);
       color: white;
       border: none;
-      border-radius: 50%;
-      width: 150px;
-      height: 150px;
-      font-size: 24px;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 1.2rem;
       font-weight: bold;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
       cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.2s, transform 0.1s;
     }
-    button:active {
-      transform: scale(0.95);
-      background-color: #005bb5;
+
+    button.play-btn:active {
+      transform: scale(0.98);
     }
+
+    button.play-btn.playing {
+      background-color: var(--accent-stop);
+    }
+
     .cache-version {
-      position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: #777;
-      font-size: 13px;
+      margin-top: auto;
+      padding-top: 20px;
+      color: var(--subtext);
+      font-size: 12px;
       font-family: monospace;
-      letter-spacing: 0.05em;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <button id="tickButton">Tick</button>
-  
-  <!-- Centered cache display element -->
-  <div id="cacheVersion" class="cache-version">Checking cache...</div>
+  <div class="container">
+    <h1>Breath Ticker</h1>
+
+    <!-- 4 Breath Phase Dropdowns -->
+    <div class="grid-2x2">
+      <div class="input-group">
+        <label for="inSec">In</label>
+        <select id="inSec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold1Sec">Hold</label>
+        <select id="hold1Sec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="outSec">Out</label>
+        <select id="outSec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold2Sec">Hold</label>
+        <select id="hold2Sec" class="calc-trigger"></select>
+      </div>
+    </div>
+
+    <!-- BPM & Repetitions -->
+    <div class="grid-2x2">
+      <div class="input-group">
+        <label for="bpmSec">BPM</label>
+        <select id="bpmSec" class="calc-trigger">
+          <option value="40">40</option>
+          <option value="80" selected>80</option>
+          <option value="100">100</option>
+          <option value="120">120</option>
+          <option value="150">150</option>
+          <option value="180">180</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="repsVal">Repetitions</label>
+        <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
+      </div>
+    </div>
+
+    <!-- Duration Display -->
+    <div class="duration-card">
+      <label>Total Duration</label>
+      <div id="durationDisplay" class="duration-value">0s</div>
+    </div>
+
+    <!-- Active State Visualizer -->
+    <div class="status-display">
+      <div id="phaseText" class="phase-text">READY</div>
+      <div id="subPhaseText" class="sub-phase-text">Press Play to begin</div>
+    </div>
+
+    <!-- Play/Stop Button -->
+    <button id="playBtn" class="play-btn">Play</button>
+
+    <!-- Cache Footer -->
+    <div id="cacheVersion" class="cache-version">Checking cache...</div>
+  </div>
 
   <script>
-    // AudioEngine abstracted exactly as in the provided source
-    const AudioEngine = {
-        ctx: null,
-        resume() {
-            if (!this.ctx) {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-        },
-        playTick() {
-            if (!this.ctx) return; 
-            
-            // Synthesize a sharp, percussive "tick"
-            const osc = this.ctx.createOscillator();
-            const gainNode = this.ctx.createGain();
-            
-            osc.connect(gainNode);
-            gainNode.connect(this.ctx.destination);
-            
-            osc.frequency.setValueAtTime(1500, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.05);
-            
-            gainNode.gain.setValueAtTime(1, this.ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-            
-            osc.start(this.ctx.currentTime);
-            osc.stop(this.ctx.currentTime + 0.05);
-        }
+    // =========================================================
+    // MUSICAL FREQUENCIES CONFIGURATION (Set your notes here in Hz)
+    // =========================================================
+
+    const FREQUENCIES = {
+      in: 440.00,  // A4 — High / Inhale
+      out: 329.63, // E4 — Medium / Exhale
+      hold: 261.63 // C4 (Middle C) — Low / Hold
     };
 
-    document.getElementById('tickButton').addEventListener('click', () => {
-        AudioEngine.resume(); 
-        AudioEngine.playTick();
+    // =========================================================
+    // AUDIO ENGINE
+    // =========================================================
+    const AudioEngine = {
+      ctx: null,
+      resume() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      playTick(freq) {
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gainNode = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        // Quick envelope to prevent audio pops
+        gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.08);
+      }
+    };
+
+    // =========================================================
+    // UI INITIALIZATION & POPULATION
+    // =========================================================
+    function populateDropdowns() {
+      const dropdownIds = ['inSec', 'hold1Sec', 'outSec', 'hold2Sec'];
+      dropdownIds.forEach(id => {
+        const select = document.getElementById(id);
+        for (let i = 0; i <= 16; i++) {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = i;
+          select.appendChild(opt);
+        }
+        select.value = 2; // Default all to 0
+      });
+    }
+
+    // Calculate total duration in seconds whenever inputs change
+    function updateDuration() {
+      const inVal = parseInt(document.getElementById('inSec').value) || 0;
+      const hold1Val = parseInt(document.getElementById('hold1Sec').value) || 0;
+      const outVal = parseInt(document.getElementById('outSec').value) || 0;
+      const hold2Val = parseInt(document.getElementById('hold2Sec').value) || 0;
+      const bpmVal = parseInt(document.getElementById('bpmSec').value) || 80;
+      const repsVal = parseInt(document.getElementById('repsVal').value) || 1;
+
+      const ticksPerRep = inVal + hold1Val + outVal + hold2Val;
+      const totalTicks = ticksPerRep * repsVal;
+      const secondsPerTick = 60 / bpmVal;
+      const totalSeconds = totalTicks * secondsPerTick;
+
+      // Format seconds display
+      const roundedSecs = Math.round(totalSeconds * 10) / 10;
+      document.getElementById('durationDisplay').textContent = `${roundedSecs}s`;
+    }
+
+    // =========================================================
+    // SEQUENCER & PLAYBACK CONTROL
+    // =========================================================
+    let isPlaying = false;
+    let playbackTimer = null;
+
+    function stopPlayback() {
+      isPlaying = false;
+      if (playbackTimer) clearTimeout(playbackTimer);
+      
+      const playBtn = document.getElementById('playBtn');
+      playBtn.textContent = 'Play';
+      playBtn.classList.remove('playing');
+
+      document.getElementById('phaseText').textContent = 'FINISHED';
+      document.getElementById('subPhaseText').textContent = 'Press Play to restart';
+    }
+
+    function startPlayback() {
+      AudioEngine.resume();
+
+      const inVal = parseInt(document.getElementById('inSec').value) || 0;
+      const hold1Val = parseInt(document.getElementById('hold1Sec').value) || 0;
+      const outVal = parseInt(document.getElementById('outSec').value) || 0;
+      const hold2Val = parseInt(document.getElementById('hold2Sec').value) || 0;
+      const bpmVal = parseInt(document.getElementById('bpmSec').value) || 80;
+      const repsVal = parseInt(document.getElementById('repsVal').value) || 1;
+
+      // Build execution queue
+      const queue = [];
+      for (let r = 1; r <= repsVal; r++) {
+        // IN (High Pitch)
+        for (let i = 1; i <= inVal; i++) {
+          queue.push({ phase: 'IN', step: i, total: inVal, freq: FREQUENCIES.in, rep: r });
+        }
+        // HOLD 1 (Low Pitch)
+        for (let i = 1; i <= hold1Val; i++) {
+          queue.push({ phase: 'HOLD', step: i, total: hold1Val, freq: FREQUENCIES.hold, rep: r });
+        }
+        // OUT (Medium Pitch)
+        for (let i = 1; i <= outVal; i++) {
+          queue.push({ phase: 'OUT', step: i, total: outVal, freq: FREQUENCIES.out, rep: r });
+        }
+        // HOLD 2 (Low Pitch)
+        for (let i = 1; i <= hold2Val; i++) {
+          queue.push({ phase: 'HOLD', step: i, total: hold2Val, freq: FREQUENCIES.hold, rep: r });
+        }
+      }
+
+      if (queue.length === 0) {
+        document.getElementById('phaseText').textContent = 'NO INPUT';
+        document.getElementById('subPhaseText').textContent = 'Set at least one phase > 0';
+        return;
+      }
+
+      isPlaying = true;
+      const playBtn = document.getElementById('playBtn');
+      playBtn.textContent = 'Stop';
+      playBtn.classList.add('playing');
+
+      const msPerTick = (60 / bpmVal) * 1000;
+      let currentIndex = 0;
+
+      function step() {
+        if (!isPlaying) return;
+
+        if (currentIndex >= queue.length) {
+          stopPlayback();
+          return;
+        }
+
+        const current = queue[currentIndex];
+        AudioEngine.playTick(current.freq);
+
+        // Update UI Visualizer
+        document.getElementById('phaseText').textContent = current.phase;
+        document.getElementById('subPhaseText').textContent = `Tick ${current.step} / ${current.total} — Rep ${current.rep} of ${repsVal}`;
+
+        currentIndex++;
+        playbackTimer = setTimeout(step, msPerTick);
+      }
+
+      step();
+    }
+
+    // =========================================================
+    // EVENT LISTENERS
+    // =========================================================
+    populateDropdowns();
+
+    document.querySelectorAll('.calc-trigger').forEach(elem => {
+      elem.addEventListener('change', updateDuration);
+      elem.addEventListener('input', updateDuration);
     });
 
-    // Register Service Worker for offline PWA support
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if (isPlaying) {
+        stopPlayback();
+        document.getElementById('phaseText').textContent = 'READY';
+        document.getElementById('subPhaseText').textContent = 'Press Play to begin';
+      } else {
+        startPlayback();
+      }
+    });
+
+    updateDuration();
+
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js');
       });
     }
 
-    // Query and display active CacheStorage names
+    // Cache Version Display
     async function displayCacheName() {
       const versionElem = document.getElementById('cacheVersion');
       if ('caches' in window) {
         try {
           const keys = await caches.keys();
-          if (keys.length > 0) {
-            versionElem.textContent = keys.join(', ');
-          } else {
-            versionElem.textContent = 'No active cache';
-          }
+          versionElem.textContent = keys.length > 0 ? keys.join(', ') : 'No active cache';
         } catch (err) {
           versionElem.textContent = 'Unable to fetch cache key';
         }

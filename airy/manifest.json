@@ -1,9 +1,9 @@
 {
-  "name": "Ticker",
-  "short_name": "Ticker",
+  "name": "Breath Ticker",
+  "short_name": "Breath",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1a1a1a",
+  "background_color": "#121212",
   "theme_color": "#007aff",
   "icons": [
     {

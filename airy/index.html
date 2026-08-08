@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Breath Ticker</title>
+  <title>So Ham</title>
   <link rel="manifest" href="manifest.json">
   <style>
     :root {
@@ -31,7 +31,7 @@
 
     .container {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -40,7 +40,16 @@
     h1 {
       text-align: center;
       font-size: 1.5rem;
-      margin: 0 0 8px 0;
+      margin: 0 0 4px 0;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--subtext);
+      font-weight: 600;
+      margin-top: 4px;
     }
 
     .grid-2x2 {
@@ -48,6 +57,20 @@
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
+
+/* 1 row, 4 columns */
+.grid-1x4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* 4 rows, 1 column */
+.grid-4x1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
 
     .input-group {
       background-color: var(--card-bg);
@@ -73,7 +96,7 @@
       border: 1px solid var(--border);
       padding: 10px;
       border-radius: 6px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       outline: none;
     }
 
@@ -153,50 +176,32 @@
   <audio id="audioPlayer" playsinline></audio>
 
   <div class="container">
-    <h1>Breath Ticker</h1>
+    <h1>So Ham</h1>
 
-    <!-- 4 Breath Phase Dropdowns -->
-    <div class="grid-2x2">
+    <!-- Phase Durations -->
+    <div class="section-title">Phases</div>
+    <div class="grid-1x4">
       <div class="input-group">
-        <label for="inSec">In (Inhale)</label>
+        <label for="inSec">In</label>
         <select id="inSec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="hold1Sec">Hold (After In)</label>
+        <label for="hold1Sec">Hold</label>
         <select id="hold1Sec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="outSec">Out (Exhale)</label>
+        <label for="outSec">Out</label>
         <select id="outSec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="hold2Sec">Hold (After Out)</label>
+        <label for="hold2Sec">Hold</label>
         <select id="hold2Sec" class="calc-trigger"></select>
       </div>
     </div>
 
-    <!-- BPM & Repetitions -->
-    <div class="grid-2x2">
-      <div class="input-group">
-        <label for="bpmSec">BPM</label>
-        <select id="bpmSec" class="calc-trigger">
-          <option value="40">40</option>
-          <option value="80" selected>80</option>
-          <option value="100">100</option>
-          <option value="120">120</option>
-          <option value="150">150</option>
-          <option value="180">180</option>
-        </select>
-      </div>
-
-      <div class="input-group">
-        <label for="repsVal">Repetitions</label>
-        <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
-      </div>
-    </div>
 
     <!-- Duration Display -->
     <div class="duration-card">
@@ -213,18 +218,82 @@
     <!-- Play/Stop Button -->
     <button id="playBtn" class="play-btn">Play</button>
 
+    <!-- Tempo & Repetitions -->
+    <div class="section-title">Session Pace & Sound Style</div>
+    <div class="grid-2x2">
+      <div class="input-group">
+        <label for="soundStyle">Sound Style</label>
+        <select id="soundStyle">
+          <option value="sustained" selected>Sustained Pad (Crossfade Bleed)</option>
+          <option value="pulsed">Pulsed Beat / Ticks</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="bpmSec">BPM</label>
+        <select id="bpmSec" class="calc-trigger">
+          <option value="40">40</option>
+          <option value="80" selected>80</option>
+          <option value="100">100</option>
+          <option value="120">120</option>
+          <option value="150">150</option>
+          <option value="180">180</option>
+        </select>
+      </div>
+
+      <div class="input-group" style="grid-column: span 2;">
+        <label for="repsVal">Repetitions</label>
+        <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
+      </div>
+    </div>
+
+
+    <!-- Phase Chord Sounds -->
+    <div class="section-title">Sound</div>
+    <div class="grid-4x1">
+      <div class="input-group">
+        <label for="inChord">In</label>
+        <select id="inChord" class="chord-select"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold1Chord">Hold</label>
+        <select id="hold1Chord" class="chord-select"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="outChord">Out</label>
+        <select id="outChord" class="chord-select"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold2Chord">Hold</label>
+        <select id="hold2Chord" class="chord-select"></select>
+      </div>
+    </div>
+
+
     <!-- Cache Footer -->
     <div id="cacheVersion" class="cache-version">Checking cache...</div>
   </div>
 
   <script>
     // =========================================================
-    // MUSICAL FREQUENCIES CONFIGURATION
+    // CHORD & SOUND PRESET LIBRARY
     // =========================================================
-    const FREQUENCIES = {
-      in: 440.00,  // A4 — High / Inhale
-      out: 329.63, // E4 — Medium / Exhale
-      hold: 261.63 // C4 (Middle C) — Low / Hold
+    const CHORDS = {
+      // Single Tones (Original)
+      single_high: { name: "A4 - High", freqs: [440.00] },
+      single_mid:  { name: "E4 - Mid", freqs: [329.63] },
+      single_low:  { name: "C4 - Low", freqs: [261.63] },
+
+      // Triads & Chords
+      c_major:     { name: "C Major Triad", freqs: [261.63, 329.63, 392.00] },
+      a_minor:     { name: "A Minor Triad", freqs: [220.00, 261.63, 329.63] },
+      c_maj7:      { name: "C Major 7th (Dreamy)", freqs: [261.63, 329.63, 392.00, 493.88] },
+      a_sus2:      { name: "A Sus2 (Open & Soft)", freqs: [220.00, 293.66, 329.63] },
+      perfect_5th: { name: "Root + 5th (Peaceful)", freqs: [261.63, 392.00] },
+      octave_pad:  { name: "Octave Blend (Expansive)", freqs: [261.63, 523.25] }
     };
 
     const audioPlayer = document.getElementById('audioPlayer');
@@ -295,6 +364,7 @@
     // UI INITIALIZATION & POPULATION
     // =========================================================
     function populateDropdowns() {
+      // 1. Durations
       const dropdownIds = ['inSec', 'hold1Sec', 'outSec', 'hold2Sec'];
       dropdownIds.forEach(id => {
         const select = document.getElementById(id);
@@ -304,7 +374,26 @@
           opt.textContent = i;
           select.appendChild(opt);
         }
-        select.value = 2; // Default all to 2
+        select.value = 4; // Default all to 2
+      });
+
+      // 2. Chords
+      const chordDropdowns = [
+        { id: 'inChord', defaultKey: 'c_maj7' },
+        { id: 'hold1Chord', defaultKey: 'a_minor' },
+        { id: 'outChord', defaultKey: 'c_major' },
+        { id: 'hold2Chord', defaultKey: 'octave_pad' }
+      ];
+
+      chordDropdowns.forEach(item => {
+        const select = document.getElementById(item.id);
+        Object.keys(CHORDS).forEach(key => {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = CHORDS[key].name;
+          select.appendChild(opt);
+        });
+        select.value = item.defaultKey;
       });
     }
 
@@ -355,20 +444,31 @@
       totalRepsConfigured = parseInt(document.getElementById('repsVal').value) || 1;
       secondsPerTick = 60 / bpmVal;
 
+      // Get selected chords for each phase
+      const inChordKey = document.getElementById('inChord').value;
+      const hold1ChordKey = document.getElementById('hold1Chord').value;
+      const outChordKey = document.getElementById('outChord').value;
+      const hold2ChordKey = document.getElementById('hold2Chord').value;
+
+      const inFreqs = CHORDS[inChordKey] ? CHORDS[inChordKey].freqs : [440.00];
+      const hold1Freqs = CHORDS[hold1ChordKey] ? CHORDS[hold1ChordKey].freqs : [261.63];
+      const outFreqs = CHORDS[outChordKey] ? CHORDS[outChordKey].freqs : [329.63];
+      const hold2Freqs = CHORDS[hold2ChordKey] ? CHORDS[hold2ChordKey].freqs : [261.63];
+
       // Build execution queue
       queue = [];
       for (let r = 1; r <= totalRepsConfigured; r++) {
         for (let i = 1; i <= inVal; i++) {
-          queue.push({ phase: 'IN (Inhale)', step: i, total: inVal, freq: FREQUENCIES.in, rep: r });
+          queue.push({ phase: 'IN', step: i, total: inVal, freqs: inFreqs, rep: r });
         }
         for (let i = 1; i <= hold1Val; i++) {
-          queue.push({ phase: 'HOLD', step: i, total: hold1Val, freq: FREQUENCIES.hold, rep: r });
+          queue.push({ phase: 'HOLD', step: i, total: hold1Val, freqs: hold1Freqs, rep: r });
         }
         for (let i = 1; i <= outVal; i++) {
-          queue.push({ phase: 'OUT (Exhale)', step: i, total: outVal, freq: FREQUENCIES.out, rep: r });
+          queue.push({ phase: 'OUT', step: i, total: outVal, freqs: outFreqs, rep: r });
         }
         for (let i = 1; i <= hold2Val; i++) {
-          queue.push({ phase: 'HOLD', step: i, total: hold2Val, freq: FREQUENCIES.hold, rep: r });
+          queue.push({ phase: 'HOLD', step: i, total: hold2Val, freqs: hold2Freqs, rep: r });
         }
       }
 
@@ -382,31 +482,94 @@
       const playBtn = document.getElementById('playBtn');
       playBtn.textContent = 'Preparing...';
       document.getElementById('phaseText').textContent = 'GENERATING';
-      document.getElementById('subPhaseText').textContent = 'Creating audio session...';
+      document.getElementById('subPhaseText').textContent = 'Building chord session...';
 
-      // Render audio track in background buffer
+      const soundStyle = document.getElementById('soundStyle').value;
+
+      // Render multi-oscillator audio track in background OfflineAudioContext
       const sampleRate = 44100;
       const totalDuration = queue.length * secondsPerTick;
-      const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, Math.ceil(sampleRate * totalDuration), sampleRate);
+      // Add a 0.6s padding to allow the final chord fade-out tail to complete gracefully
+      const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, Math.ceil(sampleRate * (totalDuration + 0.6)), sampleRate);
 
-      queue.forEach((item, index) => {
-        const startTime = index * secondsPerTick;
-        const osc = offlineCtx.createOscillator();
-        const gainNode = offlineCtx.createGain();
+      if (soundStyle === 'sustained') {
+        // Continuous sustained chords with crossfade bleed between phase transitions
+        let currentPhaseStartTime = 0;
+        const crossfadeTime = 0.5; // Seconds of overlap between phase chord changes
 
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(item.freq, startTime);
+        for (let r = 1; r <= totalRepsConfigured; r++) {
+          const phases = [
+            { sec: inVal, freqs: inFreqs },
+            { sec: hold1Val, freqs: hold1Freqs },
+            { sec: outVal, freqs: outFreqs },
+            { sec: hold2Val, freqs: hold2Freqs }
+          ];
 
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+          phases.forEach(p => {
+            if (p.sec > 0) {
+              const phaseDuration = p.sec * secondsPerTick;
+              const phaseEndTime = currentPhaseStartTime + phaseDuration;
+              const freqs = p.freqs;
+              const noteVolume = 0.25 / freqs.length;
 
-        osc.connect(gainNode);
-        gainNode.connect(offlineCtx.destination);
+              // Ensure crossfade duration doesn't exceed half the phase duration
+              const fadeDuration = Math.min(crossfadeTime, phaseDuration * 0.5);
 
-        osc.start(startTime);
-        osc.stop(startTime + 0.08);
-      });
+              freqs.forEach(freq => {
+                const osc = offlineCtx.createOscillator();
+                const gainNode = offlineCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, currentPhaseStartTime);
+
+                // Fade in at phase start
+                gainNode.gain.setValueAtTime(0.0001, currentPhaseStartTime);
+                gainNode.gain.linearRampToValueAtTime(noteVolume, currentPhaseStartTime + fadeDuration);
+
+                // Hold sustained volume through the phase
+                gainNode.gain.setValueAtTime(noteVolume, phaseEndTime);
+
+                // Crossfade bleed: Fade out past the phase boundary into the next phase's start window
+                gainNode.gain.linearRampToValueAtTime(0.0001, phaseEndTime + fadeDuration);
+
+                osc.connect(gainNode);
+                gainNode.connect(offlineCtx.destination);
+
+                osc.start(currentPhaseStartTime);
+                osc.stop(phaseEndTime + fadeDuration);
+              });
+
+              currentPhaseStartTime = phaseEndTime;
+            }
+          });
+        }
+      } else {
+        // Pulsed Ticks (short 0.08s ticks on every beat)
+        queue.forEach((item, index) => {
+          const startTime = index * secondsPerTick;
+          const freqs = item.freqs;
+
+          const noteVolume = 0.3 / freqs.length;
+
+          freqs.forEach(freq => {
+            const osc = offlineCtx.createOscillator();
+            const gainNode = offlineCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(noteVolume, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+
+            osc.connect(gainNode);
+            gainNode.connect(offlineCtx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.08);
+          });
+        });
+      }
 
       const renderedBuffer = await offlineCtx.startRendering();
       const wavBlob = bufferToWav(renderedBuffer);

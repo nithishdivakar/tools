@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ticker</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    button {
+      background-color: #007aff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 150px;
+      height: 150px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active {
+      transform: scale(0.95);
+      background-color: #005bb5;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="tickButton">Tick</button>
+
+  <script>
+    // Set up the Web Audio API context
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function playTick() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+      
+      // iOS requires audio context to be resumed on user interaction
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      // Synthesize a sharp, percussive "tick"
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+      
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    document.getElementById('tickButton').addEventListener('click', playTick);
+
+    // Register Service Worker for offline PWA support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+  </script>
+</body>
+</html>

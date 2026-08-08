@@ -149,31 +149,31 @@
 </head>
 <body>
 
-  <!-- Hidden audio anchor element keeps iOS audio session alive when backgrounded -->
-  <audio id="silentAnchor" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
+  <!-- HTML5 Audio Element for Native iOS Background Playback -->
+  <audio id="audioPlayer" playsinline></audio>
 
   <div class="container">
-    <h1>Ticker</h1>
+    <h1>Breath Ticker</h1>
 
     <!-- 4 Breath Phase Dropdowns -->
     <div class="grid-2x2">
       <div class="input-group">
-        <label for="inSec">In</label>
+        <label for="inSec">In (Inhale)</label>
         <select id="inSec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="hold1Sec">Hold</label>
+        <label for="hold1Sec">Hold (After In)</label>
         <select id="hold1Sec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="outSec">Out</label>
+        <label for="outSec">Out (Exhale)</label>
         <select id="outSec" class="calc-trigger"></select>
       </div>
 
       <div class="input-group">
-        <label for="hold2Sec">Hold</label>
+        <label for="hold2Sec">Hold (After Out)</label>
         <select id="hold2Sec" class="calc-trigger"></select>
       </div>
     </div>
@@ -227,88 +227,68 @@
       hold: 261.63 // C4 (Middle C) — Low / Hold
     };
 
+    const audioPlayer = document.getElementById('audioPlayer');
+    let isPlaying = false;
+    let queue = [];
+    let secondsPerTick = 0.75;
+    let totalRepsConfigured = 1;
+    let currentObjectUrl = null;
+
     // =========================================================
-    // AUDIO ENGINE
+    // WAV AUDIO BLOB GENERATOR
+    // Converts rendered AudioBuffer into a WAV Blob for HTML5 <audio>
     // =========================================================
-    const AudioEngine = {
-      ctx: null,
-      resume() {
-        if (!this.ctx) {
-          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function bufferToWav(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const out = new DataView(new ArrayBuffer(length));
+      let channels = [], sample, offset = 0, pos = 0;
+
+      function writeString(str) {
+        for (let i = 0; i < str.length; i++) {
+          out.setUint8(pos++, str.charCodeAt(i));
         }
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      },
-      playTick(freq) {
-        if (!this.ctx) return;
-
-        const osc = this.ctx.createOscillator();
-        const gainNode = this.ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-
-        // Quick envelope to prevent audio pops
-        gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
-
-        osc.connect(gainNode);
-        gainNode.connect(this.ctx.destination);
-
-        osc.start(this.ctx.currentTime);
-        osc.stop(this.ctx.currentTime + 0.08);
       }
-    };
 
-    // =========================================================
-    // INLINE WEB WORKER FOR UNTHROTTLED BACKGROUND TIMING
-    // =========================================================
-    const workerBlob = new Blob([`
-      let timer = null;
-      self.onmessage = function(e) {
-        if (e.data.action === 'start') {
-          if (timer) clearInterval(timer);
-          timer = setInterval(() => {
-            self.postMessage('tick');
-          }, e.data.interval);
-        } else if (e.data.action === 'stop') {
-          if (timer) clearInterval(timer);
-          timer = null;
-        }
-      };
-    `], { type: 'application/javascript' });
-
-    const timerWorker = new Worker(URL.createObjectURL(workerBlob));
-
-    timerWorker.onmessage = function(e) {
-      if (e.data === 'tick' && isPlaying) {
-        processNextTick();
+      function setUint16(data) {
+        out.setUint16(pos, data, true);
+        pos += 2;
       }
-    };
 
-    // =========================================================
-    // MEDIA SESSION API (FOR LOCK SCREEN MEDIA CONTROLS)
-    // =========================================================
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Breath Ticker',
-        artist: 'Breathing Exercise',
-        album: 'PWA Session'
-      });
+      function setUint32(data) {
+        out.setUint32(pos, data, true);
+        pos += 4;
+      }
 
-      navigator.mediaSession.setActionHandler('play', () => {
-        if (!isPlaying) startPlayback();
-      });
+      writeString('RIFF');
+      setUint32(length - 8);
+      writeString('WAVE');
+      writeString('fmt ');
+      setUint32(16);
+      setUint16(1);
+      setUint16(numOfChan);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2);
+      setUint16(16);
+      writeString('data');
+      setUint32(length - pos - 4);
 
-      navigator.mediaSession.setActionHandler('pause', () => {
-        if (isPlaying) {
-          stopPlayback();
-          document.getElementById('phaseText').textContent = 'READY';
-          document.getElementById('subPhaseText').textContent = 'Press Play to begin';
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+      }
+
+      while (offset < buffer.length) {
+        for (let i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+          out.setInt16(pos, sample, true);
+          pos += 2;
         }
-      });
+        offset++;
+      }
+
+      return new Blob([out], { type: 'audio/wav' });
     }
 
     // =========================================================
@@ -338,33 +318,24 @@
 
       const ticksPerRep = inVal + hold1Val + outVal + hold2Val;
       const totalTicks = ticksPerRep * repsVal;
-      const secondsPerTick = 60 / bpmVal;
-      const totalSeconds = totalTicks * secondsPerTick;
+      const secPerTick = 60 / bpmVal;
+      const totalSeconds = totalTicks * secPerTick;
 
       const roundedSecs = Math.round(totalSeconds * 10) / 10;
       document.getElementById('durationDisplay').textContent = `${roundedSecs}s`;
     }
 
     // =========================================================
-    // SEQUENCER & PLAYBACK CONTROL
+    // SEQUENCER & PRE-RENDERED AUDIO PLAYBACK
     // =========================================================
-    let isPlaying = false;
-    let queue = [];
-    let currentIndex = 0;
-    let totalRepsConfigured = 1;
-    const silentAnchor = document.getElementById('silentAnchor');
-
     function stopPlayback() {
       isPlaying = false;
-      timerWorker.postMessage({ action: 'stop' });
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
 
-      try {
-        silentAnchor.pause();
-        silentAnchor.currentTime = 0;
-      } catch (e) {}
-
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'none';
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
       }
 
       const playBtn = document.getElementById('playBtn');
@@ -375,53 +346,27 @@
       document.getElementById('subPhaseText').textContent = 'Press Play to restart';
     }
 
-    function processNextTick() {
-      if (!isPlaying) return;
-
-      if (currentIndex >= queue.length) {
-        stopPlayback();
-        return;
-      }
-
-      const current = queue[currentIndex];
-      AudioEngine.playTick(current.freq);
-
-      document.getElementById('phaseText').textContent = current.phase;
-      document.getElementById('subPhaseText').textContent = `Tick ${current.step} / ${current.total} — Rep ${current.rep} of ${totalRepsConfigured}`;
-
-      currentIndex++;
-    }
-
-    function startPlayback() {
-      // 1. Trigger silent anchor to unlock iOS background audio session
-      silentAnchor.play().catch(err => console.log('Silent audio playback error:', err));
-
-      // 2. Resume Web Audio Context
-      AudioEngine.resume();
-
+    async function startPlayback() {
       const inVal = parseInt(document.getElementById('inSec').value) || 0;
       const hold1Val = parseInt(document.getElementById('hold1Sec').value) || 0;
       const outVal = parseInt(document.getElementById('outSec').value) || 0;
       const hold2Val = parseInt(document.getElementById('hold2Sec').value) || 0;
       const bpmVal = parseInt(document.getElementById('bpmSec').value) || 80;
       totalRepsConfigured = parseInt(document.getElementById('repsVal').value) || 1;
+      secondsPerTick = 60 / bpmVal;
 
       // Build execution queue
       queue = [];
       for (let r = 1; r <= totalRepsConfigured; r++) {
-        // IN
         for (let i = 1; i <= inVal; i++) {
-          queue.push({ phase: 'IN', step: i, total: inVal, freq: FREQUENCIES.in, rep: r });
+          queue.push({ phase: 'IN (Inhale)', step: i, total: inVal, freq: FREQUENCIES.in, rep: r });
         }
-        // HOLD 1
         for (let i = 1; i <= hold1Val; i++) {
           queue.push({ phase: 'HOLD', step: i, total: hold1Val, freq: FREQUENCIES.hold, rep: r });
         }
-        // OUT
         for (let i = 1; i <= outVal; i++) {
-          queue.push({ phase: 'OUT', step: i, total: outVal, freq: FREQUENCIES.out, rep: r });
+          queue.push({ phase: 'OUT (Exhale)', step: i, total: outVal, freq: FREQUENCIES.out, rep: r });
         }
-        // HOLD 2
         for (let i = 1; i <= hold2Val; i++) {
           queue.push({ phase: 'HOLD', step: i, total: hold2Val, freq: FREQUENCIES.hold, rep: r });
         }
@@ -433,25 +378,81 @@
         return;
       }
 
-      isPlaying = true;
-      currentIndex = 0;
-
+      // Indicate loading/rendering
       const playBtn = document.getElementById('playBtn');
+      playBtn.textContent = 'Preparing...';
+      document.getElementById('phaseText').textContent = 'GENERATING';
+      document.getElementById('subPhaseText').textContent = 'Creating audio session...';
+
+      // Render audio track in background buffer
+      const sampleRate = 44100;
+      const totalDuration = queue.length * secondsPerTick;
+      const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, Math.ceil(sampleRate * totalDuration), sampleRate);
+
+      queue.forEach((item, index) => {
+        const startTime = index * secondsPerTick;
+        const osc = offlineCtx.createOscillator();
+        const gainNode = offlineCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(item.freq, startTime);
+
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+
+        osc.connect(gainNode);
+        gainNode.connect(offlineCtx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.08);
+      });
+
+      const renderedBuffer = await offlineCtx.startRendering();
+      const wavBlob = bufferToWav(renderedBuffer);
+
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(wavBlob);
+
+      audioPlayer.src = currentObjectUrl;
+
+      // Lock screen Media Metadata
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Breath Ticker',
+          artist: 'Breathing Exercise',
+          album: 'PWA Session'
+        });
+        navigator.mediaSession.setActionHandler('play', () => audioPlayer.play());
+        navigator.mediaSession.setActionHandler('pause', () => stopPlayback());
+      }
+
+      isPlaying = true;
       playBtn.textContent = 'Stop';
       playBtn.classList.add('playing');
 
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'playing';
-      }
-
-      const msPerTick = (60 / bpmVal) * 1000;
-
-      // Execute immediate first tick
-      processNextTick();
-
-      // Start Web Worker loop for background ticks
-      timerWorker.postMessage({ action: 'start', interval: msPerTick });
+      audioPlayer.play().catch(err => {
+        console.error('Audio playback error:', err);
+        stopPlayback();
+      });
     }
+
+    // Sync UI display with the playback position of HTML5 audio
+    audioPlayer.addEventListener('timeupdate', () => {
+      if (!isPlaying || queue.length === 0) return;
+
+      const currentTickIndex = Math.min(Math.floor(audioPlayer.currentTime / secondsPerTick), queue.length - 1);
+      const current = queue[currentTickIndex];
+
+      if (current) {
+        document.getElementById('phaseText').textContent = current.phase;
+        document.getElementById('subPhaseText').textContent = `Tick ${current.step} / ${current.total} — Rep ${current.rep} of ${totalRepsConfigured}`;
+      }
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      stopPlayback();
+    });
 
     // =========================================================
     // EVENT LISTENERS

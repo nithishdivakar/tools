@@ -1,4 +1,4 @@
-const CACHE_NAME = 'breath-ticker-v2';
+const CACHE_NAME = 'breath-ticker-v3';
 
 const urlsToCache = [
   './',

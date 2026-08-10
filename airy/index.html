@@ -220,7 +220,6 @@
 
     <!-- Tempo & Repetitions -->
     <div class="section-title">Session Pace & Sound Style</div>
-    <div class="grid-2x2">
       <div class="input-group">
         <label for="soundStyle">Sound Style</label>
         <select id="soundStyle">
@@ -229,6 +228,8 @@
         </select>
       </div>
 
+    
+    <div class="grid-2x2">
       <div class="input-group">
         <label for="bpmSec">BPM</label>
         <select id="bpmSec" class="calc-trigger">
@@ -241,12 +242,17 @@
           <option value="180">180</option>
         </select>
       </div>
+      <div class="input-group">
+        <label for="repsVal">Repetitions</label>
+        <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
+      </div>
+    </div>
 
       <div class="input-group" style="grid-column: span 2;">
         <label for="repsVal">Repetitions</label>
         <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
       </div>
-    </div>
+
 
 
     <!-- Phase Chord Sounds -->
@@ -483,7 +489,7 @@
       const playBtn = document.getElementById('playBtn');
       playBtn.textContent = 'Preparing...';
       document.getElementById('phaseText').textContent = 'GENERATING';
-      document.getElementById('subPhaseText').textContent = 'Building chord session...';
+      document.getElementById('subPhaseText').textContent = 'Building...';
 
       const soundStyle = document.getElementById('soundStyle').value;
 

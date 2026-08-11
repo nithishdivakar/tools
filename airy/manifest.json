@@ -1,6 +1,6 @@
 {
-  "name": "Breath Ticker",
-  "short_name": "Breath",
+  "name": "Breath Timer",
+  "short_name": "So Ham",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#121212",

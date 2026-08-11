@@ -179,7 +179,6 @@
     <h1>So Ham</h1>
 
     <!-- Phase Durations -->
-    <div class="section-title">Phases</div>
     <div class="grid-1x4">
       <div class="input-group">
         <label for="inSec">In</label>
@@ -219,14 +218,6 @@
     <button id="playBtn" class="play-btn">Play</button>
 
     <!-- Tempo & Repetitions -->
-    <div class="section-title">Session Pace & Sound Style</div>
-      <div class="input-group">
-        <label for="soundStyle">Sound Style</label>
-        <select id="soundStyle">
-          <option value="sustained" selected>Sustained Pad (Crossfade Bleed)</option>
-          <option value="pulsed">Pulsed Beat / Ticks</option>
-        </select>
-      </div>
 
     
     <div class="grid-2x2">
@@ -234,8 +225,8 @@
         <label for="bpmSec">BPM</label>
         <select id="bpmSec" class="calc-trigger">
           <option value="40">40</option>
-          <option value="60">60</option>
-          <option value="80" selected>80</option>
+          <option value="60" selected>60</option>
+          <option value="80">80</option>
           <option value="100">100</option>
           <option value="120">120</option>
           <option value="150">150</option>
@@ -253,10 +244,16 @@
         <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
       </div>
 
-
-
     <!-- Phase Chord Sounds -->
     <div class="section-title">Sound</div>
+      <div class="input-group">
+        <label for="soundStyle">Sound Style</label>
+        <select id="soundStyle">
+          <option value="sustained" selected>Sustained Pad (Crossfade Bleed)</option>
+          <option value="pulsed">Pulsed Beat / Ticks</option>
+        </select>
+      </div>
+
     <div class="grid-4x1">
       <div class="input-group">
         <label for="inChord">In</label>

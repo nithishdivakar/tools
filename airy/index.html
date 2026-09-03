@@ -12,6 +12,7 @@
       --text: #ffffff;
       --accent: #007aff;
       --accent-stop: #ff3b30;
+      --preccent:#4caf50;
       --subtext: #aaaaaa;
       --border: #333333;
     }
@@ -152,21 +153,34 @@
       transition: background-color 0.2s, transform 0.1s;
     }
 
-    button.preset-btn {
+    button.preset-btn, button.label-btn {
       background-color: var(--card-bg);
       color: var(--accent);
       border: 1px solid var(--border);
-      padding: 10px 4px;
+      padding: 6px 4px;
       border-radius: 6px;
       font-size: 0.8rem;
       font-weight: bold;
       cursor: pointer;
-      transition: background-color 0.2s, transform 0.1s;
+      transition: background-color 0.2s, transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    button.label-btn{
+      background-color: var(--accent);
+      color: white;
     }
 
     button.preset-btn:active {
       transform: scale(0.95);
       background-color: var(--border);
+    }
+
+    /* Highlights the preset button matching the currently loaded/playing settings */
+    button.preset-btn.active-preset {
+      background-color: var(--preccent);
+      color: white;
+      border-color: var(--preccent);
+      box-shadow: 0 0 0 2px #4caf506b;
     }
 
     button.play-btn:active {
@@ -199,35 +213,23 @@
 
     <!-- Presets -->
     <div class="grid-1x4">
-      <button class="preset-btn" onclick="loadPreset(4, 0, 6, 0)">4 - 6 -</button>
-      <button class="preset-btn" onclick="loadPreset(4, 16, 8, 16)">4 16 8 16</button>
-      <button class="preset-btn" onclick="loadPreset(3, 4, 5, 0)">3 4 5 -</button>
-      <button class="preset-btn" onclick="loadPreset(4, 7, 8, 0)">4 7 8 -</button>
+      <button class="preset-btn" data-in="4" data-hold1="0" data-out="6" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">4 - 6 -</button>
+      <button class="preset-btn" data-in="3" data-hold1="4" data-out="5" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">3 4 5 -</button>
+      <button class="preset-btn" data-in="4" data-hold1="7" data-out="8" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">4 7 8 -</button>
+      <button class="preset-btn" data-in="4" data-hold1="16" data-out="8" data-hold2="16" data-bpm="60" onclick="loadPreset(this)">4 16 8 16</button>
     </div>
-
-    <!-- Phase Durations -->
     <div class="grid-1x4">
-      <div class="input-group">
-        <label for="inSec">In</label>
-        <select id="inSec" class="calc-trigger"></select>
-      </div>
-
-      <div class="input-group">
-        <label for="hold1Sec">Hold</label>
-        <select id="hold1Sec" class="calc-trigger"></select>
-      </div>
-
-      <div class="input-group">
-        <label for="outSec">Out</label>
-        <select id="outSec" class="calc-trigger"></select>
-      </div>
-
-      <div class="input-group">
-        <label for="hold2Sec">Hold</label>
-        <select id="hold2Sec" class="calc-trigger"></select>
-      </div>
+      <button class="label-btn" onclick="">SN</button>
+      <button class="preset-btn" data-in="2" data-hold1="0" data-out="4" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 - 4 -</button>
+      <button class="preset-btn" data-in="2" data-hold1="3" data-out="4" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 3 4 -</button>
+      <button class="preset-btn" data-in="2" data-hold1="5" data-out="5" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 5 5 -</button>
     </div>
-
+    <div class="grid-1x4">
+      <button class="label-btn" onclick="">SW</button>
+      <button class="preset-btn" data-in="2" data-hold1="1" data-out="8" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 1 8 -</button>
+      <button class="preset-btn" data-in="2" data-hold1="2" data-out="12" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 2 12 -</button>
+      <button class="preset-btn" data-in="2" data-hold1="2" data-out="16" data-hold2="0" data-bpm="60" onclick="loadPreset(this)">2 2 16 -</button>
+    </div>
 
     <!-- Duration Display -->
     <div class="duration-card">
@@ -256,9 +258,41 @@
           <option value="180">180</option>
         </select>
       </div>
+
       <div class="input-group">
         <label for="repsVal">Repetitions</label>
-        <input type="number" id="repsVal" class="calc-trigger" value="5" min="1" max="999">
+        <select id="repsVal" class="calc-trigger">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="15">15</option>
+          <option value="18">18</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+
+    </div>
+    <!-- Phase Durations -->
+    <div class="grid-1x4">
+      <div class="input-group">
+        <label for="inSec">In</label>
+        <select id="inSec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold1Sec">Hold</label>
+        <select id="hold1Sec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="outSec">Out</label>
+        <select id="outSec" class="calc-trigger"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="hold2Sec">Hold</label>
+        <select id="hold2Sec" class="calc-trigger"></select>
       </div>
     </div>
 
@@ -386,17 +420,45 @@
     // UI INITIALIZATION & POPULATION
     // =========================================================
 
-    function loadPreset(inVal, hold1Val, outVal, hold2Val) {
+    function loadPreset(btn) {
+      const inVal = btn.dataset.in;
+      const hold1Val = btn.dataset.hold1;
+      const outVal = btn.dataset.out;
+      const hold2Val = btn.dataset.hold2;
+      const bpmVal = btn.dataset.bpm || "60";
+
       document.getElementById('inSec').value = inVal;
       document.getElementById('hold1Sec').value = hold1Val;
       document.getElementById('outSec').value = outVal;
       document.getElementById('hold2Sec').value = hold2Val;
-      
-      // Force BPM to 60 for all presets
-      document.getElementById('bpmSec').value = "60"; 
-      
-      // Recalculate total duration automatically
+
+      // Force preset's BPM
+      document.getElementById('bpmSec').value = bpmVal;
+
+      // Recalculate total duration automatically (also re-syncs highlight)
       updateDuration();
+    }
+
+    // Highlights whichever preset button's values exactly match the current
+    // In/Hold/Out/Hold/BPM settings, so it's obvious which preset (if any)
+    // corresponds to what's currently loaded/playing.
+    function syncPresetHighlight() {
+      const inVal = document.getElementById('inSec').value;
+      const hold1Val = document.getElementById('hold1Sec').value;
+      const outVal = document.getElementById('outSec').value;
+      const hold2Val = document.getElementById('hold2Sec').value;
+      const bpmVal = document.getElementById('bpmSec').value;
+
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        const matches =
+          btn.dataset.in === inVal &&
+          btn.dataset.hold1 === hold1Val &&
+          btn.dataset.out === outVal &&
+          btn.dataset.hold2 === hold2Val &&
+          btn.dataset.bpm === bpmVal;
+
+        btn.classList.toggle('active-preset', matches);
+      });
     }
 
     function populateDropdowns() {
@@ -448,6 +510,8 @@
 
       const roundedSecs = Math.round(totalSeconds * 10) / 10;
       document.getElementById('durationDisplay').textContent = `${roundedSecs}s`;
+
+      syncPresetHighlight();
     }
 
     // =========================================================

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F6">
+<title>tally</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAF9F6;
+    --paper-raised: #FFFFFF;
+    --line: #E4E1D6;
+    --ink: #1B1D18;
+    --ink-mute: #6B6F63;
+    --ink-faint: #B7B4A6;
+    --green: #1F6F54;
+    --green-dark: #17513E;
+    --green-wash: rgba(31, 111, 84, 0.09);
+    --red: #B23A2E;
+    --red-wash: rgba(178, 58, 46, 0.08);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--paper); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 20px calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .topbar h1 {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .tagline {
+    color: var(--ink-mute);
+    font-size: 12.5px;
+    margin: 4px 0 0;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.03em;
+    margin-bottom: 7px;
+  }
+
+  .field-group { margin-top: 30px; }
+  .thing-field {
+    width: 100%;
+    border: none;
+    border-bottom: 2px solid var(--line);
+    background: transparent;
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-size: 25px;
+    font-weight: 500;
+    color: var(--ink);
+    padding: 4px 2px 11px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .thing-field:focus { border-bottom-color: var(--green); }
+  .thing-field::placeholder { color: var(--ink-faint); }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    margin-top: 13px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip.active {
+    border-color: var(--green);
+    color: var(--green-dark);
+    background: var(--green-wash);
+  }
+  .chip.empty {
+    color: var(--ink-faint);
+    border-style: dashed;
+  }
+
+  .hero {
+    margin-top: 34px;
+    text-align: center;
+    padding: 22px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-number {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-size: 60px;
+    font-weight: 600;
+    color: var(--green-dark);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+  }
+  .hero-number.pulse { animation: pulse 0.4s ease; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  .hero-caption {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 7px;
+  }
+
+  .reps-group {
+    margin-top: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .reps-group .field-label { margin-bottom: 0; }
+  .stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    overflow: hidden;
+    background: var(--paper-raised);
+  }
+  .stepper button {
+    width: 46px;
+    height: 46px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 20px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .stepper button:active { background: var(--line); }
+  .stepper input {
+    width: 54px;
+    height: 46px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    font-family: inherit;
+    font-size: 16px;
+    background: transparent;
+    color: var(--ink);
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .log-section { margin-top: 34px; }
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.03em;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--line);
+  }
+  .log-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .log-thing {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-size: 15px;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .log-time { font-size: 11px; color: var(--ink-mute); }
+  .log-reps {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--green-dark);
+    background: var(--green-wash);
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .log-del {
+    border: none;
+    background: transparent;
+    color: var(--red);
+    font-size: 15px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+  }
+  .empty-note {
+    padding: 20px 0;
+    text-align: center;
+    color: var(--ink-mute);
+    font-size: 12px;
+  }
+
+  details.csv-details {
+    margin-top: 26px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+  summary {
+    font-size: 11px;
+    color: var(--ink-mute);
+    cursor: pointer;
+    list-style: none;
+    letter-spacing: 0.02em;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸  "; }
+  details[open] summary::before { content: "▾  "; }
+  .csv-out {
+    width: 100%;
+    margin-top: 11px;
+    min-height: 110px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--ink);
+    padding: 10px;
+    resize: vertical;
+  }
+  .csv-actions { display: flex; gap: 8px; margin-top: 9px; }
+  .csv-actions button {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    border-radius: 9px;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .csv-actions button.danger { color: var(--red); border-color: rgba(178, 58, 46, 0.35); background: var(--red-wash); }
+
+  .sw-note {
+    margin-top: 24px;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+
+  .status-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 9px 15px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    max-width: 82%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 20;
+  }
+  .status-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .status-toast.err { background: var(--red); }
+
+  .record-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--paper) 65%, rgba(250, 249, 246, 0));
+  }
+  #recordBtn {
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    display: block;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    padding: 17px;
+    border-radius: 15px;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.1s ease;
+  }
+  #recordBtn:active { background: var(--green-dark); transform: scale(0.98); }
+  #recordBtn.err { background: var(--red); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-number.pulse { animation: none; }
+    #recordBtn, .chip, .status-toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <h1>tally</h1>
+    <p class="tagline">log a thing, keep count.</p>
+  </div>
+
+  <main>
+    <section class="field-group">
+      <label class="field-label" for="thingInput">thing</label>
+      <input type="text" id="thingInput" class="thing-field" placeholder="push ups" autocomplete="off" enterkeyhint="done">
+      <div class="chips" id="chipsRow"></div>
+    </section>
+
+    <section class="hero">
+      <div class="hero-number" id="heroNumber">0</div>
+      <div class="hero-caption" id="heroCaption">nothing logged yet</div>
+    </section>
+
+    <section class="reps-group">
+      <span class="field-label">reps for this entry</span>
+      <div class="stepper">
+        <button type="button" id="repsDown" aria-label="decrease reps">−</button>
+        <input type="number" id="repsInput" value="1" min="1" step="1" inputmode="numeric">
+        <button type="button" id="repsUp" aria-label="increase reps">+</button>
+      </div>
+    </section>
+
+    <section class="log-section">
+      <div class="log-header">
+        <span>recent</span>
+        <span id="totalCount">0 records</span>
+      </div>
+      <div id="recentLog"></div>
+    </section>
+
+    <details class="csv-details" id="csvDetails">
+      <summary>export csv</summary>
+      <textarea id="csvOut" class="csv-out" readonly></textarea>
+      <div class="csv-actions">
+        <button id="copyCsvBtn" type="button">copy</button>
+        <button id="clearAllBtn" type="button" class="danger">clear all</button>
+      </div>
+    </details>
+
+    <p class="sw-note" id="cacheVersion">checking cache…</p>
+  </main>
+
+  <div id="status" class="status-toast" role="status" aria-live="polite"></div>
+
+  <div class="record-bar">
+    <button id="recordBtn" type="button">record</button>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'smart-counter-records-v1';
+
+  const thingInput = document.getElementById('thingInput');
+  const chipsRow = document.getElementById('chipsRow');
+  const repsInput = document.getElementById('repsInput');
+  const repsUp = document.getElementById('repsUp');
+  const repsDown = document.getElementById('repsDown');
+  const recordBtn = document.getElementById('recordBtn');
+  const statusEl = document.getElementById('status');
+  const recentLog = document.getElementById('recentLog');
+  const totalCountEl = document.getElementById('totalCount');
+  const csvOut = document.getElementById('csvOut');
+  const copyCsvBtn = document.getElementById('copyCsvBtn');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const heroNumber = document.getElementById('heroNumber');
+  const heroCaption = document.getElementById('heroCaption');
+
+  let records = loadRecords();
+  let statusTimer = null;
+
+  function loadRecords() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveRecords() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    } catch (e) {
+      // storage may be unavailable, fail silently
+    }
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  function getRecentDistinctThings(n) {
+    const seen = new Set();
+    const out = [];
+    for (let i = records.length - 1; i >= 0 && out.length < n; i--) {
+      const t = records[i].thing;
+      if (!seen.has(t)) {
+        seen.add(t);
+        out.push(t);
+      }
+    }
+    return out;
+  }
+
+  function renderChips() {
+    const recent = getRecentDistinctThings(3);
+    chipsRow.innerHTML = '';
+    if (recent.length === 0) {
+      const span = document.createElement('span');
+      span.className = 'chip empty';
+      span.textContent = 'no things yet';
+      chipsRow.appendChild(span);
+      return;
+    }
+    recent.forEach(thing => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip';
+      btn.textContent = thing;
+      if (thing === thingInput.value.trim()) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        thingInput.value = thing;
+        thingInput.focus();
+        updateChipActiveStates();
+        updateHero();
+      });
+      chipsRow.appendChild(btn);
+    });
+  }
+
+  function updateChipActiveStates() {
+    const current = thingInput.value.trim();
+    chipsRow.querySelectorAll('.chip').forEach(chip => {
+      chip.classList.toggle('active', !chip.classList.contains('empty') && chip.textContent === current);
+    });
+  }
+
+  function updateHero() {
+    const thing = thingInput.value.trim();
+    if (!thing) {
+      const totalReps = records.reduce((sum, r) => sum + r.reps, 0);
+      heroNumber.textContent = totalReps;
+      heroCaption.textContent = records.length === 0 ? 'nothing logged yet' : 'reps logged, all things';
+      return;
+    }
+    const matches = records.filter(r => r.thing === thing);
+    const totalReps = matches.reduce((sum, r) => sum + r.reps, 0);
+    heroNumber.textContent = totalReps;
+    heroCaption.textContent = matches.length === 0
+      ? `${thing} · not logged yet`
+      : `${thing} · ${matches.length} ${matches.length === 1 ? 'entry' : 'entries'}`;
+  }
+
+  function pulseHero() {
+    heroNumber.classList.remove('pulse');
+    void heroNumber.offsetWidth;
+    heroNumber.classList.add('pulse');
+  }
+
+  function renderRecentLog() {
+    totalCountEl.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
+    recentLog.innerHTML = '';
+    if (records.length === 0) {
+      const p = document.createElement('div');
+      p.className = 'empty-note';
+      p.textContent = 'nothing recorded yet';
+      recentLog.appendChild(p);
+      return;
+    }
+    const last = records.slice(-8).reverse();
+    last.forEach(rec => {
+      const originalIndex = records.indexOf(rec);
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      row.innerHTML = `
+        <div class="log-thing">${escapeHtml(rec.thing)}</div>
+        <div class="log-time">${formatTime(rec.time)}</div>
+        <div class="log-reps">×${rec.reps}</div>
+      `;
+      const delBtn = document.createElement('button');
+      delBtn.className = 'log-del';
+      delBtn.setAttribute('aria-label', 'delete record');
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', () => {
+        records.splice(originalIndex, 1);
+        afterChange();
+      });
+      row.appendChild(delBtn);
+      recentLog.appendChild(row);
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function csvEscape(str) {
+    if (/[",\n]/.test(str)) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function renderCsv() {
+    const lines = ['thing,time,reps'];
+    records.forEach(rec => {
+      lines.push(`${csvEscape(rec.thing)},${csvEscape(rec.time)},${rec.reps}`);
+    });
+    csvOut.value = lines.join('\n');
+  }
+
+  function afterChange() {
+    saveRecords();
+    renderChips();
+    renderRecentLog();
+    renderCsv();
+    updateHero();
+  }
+
+  function setStatus(text, isErr) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('err', !!isErr);
+    statusEl.classList.add('show');
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => statusEl.classList.remove('show'), 2400);
+  }
+
+  function clampReps(v) {
+    v = parseInt(v);
+    if (isNaN(v) || v < 1) v = 1;
+    return v;
+  }
+
+  repsUp.addEventListener('click', () => {
+    repsInput.value = clampReps(repsInput.value) + 1;
+  });
+  repsDown.addEventListener('click', () => {
+    repsInput.value = Math.max(1, clampReps(repsInput.value) - 1);
+  });
+  repsInput.addEventListener('change', () => {
+    repsInput.value = clampReps(repsInput.value);
+  });
+
+  thingInput.addEventListener('input', () => {
+    updateChipActiveStates();
+    updateHero();
+  });
+
+  function doRecord() {
+    const thing = thingInput.value.trim();
+    if (!thing) {
+      recordBtn.classList.add('err');
+      setStatus('type a thing first', true);
+      thingInput.focus();
+      setTimeout(() => recordBtn.classList.remove('err'), 400);
+      return;
+    }
+    const reps = clampReps(repsInput.value);
+    records.push({
+      thing: thing,
+      time: new Date().toISOString(),
+      reps: reps
+    });
+    afterChange();
+    pulseHero();
+    setStatus(`recorded "${thing}" ×${reps}`);
+    repsInput.value = 1;
+  }
+
+  recordBtn.addEventListener('click', doRecord);
+
+  copyCsvBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(csvOut.value);
+      copyCsvBtn.textContent = 'copied';
+      setTimeout(() => { copyCsvBtn.textContent = 'copy'; }, 1000);
+    } catch (e) {
+      csvOut.select();
+      document.execCommand('copy');
+    }
+  });
+
+  clearAllBtn.addEventListener('click', () => {
+    if (records.length === 0) return;
+    if (confirm('clear all recorded data? this cannot be undone.')) {
+      records = [];
+      afterChange();
+      setStatus('all records cleared');
+    }
+  });
+
+  afterChange();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+
+  async function displayCacheName() {
+    const el = document.getElementById('cacheVersion');
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        el.textContent = 'sw cache: ' + (keys.length ? keys.join(', ') : 'none');
+      } catch (e) {
+        el.textContent = 'sw cache: unavailable';
+      }
+    } else {
+      el.textContent = 'sw: not supported';
+    }
+  }
+  displayCacheName();
+</script>
+</body>
+</html>

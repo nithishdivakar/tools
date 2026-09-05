@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>READ min</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+    // ==================== feed-config.js ====================
+/**
+ * FEED_CONFIG - Centralized list of RSS/Atom feed sources.
+ * Each entry requires a name and url. 'starred' is optional.
+ */
+const FEED_CONFIG = [
+    { name: "LW curated", url: "https://www.lesswrong.com/feed.xml?view=curated-rss", tags: ["star"] },
+    { name: "LW frontpage", url: "https://www.lesswrong.com/feed.xml?view=frontpage-rss&karmaThreshold=45", tags: ["tech"] },
+    { name: "LW all", url: "https://www.lesswrong.com/feed.xml?view=community-rss&karmaThreshold=125", tags: ["tech"] },
+    { name: "Lil'Log", url: "https://lilianweng.github.io/index.xml", tags: ["star", "people"] },
+    { name: "gwern", url: "https://gwern.substack.com/feed", tags: ["star", "people"] },
+    { name: "Off The Convex Path", url: "http://www.offconvex.org/feed.xml", tags: ["star"] },
+    { name: "Vicki Boykis", url: "https://vickiboykis.com/index.xml", tags: ["star", "people"] },
+    { name: "Sebastian Raschka", url: "https://sebastianraschka.com/rss_feed.xml", tags: ["star", "people"] },
+    { name: "Irrational Exuberance", url: "https://lethain.com/feeds.xml", tags: ["star", "people"] },
+    { name: "Slava Akhmechet", url: "https://www.spakhm.com/feed.rss", tags: ["star", "people"] },
+    { name: "apenwarr", url: "https://apenwarr.ca/log/rss.php", tags: ["star", "people"] },
+    { name: "The Oatmeal", url: "https://theoatmeal.com/feed/rss", tags: ["star", "comics"] },
+    { name: "Shtetl-Optimized", url: "https://scottaaronson.blog/?feed=rss2", tags: ["star", "people"] },
+    { name: "XKCD", url: "https://www.xkcd.com/rss.xml", tags: ["star", "comics"] },
+    { name: "EA curated", url: "https://forum.effectivealtruism.org/feed.xml?view=curated-rss", tags: ["star"] },
+    { name: "EA frontpage", url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=2", tags: ["tech"] },
+    { name: "EA all", url: "https://forum.effectivealtruism.org/feed.xml?view=community-rss&karmaThreshold=200", tags: ["tech"] },
+    { name: "Benedict Evans", url: "http://ben-evans.com/benedictevans?format=rss", tags: ["people"] },
+    { name: "Gergely Orosz", url: "https://blog.pragmaticengineer.com/rss/", tags: ["people"] },
+    { name: "ByteByteGo", url: "https://blog.bytebytego.com/feed", tags: ["tech"] },
+    { name: "Spotify", url: "https://engineering.atspotify.com/feed", tags: ["companies"] },
+    { name: "The Gradient", url: "https://thegradient.pub/rss/", tags: ["tech"] },
+    { name: "r/MachineLearning", url: "https://www.reddit.com/r/MachineLearning/.rss", tags: ["tech"] },
+    { name: "HN Frontpage", url: "https://hnrss.org/frontpage", tags: ["tech"] },
+    { name: "HN newest", url: "https://hnrss.org/newest", tags: ["tech"] },
+    { name: "The Verge", url: "https://www.theverge.com/rss/index.xml", tags: ["tech"] },
+    { name: "Wired", url: "https://www.wired.com/feed/rss", tags: ["tech"] },
+    { name: "TechCrunch", url: "https://techcrunch.com/feed/", tags: ["tech"] },
+    { name: "Lobsters", url: "https://lobste.rs/rss", tags: ["tech"] },
+    { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index", tags: ["tech"] },
+    { name: "Smashing Mag", url: "https://www.smashingmagazine.com/feed/", tags: ["tech"] },
+    // { name: "NY Times", url: "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", tags: ["news"] },
+    // { name: "BBC", url: "http://feeds.bbci.co.uk/news/world/rss.xml", tags: ["news"] },
+    // { name: "Guardian", url: "https://www.theguardian.com/world/rss", tags: ["news"] },
+    // { name: "Reuters-G", url: "https://news.google.com/rss/search?q=site%3Areuters.com&hl=en-US&gl=US&ceid=US%3Aen", tags: ["news"] },
+    // { name: "Aljazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", tags: ["news"] },
+    // { name: "Associated Press", url: "https://feedx.net/rss/ap.xml", tags: ["news"] },
+    { name: "Antirez", url: "http://antirez.com/rss" },
+    { url: "https://anildash.com/feed.xml" },
+    { url: "https://aresluna.org/main.rss" },
+    { url: "https://beej.us/blog/rss.xml" },
+    { url: "https://bernsteinbear.com/feed.xml" },
+    { url: "https://blog.jim-nielsen.com/feed.xml" },
+    { url: "https://blog.miguelgrinberg.com/feed" },
+    { url: "https://blog.pixelmelt.dev/rss/" },
+    { url: "https://bogdanthegeek.github.io/blog/index.xml" },
+    { url: "https://borretti.me/feed.xml" },
+    { url: "https://brutecat.com/rss.xml" },
+    { url: "https://buttondown.com/hillelwayne/rss" },
+    { url: "https://chadnauseam.com/rss.xml" },
+    { url: "https://computer.rip/rss.xml" },
+    { url: "https://danielchasehooper.com/feed.xml" },
+    { url: "https://danieldelaney.net/feed" },
+    { url: "https://danielwirtz.com/rss.xml" },
+    { name: "Daring Fireball", url: "https://daringfireball.net/feeds/main", tags: ["tech"] },
+    { url: "https://dynomight.net/feed.xml" },
+    { url: "https://eli.thegreenplace.net/feeds/all.atom.xml" },
+    { url: "https://entropicthoughts.com/feed.xml" },
+    { url: "https://ericmigi.com/rss.xml" },
+    { url: "https://evanhahn.com/feed.xml" },
+    { url: "https://fabiensanglard.net/rss.xml" },
+    { url: "https://feed.tedium.co/" },
+    { url: "https://geohot.github.io/blog/feed.xml" },
+    { url: "https://gilesthomas.com/feed/rss.xml" },
+    { url: "https://grantslatton.com/rss.xml" },
+    { url: "https://herman.bearblog.dev/feed/" },
+    { url: "https://hey.paris/index.xml" },
+    { url: "https://hugotunius.se/feed.xml" },
+    { url: "https://idiallo.com/feed.rss" },
+    { url: "https://it-notes.dragas.net/feed/" },
+    { url: "https://jayd.ml/feed.xml" },
+    { url: "https://joanwestenberg.com/rss" },
+    { url: "https://jyn.dev/atom.xml" },
+    { url: "https://keygen.sh/blog/feed.xml" },
+    { url: "https://krebsonsecurity.com/feed/" },
+    { url: "https://lcamtuf.substack.com/feed" },
+    { url: "https://lucumr.pocoo.org/feed.atom" },
+    { url: "https://martinalderson.com/feed.xml" },
+    { url: "https://matklad.github.io/feed.xml" },
+    { url: "https://maurycyz.com/index.xml" },
+    { url: "https://micahflee.com/feed/" },
+    { url: "https://michael.stapelberg.ch/feed.xml" },
+    { url: "https://minimaxir.com/index.xml" },
+    { url: "https://mitchellh.com/feed.xml" },
+    { url: "https://nesbitt.io/feed.xml" },
+    { url: "https://oldvcr.blogspot.com/feeds/posts/default" },
+    { url: "https://overreacted.io/rss.xml" },
+    { url: "https://philiplaine.com/index.xml" },
+    { url: "https://pluralistic.net/feed/" },
+    { url: "https://rakhim.exotext.com/rss.xml" },
+    { url: "https://refactoringenglish.com/index.xml" },
+    { url: "https://shkspr.mobi/blog/feed/" },
+    { name: "Simone", url: "https://simone.org/feed/" },
+    { url: "https://skyfall.dev/rss.xml" },
+    { url: "https://steveblank.com/feed/" },
+    { url: "https://susam.net/feed.xml" },
+    { url: "https://terriblesoftware.org/feed/" },
+    { url: "https://timsh.org/rss/" },
+    { url: "https://tomrenner.com/index.xml" },
+    { url: "https://worksonmymachine.substack.com/feed" },
+    { url: "https://www.abortretry.fail/feed" },
+    { url: "https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/feed.xml" },
+    { url: "https://www.construction-physics.com/feed" },
+    { url: "https://www.downtowndougbrown.com/feed/" },
+    { url: "https://www.dwarkeshpatel.com/feed" },
+    { url: "https://www.experimental-history.com/feed" },
+    { url: "https://www.geoffreylitt.com/feed.xml" },
+    { url: "https://www.jeffgeerling.com/blog.xml" },
+    { url: "https://www.righto.com/feeds/posts/default" },
+    { url: "https://www.seangoedecke.com/rss.xml" },
+    { url: "https://www.theatlantic.com/feed/author/derek-thompson/" },
+    { url: "https://www.troyhunt.com/rss/" },
+    { url: "https://www.wheresyoured.at/rss/" },
+    { url: "https://xania.org/feed" },
+    { url: "https://xeiaso.net/blog.rss" },
+    { name: "Trello", url: "https://trello.engineering/feed.xml", tags: ["companies"] },
+    { name: "The Netflix Tech Blog", url: "http://techblog.netflix.com/feeds/posts/default", tags: ["companies"] },
+    { name: "Facebook Code", url: "https://code.facebook.com/posts/rss", tags: ["companies"] },
+    { name: "Hootsuite", url: "http://code.hootsuite.com/feed/", tags: ["companies"] },
+    { name: "XING", url: "https://devblog.xing.com/feed/", tags: ["companies"] },
+    { name: "Flipboard", url: "http://engineering.flipboard.com/feed.xml", tags: ["companies"] },
+    { name: "Yahoo", url: "http://yahooeng.tumblr.com/rss", tags: ["companies"] },
+    { name: "DigitalOcean", url: "https://www.digitalocean.com/community/tutorials/feed", tags: ["companies"] },
+    { name: "Intercom", url: "https://engineering.intercom.io/feed.xml", tags: ["companies"] },
+    { name: "Songkick", url: "http://devblog.songkick.com/feed/", tags: ["companies"] },
+    { name: "ThoughtWorks", url: "https://www.thoughtworks.com/rss/insights.xml", tags: ["companies"] },
+    { name: "Squarespace Engineering", url: "http://engineering.squarespace.com/blog?format=RSS", tags: ["companies"] },
+    { name: "Airbnb", url: "http://nerds.airbnb.com/feed/", tags: ["companies"] },
+    { name: "Stripe", url: "https://stripe.com/blog/feed.rss", tags: ["companies"] },
+    { name: "500px", url: "http://developers.500px.com/feed", tags: ["companies"] },
+    { name: "Spotify", url: "https://labs.spotify.com/feed/", tags: ["companies"] },
+    { name: "Instacart", url: "http://tech.instacart.com/feed/", tags: ["companies"] },
+    { name: "LinkedIn", url: "https://engineering.linkedin.com/blog.rss", tags: ["companies"] },
+    { name: "Indeed", url: "https://engineering.indeedblog.com/feed/", tags: ["companies"] },
+    { name: "Yelp", url: "http://engineeringblog.yelp.com/feed.xml", tags: ["companies"] },
+    { name: "Square", url: "http://feeds.feedburner.com/corner-squareup-com", tags: ["companies"] },
+    { name: "Ticketmaster", url: "http://tech.ticketmaster.com/feed/", tags: ["companies"] },
+    { name: "Flickr", url: "http://code.flickr.net/feed/", tags: ["companies"] },
+    { name: "New York Times", url: "http://open.blogs.nytimes.com/feed/", tags: ["companies"] },
+    { name: "Imgur", url: "https://blog.imgur.com/feed/", tags: ["companies"] },
+    { name: "Pinterest", url: "https://engineering.pinterest.com/blog/rss", tags: ["companies"] },
+    { name: "Khan Academy", url: "http://engineering.khanacademy.org/rss.xml", tags: ["companies"] },
+    { name: "Kickstarter", url: "https://www.kickstarter.com/backing-and-hacking.atom", tags: ["companies"] },
+    { name: "Nextdoor", url: "https://engblog.nextdoor.com/feed/", tags: ["companies"] },
+    { name: "Tumblr", url: "http://engineering.tumblr.com/rss", tags: ["companies"] },
+    { name: "Bigcommerce", url: "http://www.bigeng.io/rss/", tags: ["companies"] },
+    { name: "Gusto", url: "http://engineering.gusto.com/rss/", tags: ["companies"] },
+    { name: "Quora", url: "http://engineering.quora.com/rss", tags: ["companies"] },
+    { name: "Dropbox", url: "https://blogs.dropbox.com/tech/feed/", tags: ["companies"] },
+    { name: "Bazaarvoice", url: "http://blog.developer.bazaarvoice.com/feed/", tags: ["companies"] },
+    { name: "Codeship", url: "http://blog.codeship.com/feed/", tags: ["companies"] },
+    { name: "Heroku", url: "http://engineering.heroku.com/feed.xml", tags: ["companies"] },
+    { name: "Indeed", url: "http://engineering.indeedblog.com/feed/", tags: ["companies"] },
+    { name: "Wealthfront", url: "http://eng.wealthfront.com/feed/", tags: ["companies"] },
+    { name: "Instagram", url: "http://instagram-engineering.tumblr.com/rss", tags: ["companies"] },
+    { name: "GitHub", url: "http://githubengineering.com/atom.xml", tags: ["companies"] },
+    { name: "Ebay", url: "http://www.ebaytechblog.com/feed/", tags: ["companies"] },
+    { name: "GoSquared", url: "https://engineering.gosquared.com/feed", tags: ["companies"] },
+    { name: "Atlassian", url: "https://developer.atlassian.com/blog/feed.xml", tags: ["companies"] },
+    { name: "Soundcloud", url: "https://developers.soundcloud.com/blog.rss", tags: ["companies"] },
+    { name: "AWS", url: "https://aws.amazon.com/blogs/aws/feed/", tags: ["companies"] },
+    { name: "Dailymotion", url: "http://engineering.dailymotion.com/rss/", tags: ["companies"] },
+    { name: "Medium", url: "https://medium.com/feed/medium-eng", tags: ["companies"] },
+    { name: "Stack Overflow", url: "http://blog.stackoverflow.com/feed/", tags: ["companies"] },
+    { name: "Etsy", url: "https://codeascraft.com/feed/", tags: ["companies"] },
+    { name: "Twitter", url: "https://blog.twitter.com/api/blog.rss?name=engineering", tags: ["companies"] },
+    { name: "Twilio", url: "https://www.twilio.com/engineering/feed/", tags: ["companies"] },
+    { name: "Target", url: "https://target.github.io/feed.xml", tags: ["companies"] },
+    { name: "Federico Tomassetti", url: "http://tomassetti.me/feed/", tags: ["people"] },
+    { name: "Dan Luu", url: "http://danluu.com/atom.xml", tags: ["people"] },
+    { name: "Zach Holman", url: "https://zachholman.com/atom.xml", tags: ["people"] },
+    { name: "Jon Skeet", url: "http://codeblog.jonskeet.uk/feed/", tags: ["people"] },
+    { name: "Geek | Manager", url: "http://feeds.feedburner.com/GeekManager", tags: ["people"] },
+    { name: "Martin Fowler", url: "http://www.martinfowler.com/feed.atom", tags: ["people"] },
+    { name: "Coding Horror", url: "http://feeds.feedburner.com/codinghorror/", tags: ["people"] },
+    { name: "Eleganthack", url: "http://eleganthack.com/feed/", tags: ["people"] },
+    { name: "Scott Hanselman", url: "http://feeds.hanselman.com/ScottHanselman", tags: ["people"] },
+    { name: "Matt Cutts", url: "https://www.mattcutts.com/blog/feed/", tags: ["people"] },
+    { name: "Peter Norvig", url: "http://www.norvig.com/rss-feed.xml", tags: ["people"] },
+    { name: "The Clean Code Blog", url: "http://blog.cleancoder.com/atom.xml", tags: ["people"] },
+    { name: "Rands in Repose", url: "http://randsinrepose.com/feed/", tags: ["people"] },
+    { name: "Cap Watkins", url: "http://capwatkins.com/blog/rss", tags: ["people", "dead"] },
+    { name: "Steve Yegge", url: "http://steve-yegge.blogspot.com/feeds/posts/default", tags: ["people"] },
+    { name: "Accidentally in Code", url: "http://feeds.feedburner.com/AccidentallyInCode", tags: ["people"] },
+    { name: "Elided Branches", url: "http://www.elidedbranches.com/feeds/posts/default", tags: ["people"] },
+    { name: "Julia Evans", url: "http://jvns.ca/atom.xml", tags: ["people"] },
+    { name: "jbrains.ca", url: "http://blog.jbrains.ca/feed.xml", tags: ["people"] },
+    { name: "Joel Spolsky", url: "http://www.joelonsoftware.com/rss.xml", tags: ["people"] },
+    { name: "Ethan Mollick", url: "https://www.oneusefulthing.org/feed", tags: ["people", "media"] },
+    { name: "LLM Watch", url: "https://www.llmwatch.com/feed", tags: ["media"] },
+    { name: "Arg Min", url: "https://www.argmin.net/feed", tags: ["media"] },
+    { name: "Lenny's Newsletter", url: "https://www.lennysnewsletter.com/feed", tags: ["media"] },
+    { name: "Yannic Kilcher", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew", tags: ["media", "dead"] },
+    { name: "Andrej Karpathy", url: "https://karpathy.github.io/feed.xml", tags: ["star", "people"] },
+    { name: "Anthropic Blog", url: "https://www.anthropic.com/blog/rss.xml", tags: ["star", "tech", "dead"] },
+    { name: "Google DeepMind", url: "https://deepmind.google/blog/rss.xml", tags: ["tech", "companies"] },
+    { name: "Simon Willison", url: "https://simonwillison.net/atom/everything/", tags: ["people"] },
+    { name: "Astral Codex Ten", url: "https://www.astralcodexten.com/feed", tags: ["star", "people"] },
+    { name: "Stratechery", url: "https://stratechery.com/feed/", tags: ["media"] },
+    { name: "The Morning Paper", url: "https://blog.acolyer.org/feed/", tags: ["people"] },
+    { name: "Ribbonfarm", url: "https://ribbonfarm.com/feed", tags: ["star", "people"] },
+    { name: "Meaningness", url: "https://meaningness.substack.com/feed", tags: ["star", "people"] },
+    { name: "Melting Asphalt", url: "https://meltingasphalt.com/feed", tags: ["star", "people","T"] },
+    { name: "Embedded in Academia", url: "https://blog.regehr.org/feed", tags: ["people"] },
+    { name: "without.boats", url: "https://without.boats/index.xml", tags: ["people"] },
+    { name: "Works in Progress", url: "https://www.worksinprogress.news/feed", tags: ["people"] },
+    { name: "Roots of Progress", url: "https://rootsofprogress.org/feed", tags: ["star", "people"] },
+    { name: "HN Classic", url: "https://hnrss.org/classic", tags: ["tech"] },
+    { name: "Interconnects", url: "https://www.interconnects.ai/feed", tags: ["star", "people"] },
+    { name: "Freddie deBoer", url: "https://freddiedeboer.substack.com/feed", tags: ["people"] },
+    { name: "Today in Tabs", url: "https://rss.beehiiv.com/feeds/ZRiesnGI0u.xml", tags: ["media"] },
+    { name: "Adam Jermyn", url: "https://adamjermyn.com/index.xml", tags: ["star", "people"] },
+    { name: "Venkatesh Rao", url: "https://contraptions.venkateshrao.com/feed", tags: ["star", "people"] },
+    { name: "Nostalgia", url: "https://raw.githubusercontent.com/nithishdivakar/daily-nostalgia/refs/heads/main/feed.xml", tags: ["nost"]},
+  ];
+    </script>
+    <script>
+    // ==================== cache-db.js ====================
+const CacheDB = {
+    DB_NAME: 'ReaderCache',
+    STORE_NAME: 'feeds',
+    TTL: 90 * 60 * 1000, // in ms
+
+    async init() {
+        return new Promise((resolve) => {
+            const request = indexedDB.open(this.DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                e.target.result.createObjectStore(this.STORE_NAME);
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+        });
+    },
+
+    async get(url) {
+        const db = await this.init();
+        return new Promise((resolve) => {
+            const req = db.transaction(this.STORE_NAME).objectStore(this.STORE_NAME).get(url);
+            req.onsuccess = () => {
+                const data = req.result;
+                if (data && (Date.now() - data.timestamp < this.TTL)) {
+                    const bundleWithFlag = {
+                        ...data.bundle,
+                        fromCache: true
+                    };
+                    resolve(bundleWithFlag);
+                } else {
+                    resolve(null); // Expired or missing
+                }
+            };
+        });
+    },
+
+    async set(url, bundle) {
+        const db = await this.init();
+        const tx = db.transaction(this.STORE_NAME, 'readwrite');
+        tx.objectStore(this.STORE_NAME).put({ bundle, timestamp: Date.now() }, url);
+    },
+
+    async nuke() {
+        const db = await this.init();
+        const tx = db.transaction(this.STORE_NAME, 'readwrite');
+        tx.objectStore(this.STORE_NAME).clear();
+        console.log("Cache nuked.");
+    },
+
+    async cleanup() {
+        const db = await this.init();
+        const tx = db.transaction(this.STORE_NAME, 'readwrite');
+        const store = tx.objectStore(this.STORE_NAME);
+        const request = store.openCursor();
+
+        request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                if (Date.now() - cursor.value.timestamp > this.TTL) {
+                    cursor.delete(); // Physically removes expired entries
+                }
+                cursor.continue();
+            }
+        };
+    },
+
+    async count() {
+        const db = await this.init();
+        return new Promise((resolve) => {
+            const req = db.transaction(this.STORE_NAME).objectStore(this.STORE_NAME).count();
+            req.onsuccess = () => resolve(req.result);
+        });
+    },
+};
+    </script>
+    <script>
+    // ==================== rss-engine.js ====================
+/**
+ * RSS Engine - A self-sufficient module for fetching and parsing RSS/Atom feeds
+ * using multiple proxy strategies to bypass CORS.
+ */
+
+const RSSEngine = {
+    async process(sourceConfig) {
+        const bundle = {
+            id: sourceConfig.url,
+            name: sourceConfig.name,
+            url: sourceConfig.url,
+            status: 'waiting',
+            lastFetched: new Date(),
+            strategyUsed: null,
+            items: [],
+            error: null,
+            metadata: {
+                title: sourceConfig.name,
+                description: '',
+                link: '',
+                icon: ''
+            }
+        };
+
+        try {
+            const { text, strategy } = await this.fetchWithStrategy(sourceConfig.url);
+            bundle.strategyUsed = strategy;
+            
+            const parsed = this.parse(text, bundle);
+            bundle.items = parsed.items;
+            bundle.metadata = { ...bundle.metadata, ...parsed.feedMeta };
+            bundle.status = 'success';
+        } catch (err) {
+            bundle.status = 'error';
+            bundle.error = err.message;
+        }
+
+        return bundle;
+    },
+    async fetchWithStrategy(url) {
+        const strategies = [
+            { name: 'CorsProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(url)}` },
+            { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+            { name: 'ThingProxy', url: `http://thingproxy.freeboard.io/fetch/${url}` },
+            { name: 'ThingProxys', url: `https://thingproxy.freeboard.io/fetch/${url}` },
+            { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+            { name: 'RSSBridge', url: `https://rss-bridge.org/bridge01/?action=display&bridge=FeedMergeBridge&format=Atom&url=${encodeURIComponent(url)}` },
+            { name: 'FetchRSS', url: `https://fetchrss.com/rss/${encodeURIComponent(url)}` }
+        ];
+
+        // Shuffle and add Direct
+        for (let i = strategies.length - 1; i > 1; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [strategies[i], strategies[j]] = [strategies[j], strategies[i]];
+        }
+        strategies.unshift({ name: 'Direct', url: url });
+        strategies.unshift({ name: 'Mp', url: `https://red-snowflake-da20.47e73dbfc21166b.workers.dev/?url=${encodeURIComponent(url)}` });
+
+        // Create ONE controller to rule them all
+        const globalController = new AbortController();
+        const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        const activePromises = [];
+
+        try {
+            for (const strat of strategies) {
+                const strategyPromise = (async () => {
+                    try {
+                        // Pass the global signal to every fetch
+                        const res = await fetch(strat.url, { signal: globalController.signal });
+                        if (res.ok) {
+                            const text = await res.text();
+                            const lc = text.trimStart().toLowerCase();
+                            if (text && (lc.includes('<rss') || lc.includes('<feed') || lc.includes('<channel'))) {
+                                // SUCCESS! Kill all other pending fetches
+                                globalController.abort(); 
+                                return { text, strategy: strat.name };
+                            }
+                        }
+                        console.log("Stratergy [" + strat.name + "] failed for " + strat.url);
+                        throw new Error('Fail');
+                    } catch (e) {
+                        // Keep the promise "pending" forever if it fails/aborts 
+                        // so it doesn't trigger Promise.any early
+                        console.log("Stratergy [" + strat.name + "] failed for " + strat.url + e);
+                        return await new Promise(() => {}); 
+                    }
+                })();
+
+                activePromises.push(strategyPromise);
+
+                // Wait 5s or until the current one (or any previous one) finishes
+                const result = await Promise.race([
+                    strategyPromise,
+                    Promise.any(activePromises),
+                    timeout(5000).then(() => 'STAGGER_NEXT')
+                ]);
+
+                if (result && result !== 'STAGGER_NEXT') {
+                    return result;
+                }
+            }
+
+            // Final fallback to wait for whoever wins
+            return await Promise.any(activePromises);
+
+        } catch (err) {
+            console.log("All stratergies failed for "+ url)
+            throw new Error("All strategies failed.");
+        }
+    },
+    extractCleanText(htmlDoc) {
+        // Select elements that usually represent a new line or block
+        const blocks = htmlDoc.querySelectorAll('p, div, br, li, h1, h2, h3, h4, h5, h6, tr');
+
+        blocks.forEach(el => {
+            const tagName = el.tagName.toLowerCase();
+            if (tagName === 'br') {
+                el.replaceWith('\n');
+            } else {
+                // Add a newline after the element to separate it from following content
+                el.after('\n');
+            }
+        });
+
+        return (htmlDoc.body.textContent || "")
+            .replace(/\n\s*\n/g, '\n\n') // Reduce excessive whitespace to double newlines
+            .trim();
+    },
+    parse(xmlText, sourceBundle) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, "text/xml");
+        
+        if (doc.querySelector("parsererror")) throw new Error("Invalid XML format");
+
+        // 1. Smarter Feed Title Extraction (from original logic)
+        let feedTitle = doc.querySelector("channel > title, feed > title")?.textContent;
+        if (feedTitle && (sourceBundle.name === 'Loading...' || !sourceBundle.name)) {
+            feedTitle = feedTitle.split(/[:|-]/)[0].trim();
+        } else {
+            feedTitle = feedTitle || new URL(sourceBundle.url).hostname.replace('www.', '');
+        }
+
+        const feedMeta = {
+            title: feedTitle,
+            description: doc.querySelector("channel > description, feed > subtitle")?.textContent || '',
+            link: doc.querySelector("channel > link, feed > link[rel='alternate']")?.getAttribute("href") || 
+                  doc.querySelector("channel > link")?.textContent || '',
+            icon: `https://www.google.com/s2/favicons?domain=${new URL(sourceBundle.url).hostname}&sz=64`
+        };
+
+        const entries = Array.from(doc.querySelectorAll("item, entry"));
+        
+        const items = entries.map(el => {
+            const ingestionTime = Date.now();
+            const getTag = (tag) => el.querySelector(tag)?.textContent || "";
+            
+            // 2. Enhanced Link Extraction
+            let link = getTag("link") || el.querySelector("link")?.getAttribute("href") || "";
+
+            // 3. Content and Image Extraction (Merged Logic)
+            const rawContent = getTag("content\\:encoded") || 
+                               getTag("description") || 
+                               getTag("summary") || 
+                               getTag("content");
+            
+            const htmlDoc = parser.parseFromString(rawContent, 'text/html');
+            // const blurb = (htmlDoc.body.textContent || "").trim();
+            const blurb = this.extractCleanText(htmlDoc);
+
+            // 4. Detailed Image Extraction (from original logic)
+            let image = el.querySelector("enclosure[type^='image']")?.getAttribute("url") || 
+                        el.querySelector("media\\:content, content")?.getAttribute("url");
+            
+            if (!image) {
+                const firstImg = htmlDoc.querySelector('img');
+                if (firstImg) image = firstImg.getAttribute('src');
+            }
+
+            const dateStr = getTag("pubDate") || getTag("published") || getTag("updated");
+            // const date = dateStr ? new Date(dateStr) : new Date();
+            const date = dateStr ? new Date(dateStr) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+            return {
+                id: link.trim() || Math.random().toString(36).substr(2, 9),
+                title: getTag("title").trim() || "Untitled",
+                link: link.trim(),
+                date: isNaN(date.getTime()) ? new Date() : date,
+                snippet: blurb,
+                ingestedAt: ingestionTime,
+                image: image || null,
+                sourceId: sourceBundle.id,
+                sourceName: feedMeta.title
+            };
+        });
+
+        return { items, feedMeta };
+    }
+};
+    </script>
+    <style>
+        * { margin: 0; }
+        body {font-size: 16px;word-wrap: break-word;padding: 0.5rem;max-width: 540px;margin: auto;}
+        .rows {display: flex; flex-direction: column;}
+        .cols {display: flex; flex-direction: row;}
+        .gapx {gap:0 0.5rem;}
+        .gapy {gap:0.5rem 0;}
+        .snippet {color: #01335b;font-size: small;}
+        .meta {color: #01335b;font-size: x-small;}
+        .seen { opacity: 0.5; }
+        .btn_lnk{color:#0000ef;}
+    </style>
+</head>
+<body>
+    <div style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text x=%2250%22 y=%2265%22 font-family=%22monospace%22 font-size=%2248%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22black%22>r.</text></svg>'); width:20px; height:20px;"></div>
+<div id="app" class="rows" style="gap: 1rem 0;">
+    <h1>READ</h1>
+    <div>{{ status }} -- {{b0_out.length}} items injested</div>
+    <div class="rows gapy">
+        <h2>Predicates</h3>
+        <ul>
+            <li>
+                <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
+                    <span>Tags:</span>
+                    <template v-for="(data, tag) in all_tags" :key="tag">
+                        <a class="btn_lnk" href="#" @click="set_active_tag(data.tag_id)">{{ tag }}</a>
+                    </template>
+                </div>
+            </li>
+            <li>
+                <div class="cols" style="justify-content: flex-start;flex-wrap: wrap; gap: 0 0.5rem;">
+                    <span>Days:</span>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(1)">1d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(3)">3d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(7)">7d</a>
+                    <a class="btn_lnk" href="#" @click="set_date_preset(128)">all</a>
+                </div>
+            </li>
+            <li>Toggle <a href="#" class="btn_lnk" @click="toggle_tag('seen')">seen</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="rows gapy">
+        <h2> Filtered Buffer</h2>
+        <div class="cols gapx meta">
+            --
+            <template v-for="(data, tag) in visible_tags" :key="tag">
+                <span>{{ tag }}({{ data.tag_count }})</span>
+            </template>
+        </div>
+        <div class="rows" style="gap:1em 0;">
+            <div v-for="(a, i) in b2_out" :key="a.link + i">
+                <art :a="a"></art>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+const SeenStore = (() => {
+    const KEY     = 'reader_seen_v2';
+    const TTL_MS  = 7 * 24 * 60 * 60 * 1000;
+    let map = {};
+
+    try {
+        const stored = JSON.parse(localStorage.getItem(KEY) || '{}');
+        const now    = Date.now();
+        for (const [url, ts] of Object.entries(stored))
+            if (now - ts < TTL_MS) map[url] = ts;
+        localStorage.setItem(KEY, JSON.stringify(map));
+    } catch {}
+
+    return {
+        has(url) { return url in map; },
+        add(url) { map[url] = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(map)); } catch {} },
+    };
+})();
+
+const seen_observer = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+        if (e.intersectionRatio < 0.5) continue;
+        const article = e.target._article;
+        if (!article || article.source.tags.includes('seen')) continue;
+        e.target._timer = setTimeout(() => {
+            // article.source.tags.push('seen');
+            SeenStore.add(article.link);
+        }, 1000);
+    }
+}, { threshold: 0.5 });
+
+function make_buffer(source = null, sort_fn = null) {
+    const _store     = source ? null : ref([]);
+    const predicates = ref({});
+    const all        = source ? source : _store;
+
+    const out = computed(() => {
+        const filtered = all.value.filter(
+            a => Object.values(predicates.value).every(p => p(a))
+        );
+        return sort_fn ? [...filtered].sort(sort_fn) : filtered;
+    });
+
+    function ingest(article)           { if (_store) _store.value.push(article); }
+    function set_predicate(key, fn)    { predicates.value = { ...predicates.value, [key]: fn }; }
+    function remove_predicate(key)     { const { [key]: _, ...rest } = predicates.value; predicates.value = rest; }
+    function has_predicate(key)        { return key in predicates.value; }
+
+    return { out, ingest, set_predicate, remove_predicate, has_predicate };
+}
+
+const app = createApp({
+    setup() {
+        const status = ref('loading...');
+
+        const b0 = make_buffer();
+        const b1 = make_buffer(b0.out);
+        const b2 = make_buffer(b1.out, (a, b) => a._salt - b._salt);
+
+        const tags_stats = (buffer) => computed(() => {
+            const stats = {
+                _all: { tag_id: null, tag_count: 0 }
+            };
+            buffer.out.value.forEach(item => {
+                const tags = item.source?.tags || [];
+                stats._all.tag_count++;
+                tags.forEach(t => {
+                    if (t != null) {
+                        if (!stats[t]) {
+                            stats[t] = {
+                                tag_id: t,
+                                tag_count: 0
+                            };
+                        }
+                        stats[t].tag_count++;
+                    }
+                });
+            });
+            return stats;
+        });
+
+        const set_date_preset = (b, days) => {
+            const start = new Date();
+            start.setDate(start.getDate() - parseInt(days));
+            const start_str = start.toISOString().split('T')[0];
+            b.set_predicate('date_start', a => a.date.toISOString().split('T')[0] >= start_str);
+        };
+
+        const tag_pred = (tag, include = true) => a => {
+            const match = Array.isArray(a.source?.tags) && a.source.tags.includes(tag);
+            return include ? !match : match;
+        };
+
+        const set_active_tag_fn = (b, tag) => {
+            b.set_predicate('tag_filter', tag === null ? () => true : tag_pred(tag, false));
+        };
+
+        const is_tag_active_fn= (b, tag) => {
+            if (typeof tag !== 'string' || !tag) return;
+            const key = `filter_${tag}`;
+            return b.has_predicate(key)
+        };
+
+        const toggle_tag_fn = (b, tag) => {
+            if (typeof tag !== 'string' || !tag) return;
+            const key = `filter_${tag}`;
+            b.has_predicate(key) ? b.remove_predicate(key) : b.set_predicate(key, tag_pred(tag, true));
+        };
+
+        async function fetch_source(config) {
+            try {
+                let bundle = await CacheDB.get(config.url);
+                if (!bundle) {
+                    bundle = await RSSEngine.process({ url: config.url, name: config.name });
+                    if (bundle.status === 'success') await CacheDB.set(config.url, bundle);
+                }
+                if (bundle.status === 'success') {
+                    bundle.items.forEach(item => {
+                        const orig_tags = [...(config.tags || [])];
+                        if (SeenStore.has(item.link)){
+                            orig_tags.push('seen');
+                        }
+                        const tags = [...new Set([...orig_tags])];
+
+                        b0.ingest({
+                            ...item,
+                            _salt:       Math.random(),
+                            date:        new Date(item.date || Date.now()),
+                            source_name: config.name || config.url,
+                            source_id:   config.url,
+                            source:      { ...config, tags },
+                            from_cache:  bundle.fromCache,
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('fetch error', config.url, e);
+            }
+        }
+
+        onMounted(async () => {
+            await CacheDB.cleanup();
+            status.value = `fetching ${FEED_CONFIG.length} sources`;
+            set_date_preset(b1, 30);
+            set_date_preset(b2, 1);
+            await Promise.allSettled(FEED_CONFIG.map(fetch_source));
+            status.value = `done — ${b0.out.value.length} total, ${b2.out.value.length} filtered`;
+        });
+
+        const all_tags     = tags_stats(b1);
+        const visible_tags = tags_stats(b2);
+
+        return {
+            status,
+            b0_out: b0.out,
+            b2_out: b2.out,
+            b2,
+            set_date_preset: (days) => set_date_preset(b2, days),
+            set_active_tag:  (tag)  => set_active_tag_fn(b2, tag),
+            toggle_tag:  (tag)  => toggle_tag_fn(b2, tag),
+            is_tag_active: (tag) => is_tag_active_fn(b2, tag),
+            all_tags,
+            visible_tags
+        };
+    }
+});
+
+app.component('art', {
+    props: ['a'],
+    setup(props) {
+        const root = ref(null);
+        onMounted(() => {
+            root.value._article = props.a;
+            seen_observer.observe(root.value);
+        });
+        onUnmounted(() => {
+    if (root.value) {
+        clearTimeout(root.value._timer);
+        seen_observer.unobserve(root.value);
+    }
+});
+        return { root };
+    },
+    template: `
+        <div :class="['rows', { seen: a.source.tags?.includes('seen') }]" ref="root">
+            <span class="meta">
+                {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
+            </span>
+            <span style="font-size: larger;">
+                <a :href="a.link" class="btn_lnk" target="_blank">{{ a.title }}</a>
+            </span>
+            <div class="snippet">
+                {{ a.snippet.substring(0, 600) }}
+            </div>
+        </div>
+    `
+});
+
+app.mount('#app');
+</script>
+</body>
+</html>

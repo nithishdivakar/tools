@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#FAF9F6">
-<title>tally</title>
+<title>thing counter</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,8 +13,8 @@
 
 
 /*
-| Role        | Job                                       | Example from tally  |
-|------------ |------------------------------------------ |-------------------- |
+| Role        | Job                                       | Example              |
+|------------ |------------------------------------------ |---------------------- |
 | background  | page canvas                               | #FAF9F6             |
 | surface     | cards, inputs, raised elements            | #FFFFFF             |
 | ink         | primary text                              | #1B1D18             |
@@ -76,8 +76,10 @@
   }
   .logo{
     background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2265%22 font-family=%22monospace%22 font-size=%2248%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22black%22>%23</text></svg>');
-    width:20px;
-    height:20px;
+    width: 30px;
+    height: 30px;
+    background-size: contain;
+    background-repeat: no-repeat;
   }
   .page {
     max-width: 480px;
@@ -88,7 +90,7 @@
       display: flex;
       align-items: center;
       flex-direction: row;
-      gap: 5px;
+      gap: 0px;
   }
 
   .topbar h1 {
@@ -113,6 +115,17 @@
   }
 
   .field-group { margin-top: 30px; }
+  .thing-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .thing-row .field-label {
+    margin-bottom: 0;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .thing-row .thing-field { flex: 1 1 auto; }
   .thing-field {
     width: 100%;
     border: none;
@@ -229,6 +242,51 @@
   .stepper input::-webkit-outer-spin-button,
   .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
+  .day-section { margin-top: 34px; }
+  .day-header-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.03em;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--line);
+  }
+  .day-block {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 15px;
+  }
+  .day-date {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    min-width: 100px;
+  }
+  .day-things {
+    font-size: 12px;
+    color: var(--ink-mute);
+    line-height: 1.6;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 2px 5px;
+  }
+  .day-things .thing-name { color: var(--ink); }
+
+  .thing-name {
+    font-size:10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
   .log-section { margin-top: 34px; }
   .log-header {
     display: flex;
@@ -307,6 +365,12 @@
     color: var(--ink);
     padding: 10px;
     resize: vertical;
+  }
+  .csv-hint {
+    font-size: 10.5px;
+    color: var(--ink-mute);
+    margin: 8px 2px 0;
+    line-height: 1.5;
   }
   .csv-actions { display: flex; gap: 8px; margin-top: 9px; }
   .csv-actions button {
@@ -397,8 +461,10 @@
 
   <main>
     <section class="field-group">
-      <label class="field-label" for="thingInput">thing</label>
-      <input type="text" id="thingInput" class="thing-field" placeholder="..." autocomplete="off" enterkeyhint="done">
+      <div class="thing-row">
+        <label class="field-label" for="thingInput">thing</label>
+        <input type="text" id="thingInput" class="thing-field" placeholder="..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+      </div>
       <div class="chips" id="chipsRow"></div>
     </section>
 
@@ -416,6 +482,13 @@
       </div>
     </section>
 
+    <section class="day-section">
+      <div class="day-header-row">
+        <span>by day</span>
+      </div>
+      <div id="dayView"></div>
+    </section>
+
     <section class="log-section">
       <div class="log-header">
         <span>recent</span>
@@ -425,9 +498,11 @@
     </section>
 
     <details class="csv-details" id="csvDetails">
-      <summary>export csv</summary>
-      <textarea id="csvOut" class="csv-out" readonly></textarea>
+      <summary>import / export csv</summary>
+      <textarea id="csvOut" class="csv-out" spellcheck="false"></textarea>
+      <p class="csv-hint">paste csv data above (thing,time,reps) then tap import to load it. this replaces everything currently recorded.</p>
       <div class="csv-actions">
+        <button id="importCsvBtn" type="button">import</button>
         <button id="copyCsvBtn" type="button">copy</button>
         <button id="clearAllBtn" type="button" class="danger">clear all</button>
       </div>
@@ -454,8 +529,10 @@
   const recordBtn = document.getElementById('recordBtn');
   const statusEl = document.getElementById('status');
   const recentLog = document.getElementById('recentLog');
+  const dayView = document.getElementById('dayView');
   const totalCountEl = document.getElementById('totalCount');
   const csvOut = document.getElementById('csvOut');
+  const importCsvBtn = document.getElementById('importCsvBtn');
   const copyCsvBtn = document.getElementById('copyCsvBtn');
   const clearAllBtn = document.getElementById('clearAllBtn');
   const heroNumber = document.getElementById('heroNumber');
@@ -485,6 +562,12 @@
     const d = new Date(iso);
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  function formatDay(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   function getRecentDistinctThings(n) {
@@ -555,6 +638,44 @@
     heroNumber.classList.add('pulse');
   }
 
+  function renderDayView() {
+    dayView.innerHTML = '';
+    if (records.length === 0) {
+      const p = document.createElement('div');
+      p.className = 'empty-note';
+      p.textContent = 'nothing recorded yet';
+      dayView.appendChild(p);
+      return;
+    }
+
+    // group records by day, then sum reps by thing within each day
+    const byDay = new Map();
+    records.forEach(rec => {
+      const day = formatDay(rec.time);
+      if (!byDay.has(day)) byDay.set(day, new Map());
+      const byThing = byDay.get(day);
+      byThing.set(rec.thing, (byThing.get(rec.thing) || 0) + rec.reps);
+    });
+
+    const days = Array.from(byDay.keys()).sort((a, b) => b.localeCompare(a));
+
+    days.forEach(day => {
+      const byThing = byDay.get(day);
+      const thingsText = Array.from(byThing.entries())
+        .sort(([thingA], [thingB]) => thingA.localeCompare(thingB))
+        .map(([thing, total]) => `<span class="thing-name">${escapeHtml(thing)} (${total})</span> `)
+        .join(' ');
+
+      const block = document.createElement('div');
+      block.className = 'day-block';
+      block.innerHTML = `
+        <div class="day-date">${escapeHtml(day)}</div>
+        <div class="day-things">${thingsText}</div>
+      `;
+      dayView.appendChild(block);
+    });
+  }
+
   function renderRecentLog() {
     totalCountEl.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
     recentLog.innerHTML = '';
@@ -601,6 +722,89 @@
     return str;
   }
 
+  // parses raw csv text into an array of row arrays, handling quoted
+  // fields (with embedded commas, quotes, and newlines) per csvEscape above
+  function parseCsvText(text) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += c;
+        }
+      } else if (c === '"') {
+        inQuotes = true;
+      } else if (c === ',') {
+        row.push(field);
+        field = '';
+      } else if (c === '\n') {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = '';
+      } else if (c === '\r') {
+        // skip, \n handles the line break
+      } else {
+        field += c;
+      }
+    }
+    if (field.length > 0 || row.length > 0) {
+      row.push(field);
+      rows.push(row);
+    }
+    return rows.filter(r => !(r.length === 1 && r[0].trim() === ''));
+  }
+
+  function parseCsvIntoRecords(text) {
+    const rows = parseCsvText(text);
+    if (rows.length === 0) return { records: [], skipped: 0 };
+
+    let start = 0;
+    let thingIdx = 0, timeIdx = 1, repsIdx = 2;
+    const firstRow = rows[0].map(c => c.trim().toLowerCase());
+    if (firstRow.includes('thing') || firstRow.includes('time') || firstRow.includes('reps')) {
+      thingIdx = firstRow.indexOf('thing');
+      timeIdx = firstRow.indexOf('time');
+      repsIdx = firstRow.indexOf('reps');
+      if (thingIdx === -1) thingIdx = 0;
+      if (timeIdx === -1) timeIdx = 1;
+      if (repsIdx === -1) repsIdx = 2;
+      start = 1;
+    }
+
+    const parsed = [];
+    let skipped = 0;
+    for (let i = start; i < rows.length; i++) {
+      const cells = rows[i];
+      const thing = (cells[thingIdx] || '').trim();
+      const timeRaw = (cells[timeIdx] || '').trim();
+      const repsRaw = (cells[repsIdx] || '').trim();
+
+      if (!thing) { skipped++; continue; }
+
+      let time = timeRaw ? new Date(timeRaw) : new Date();
+      if (isNaN(time.getTime())) time = new Date();
+
+      let reps = parseInt(repsRaw, 10);
+      if (isNaN(reps) || reps < 1) reps = 1;
+
+      parsed.push({ thing, time: time.toISOString(), reps });
+    }
+
+    // the rest of the app assumes records are in ascending chronological
+    // order (recent log and chips read from the end of the array)
+    parsed.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    return { records: parsed, skipped };
+  }
+
   function renderCsv() {
     const lines = ['thing,time,reps'];
     records.forEach(rec => {
@@ -612,6 +816,7 @@
   function afterChange() {
     saveRecords();
     renderChips();
+    renderDayView();
     renderRecentLog();
     renderCsv();
     updateHero();
@@ -668,6 +873,28 @@
   }
 
   recordBtn.addEventListener('click', doRecord);
+
+  importCsvBtn.addEventListener('click', () => {
+    const text = csvOut.value;
+    if (!text.trim()) {
+      setStatus('paste some csv data first', true);
+      return;
+    }
+    const { records: parsed, skipped } = parseCsvIntoRecords(text);
+    if (parsed.length === 0) {
+      setStatus('no valid rows found in that csv', true);
+      return;
+    }
+    const skipNote = skipped > 0 ? `, skipped ${skipped}` : '';
+    const proceed = confirm(
+      `import ${parsed.length} record${parsed.length === 1 ? '' : 's'}${skipNote}? this replaces everything currently recorded.`
+    );
+    if (!proceed) return;
+
+    records = parsed;
+    afterChange();
+    setStatus(`imported ${parsed.length} record${parsed.length === 1 ? '' : 's'}`);
+  });
 
   copyCsvBtn.addEventListener('click', async () => {
     try {

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed Health Checker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --green: #00ff87;
+    --red: #ff4444;
+    --yellow: #ffcc00;
+    --blue: #4488ff;
+    --dim: #555;
+    --text: #e0e0e0;
+    --subtext: #888;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--green);
+  }
+
+  h1 span { color: var(--dim); font-weight: 400; }
+
+  .stats {
+    display: flex;
+    gap: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+  }
+
+  .stat { display: flex; flex-direction: column; align-items: flex-end; }
+  .stat-val { font-size: 1.4rem; font-weight: 600; line-height: 1; }
+  .stat-label { color: var(--subtext); font-size: 0.68rem; margin-top: 2px; }
+  .stat.ok .stat-val { color: var(--green); }
+  .stat.fail .stat-val { color: var(--red); }
+  .stat.pending .stat-val { color: var(--yellow); }
+  .stat.total .stat-val { color: var(--text); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+
+  button:hover { border-color: var(--green); color: var(--green); }
+  button.primary { background: var(--green); color: #000; border-color: var(--green); }
+  button.primary:hover { background: #00cc6a; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .filter-btns {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    border-radius: 0;
+  }
+
+  .filter-btn.active { border-color: var(--blue); color: var(--blue); }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+
+  .progress-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--subtext);
+    margin-bottom: 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  thead th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--subtext);
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  thead th:hover { color: var(--text); }
+
+  tbody tr {
+    border-bottom: 1px solid #1a1a1a;
+    transition: background 0.1s;
+  }
+
+  tbody tr:hover { background: var(--surface); }
+
+  td {
+    padding: 9px 10px;
+    vertical-align: middle;
+  }
+
+  .td-status {
+    width: 90px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .status-ok { color: var(--green); }
+  .status-fail { color: var(--red); }
+  .status-pending { color: var(--yellow); }
+  .status-checking {
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .spinner {
+    width: 10px; height: 10px;
+    border: 1.5px solid var(--blue);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .td-name {
+    font-weight: 500;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .td-url {
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .td-url a {
+    color: var(--subtext);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+  }
+
+  .td-url a:hover { color: var(--blue); text-decoration: underline; }
+
+  .td-tags { max-width: 160px; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    margin: 1px 2px 1px 0;
+  }
+
+  .tag.star { border-color: #ffcc0055; color: var(--yellow); }
+
+  .td-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    width: 70px;
+    color: var(--subtext);
+  }
+
+  .td-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--subtext);
+    width: 80px;
+    text-align: right;
+  }
+
+  .td-error {
+    font-size: 0.72rem;
+    color: var(--red);
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 60px;
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+  }
+
+  .export-btn {
+    margin-left: auto;
+  }
+
+  #search {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 200px;
+    outline: none;
+  }
+
+  #search:focus { border-color: var(--blue); }
+  #search::placeholder { color: var(--dim); }
+
+  .concurrency-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--subtext);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #concurrency {
+    width: 44px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    padding: 4px 6px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>feed<span>/</span>checker</h1>
+    <div style="color:var(--subtext);font-size:0.75rem;margin-top:4px;font-family:'IBM Plex Mono',monospace;">
+      rss · atom · health diagnostics
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat total"><span class="stat-val" id="s-total">0</span><span class="stat-label">TOTAL</span></div>
+    <div class="stat ok"><span class="stat-val" id="s-ok">0</span><span class="stat-label">OK</span></div>
+    <div class="stat fail"><span class="stat-val" id="s-fail">0</span><span class="stat-label">DEAD</span></div>
+    <div class="stat pending"><span class="stat-val" id="s-pending">0</span><span class="stat-label">PENDING</span></div>
+  </div>
+</header>
+
+<div class="controls">
+  <button class="primary" id="btn-run" onclick="startChecks()">▶ Run Checks</button>
+  <button id="btn-stop" onclick="stopChecks()" disabled>■ Stop</button>
+  <button onclick="exportCSV()">↓ Export CSV</button>
+  <button id="btn-dead-config" onclick="exportDeadConfig()" disabled title="Run checks first">↓ Export Dead Config</button>
+  <label class="concurrency-label">
+    workers <input type="number" id="concurrency" value="8" min="1" max="20">
+  </label>
+  <input type="text" id="search" placeholder="search name / url…" oninput="renderTable()">
+  <div class="filter-btns">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-filter="ok" onclick="setFilter('ok',this)">OK</button>
+    <button class="filter-btn" data-filter="fail" onclick="setFilter('fail',this)">Dead</button>
+    <button class="filter-btn" data-filter="pending" onclick="setFilter('pending',this)">Pending</button>
+  </div>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+<div class="progress-text" id="progress-text">Load your feed-config.js then hit Run Checks.</div>
+
+<table>
+  <thead>
+    <tr>
+      <th onclick="sortBy('status')">Status</th>
+      <th onclick="sortBy('name')">Name</th>
+      <th>URL</th>
+      <th onclick="sortBy('tags')">Tags</th>
+      <th onclick="sortBy('code')">HTTP</th>
+      <th onclick="sortBy('time')">Time</th>
+      <th>Error</th>
+    </tr>
+  </thead>
+  <tbody id="table-body"></tbody>
+</table>
+<div id="no-results" class="no-results" style="display:none">No results match the current filter.</div>
+
+<script src="feed-config.js"></script>
+<script>
+// FEED_CONFIG is already declared as const by feed-config.js — just use it directly.
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof FEED_CONFIG !== 'undefined' && Array.isArray(FEED_CONFIG) && FEED_CONFIG.length) {
+    initRows();
+    document.getElementById('progress-text').textContent =
+      'Loaded ' + FEED_CONFIG.length + ' feeds — hit Run Checks to begin.';
+  } else {
+    document.getElementById('progress-text').textContent =
+      '⚠ FEED_CONFIG not found. Make sure feed-config.js is in the same folder.';
+  }
+});
+
+
+// ── State ──
+let rows = [];
+let filter = 'all';
+let sortCol = 'status';
+let sortDir = 1;
+let running = false;
+let stopFlag = false;
+
+function initRows() {
+  rows = FEED_CONFIG.map((f, i) => ({
+    id: i,
+    name: f.name || urlToName(f.url),
+    url: f.url,
+    tags: f.tags || [],
+    status: 'pending',
+    code: null,
+    time: null,
+    error: null,
+  }));
+  document.getElementById('s-total').textContent = rows.length;
+  document.getElementById('s-pending').textContent = rows.length;
+  renderTable();
+}
+
+function urlToName(url) {
+  try { return new URL(url).hostname.replace('www.',''); } catch { return url; }
+}
+
+// ── Checking logic ──
+// const PROXY = 'https://corsproxy.io/?';
+const PROXY = 'https://red-snowflake-da20.47e73dbfc21166b.workers.dev/?url=';
+
+
+async function checkFeed(row) {
+  const t0 = Date.now();
+  try {
+    const res = await fetch(PROXY + encodeURIComponent(row.url), {
+      method: 'GET',
+      signal: AbortSignal.timeout(12000),
+      headers: { 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' }
+    });
+    row.time = Date.now() - t0;
+    row.code = res.status;
+    if (res.status >= 200 && res.status < 400) {
+      row.status = 'ok';
+    } else {
+      row.status = 'fail';
+      row.error = `HTTP ${res.status}`;
+    }
+  } catch (e) {
+    row.time = Date.now() - t0;
+    row.status = 'fail';
+    row.error = e.name === 'TimeoutError' ? 'Timeout (12s)' : (e.message || 'Network error');
+  }
+}
+
+async function runPool(tasks, concurrency) {
+  let i = 0;
+  async function worker() {
+    while (i < tasks.length && !stopFlag) {
+      const task = tasks[i++];
+      task.status = 'checking';
+      renderStats();
+      await checkFeed(task);
+      renderStats();
+      updateProgress(tasks);
+      renderTable();
+    }
+  }
+  const workers = Array.from({ length: concurrency }, worker);
+  await Promise.all(workers);
+}
+
+async function startChecks() {
+  if (!FEED_CONFIG) {
+    alert('feed-config.js not loaded. Make sure both files are in the same folder and open via a local server.');
+    return;
+  }
+  stopFlag = false;
+  running = true;
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-stop').disabled = false;
+
+  // Reset all
+  rows.forEach(r => { r.status = 'pending'; r.code = null; r.time = null; r.error = null; });
+  renderStats();
+
+  const concurrency = Math.max(1, Math.min(20, parseInt(document.getElementById('concurrency').value) || 8));
+  await runPool(rows, concurrency);
+
+  running = false;
+  document.getElementById('btn-run').disabled = false;
+  document.getElementById('btn-stop').disabled = true;
+  const deadCount = rows.filter(r=>r.status==='fail').length;
+  document.getElementById('progress-text').textContent =
+    `Done — ${rows.filter(r=>r.status==='ok').length} ok, ${deadCount} dead.`;
+  document.getElementById('btn-dead-config').disabled = deadCount === 0;
+}
+
+function stopChecks() {
+  stopFlag = true;
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('progress-text').textContent = 'Stopped.';
+}
+
+function updateProgress(tasks) {
+  const done = tasks.filter(r => r.status === 'ok' || r.status === 'fail').length;
+  const pct = Math.round((done / tasks.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent =
+    `Checking… ${done} / ${tasks.length} (${pct}%)`;
+}
+
+// ── Render ──
+function renderStats() {
+  document.getElementById('s-ok').textContent = rows.filter(r => r.status === 'ok').length;
+  document.getElementById('s-fail').textContent = rows.filter(r => r.status === 'fail').length;
+  document.getElementById('s-pending').textContent = rows.filter(r => r.status === 'pending' || r.status === 'checking').length;
+}
+
+function setFilter(f, el) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('search').value.toLowerCase();
+
+  let visible = rows.filter(r => {
+    if (filter === 'ok' && r.status !== 'ok') return false;
+    if (filter === 'fail' && r.status !== 'fail') return false;
+    if (filter === 'pending' && r.status !== 'pending' && r.status !== 'checking') return false;
+    if (search && !r.name.toLowerCase().includes(search) && !r.url.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const statusOrder = { fail: 0, checking: 1, pending: 2, ok: 3 };
+  visible.sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'status') { av = statusOrder[a.status] ?? 4; bv = statusOrder[b.status] ?? 4; }
+    else if (sortCol === 'name') { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
+    else if (sortCol === 'tags') { av = (a.tags||[]).join(','); bv = (b.tags||[]).join(','); }
+    else if (sortCol === 'code') { av = a.code ?? 999; bv = b.code ?? 999; }
+    else if (sortCol === 'time') { av = a.time ?? 99999; bv = b.time ?? 99999; }
+    if (av < bv) return -1 * sortDir;
+    if (av > bv) return 1 * sortDir;
+    return 0;
+  });
+
+  const tbody = document.getElementById('table-body');
+  if (visible.length === 0) {
+    tbody.innerHTML = '';
+    document.getElementById('no-results').style.display = 'block';
+    return;
+  }
+  document.getElementById('no-results').style.display = 'none';
+
+  tbody.innerHTML = visible.map(r => `
+    <tr>
+      <td class="td-status">${statusCell(r)}</td>
+      <td class="td-name" title="${r.name}">${r.name}</td>
+      <td class="td-url"><a href="${r.url}" target="_blank" title="${r.url}">${r.url}</a></td>
+      <td class="td-tags">${(r.tags||[]).map(t => `<span class="tag ${t}">${t}</span>`).join('')}</td>
+      <td class="td-code">${r.code ?? '—'}</td>
+      <td class="td-time">${r.time != null ? r.time + 'ms' : '—'}</td>
+      <td class="td-error" title="${r.error||''}">${r.error || ''}</td>
+    </tr>
+  `).join('');
+}
+
+function statusCell(r) {
+  if (r.status === 'ok') return '<span class="status-ok">● OK</span>';
+  if (r.status === 'fail') return '<span class="status-fail">✕ DEAD</span>';
+  if (r.status === 'checking') return '<span class="status-checking"><span class="spinner"></span>CHECKING</span>';
+  return '<span class="status-pending">○ PENDING</span>';
+}
+
+// ── Export Dead Config ──
+function exportDeadConfig() {
+  const deadUrls = new Set(rows.filter(r => r.status === 'fail').map(r => r.url));
+
+  // Reconstruct entries from FEED_CONFIG, tagging dead ones
+  const entries = FEED_CONFIG.map(entry => {
+    const isDead = deadUrls.has(entry.url);
+    let tags = entry.tags ? [...entry.tags] : [];
+    if (isDead && !tags.includes('dead')) tags.push('dead');
+
+    // Build the entry object preserving original field order
+    const out = {};
+    if (entry.name !== undefined) out.name = entry.name;
+    out.url = entry.url;
+    if (tags.length > 0) out.tags = tags;
+    // carry over any other fields
+    for (const k of Object.keys(entry)) {
+      if (k !== 'name' && k !== 'url' && k !== 'tags') out[k] = entry[k];
+    }
+    return out;
+  });
+
+  // Serialise each entry as a compact one-liner
+  const lines = entries.map(e => {
+    const parts = [];
+    if (e.name !== undefined) parts.push(`name: ${JSON.stringify(e.name)}`);
+    parts.push(`url: ${JSON.stringify(e.url)}`);
+    if (e.tags && e.tags.length) parts.push(`tags: [${e.tags.map(t => JSON.stringify(t)).join(', ')}]`);
+    for (const k of Object.keys(e)) {
+      if (k !== 'name' && k !== 'url' && k !== 'tags') parts.push(`${k}: ${JSON.stringify(e[k])}`);
+    }
+    return `  { ${parts.join(', ')} }`;
+  });
+
+  const deadCount = deadUrls.size;
+  const header =
+`/**
+ * FEED_CONFIG - Centralized list of RSS/Atom feed sources.
+ * Each entry requires a name and url. 'starred' is optional.
+ *
+ * Generated by feed-checker — ${new Date().toISOString().slice(0,10)}
+ * ${deadCount} feed${deadCount !== 1 ? 's' : ''} tagged "dead" based on last health check.
+ */
+const FEED_CONFIG = [\n`;
+
+  const footer =
+`\n];\n
+// Export for different environments
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FEED_CONFIG;
+} else {
+    window.FEED_CONFIG = FEED_CONFIG;
+}`;
+
+  const content = header + lines.join(',\n') + footer;
+  const blob = new Blob([content], { type: 'text/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'feed-config.js';
+  a.click();
+}
+
+function exportCSV() {
+  const headers = ['name','url','tags','status','http_code','time_ms','error'];
+  const lines = [headers.join(','), ...rows.map(r =>
+    [r.name, r.url, (r.tags||[]).join('|'), r.status, r.code??'', r.time??'', (r.error||'').replace(/,/g,' ')]
+    .map(v => `"${v}"`).join(',')
+  )];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'feed-health.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

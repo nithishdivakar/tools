@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed Sort</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --green: #00ff87;
+    --red: #ff4444;
+    --yellow: #ffcc00;
+    --blue: #4488ff;
+    --purple: #bb88ff;
+    --dim: #555;
+    --text: #e0e0e0;
+    --subtext: #888;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--green);
+  }
+  h1 span { color: var(--dim); font-weight: 400; }
+
+  .subtitle {
+    color: var(--subtext);
+    font-size: 0.75rem;
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stats {
+    display: flex;
+    gap: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; }
+  .stat-val { font-size: 1.4rem; font-weight: 600; line-height: 1; }
+  .stat-label { color: var(--subtext); font-size: 0.68rem; margin-top: 2px; }
+  .stat.total .stat-val { color: var(--text); }
+  .stat.tags-stat .stat-val { color: var(--purple); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  button:hover { border-color: var(--green); color: var(--green); }
+  button.primary { background: var(--green); color: #000; border-color: var(--green); }
+  button.primary:hover { background: #00cc6a; }
+
+  .sort-group {
+    display: flex;
+    border: 1px solid var(--border);
+  }
+  .sort-group span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--subtext);
+    padding: 8px 10px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .sort-btn {
+    border: none;
+    border-right: 1px solid var(--border);
+    padding: 8px 14px;
+    font-size: 0.72rem;
+  }
+  .sort-btn:last-child { border-right: none; }
+  .sort-btn.active { color: var(--green); }
+  .sort-btn:hover { border-color: transparent; }
+
+  .dir-btn { padding: 8px 12px; }
+
+  #search {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 220px;
+    outline: none;
+  }
+  #search:focus { border-color: var(--green); }
+  #search::placeholder { color: var(--dim); }
+
+  .ml-auto { margin-left: auto; }
+
+  .tag-filter-wrap {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .tag-filter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 2px;
+  }
+  .tf-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .tf-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .tf-btn.active { border-color: var(--purple); color: var(--purple); background: #1a0e2a; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  thead th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--subtext);
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sort-active { color: var(--green); }
+
+  tbody tr { border-bottom: 1px solid #1a1a1a; transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface); }
+  td { padding: 8px 10px; vertical-align: middle; }
+
+  .td-idx {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--dim);
+    width: 40px;
+    text-align: right;
+    padding-right: 14px;
+  }
+  .td-name { font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .td-name.no-name { color: var(--dim); font-style: italic; font-size: 0.75rem; }
+
+  .td-url { max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .td-url a {
+    color: var(--subtext);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+  }
+  .td-url a:hover { color: var(--blue); text-decoration: underline; }
+
+  .td-tags { max-width: 220px; }
+  .tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    margin: 1px 2px 1px 0;
+  }
+  .tag.star      { border-color: #ffcc0055; color: var(--yellow); }
+  .tag.dead      { border-color: #ff444455; color: var(--red); }
+  .tag.tech      { border-color: #4488ff44; color: var(--blue); }
+  .tag.people    { border-color: #00ff8744; color: var(--green); }
+  .tag.companies { border-color: #bb88ff44; color: var(--purple); }
+
+  .no-results {
+    text-align: center;
+    padding: 60px;
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+  }
+
+  .status-bar {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--subtext);
+    margin-bottom: 16px;
+    min-height: 18px;
+  }
+  .status-bar .ok  { color: var(--green); }
+  .status-bar .err { color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>feed<span>/</span>sort</h1>
+    <div class="subtitle">config · sort · export</div>
+  </div>
+  <div class="stats">
+    <div class="stat total">   <span class="stat-val" id="s-total">0</span><span class="stat-label">FEEDS</span></div>
+    <div class="stat tags-stat"><span class="stat-val" id="s-tags">0</span> <span class="stat-label">TAGS</span></div>
+  </div>
+</header>
+
+<div class="status-bar" id="status-bar">Loading…</div>
+
+<div class="controls">
+  <div class="sort-group">
+    <span>Sort</span>
+    <button class="sort-btn active" id="sb-name" onclick="setSort('name',this)">Name</button>
+    <button class="sort-btn"        id="sb-url"  onclick="setSort('url',this)">URL</button>
+    <button class="sort-btn"        id="sb-tags" onclick="setSort('tags',this)">Tags</button>
+    <button class="sort-btn"        id="sb-none" onclick="setSort('none',this)">Original</button>
+  </div>
+  <button class="dir-btn" id="dir-btn" onclick="toggleDir()" title="Reverse sort direction">↑</button>
+  <input type="text" id="search" placeholder="search name / url / tag…" oninput="renderTable()">
+  <button class="ml-auto primary" onclick="exportConfig()">↓ Export feed-config.js</button>
+</div>
+
+<div class="tag-filter-wrap" id="tag-filters"></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="sort-active" id="th-name" onclick="setSort('name',document.getElementById('sb-name'))">Name ↑</th>
+      <th id="th-url"  onclick="setSort('url', document.getElementById('sb-url'))">URL</th>
+      <th id="th-tags" onclick="setSort('tags',document.getElementById('sb-tags'))">Tags</th>
+    </tr>
+  </thead>
+  <tbody id="table-body"></tbody>
+</table>
+<div id="no-results" class="no-results" style="display:none">No results match the current filter.</div>
+
+<!-- Same pattern as feed-checker: just drop both files in the same folder -->
+<script src="feed-config.js"></script>
+<script>
+let allFeeds = [];
+let sortCol  = 'name';
+let sortDir  = 1;
+let activeTag = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof FEED_CONFIG === 'undefined' || !Array.isArray(FEED_CONFIG) || !FEED_CONFIG.length) {
+    setStatus('<span class="err">⚠ FEED_CONFIG not found — make sure feed-config.js is in the same folder and open via a local server.</span>');
+    return;
+  }
+
+  allFeeds = FEED_CONFIG.map((f, i) => ({
+    _orig : i,
+    name  : f.name != null ? f.name : null,
+    url   : f.url  || '',
+    tags  : Array.isArray(f.tags) ? [...f.tags] : [],
+    _extra: Object.fromEntries(Object.entries(f).filter(([k]) => !['name','url','tags'].includes(k)))
+  }));
+
+  const tagSet = new Set();
+  allFeeds.forEach(f => f.tags.forEach(t => tagSet.add(t)));
+
+  document.getElementById('s-total').textContent = allFeeds.length;
+  document.getElementById('s-tags').textContent  = tagSet.size;
+  setStatus(`<span class="ok">✓ ${allFeeds.length} feeds loaded</span> — ${tagSet.size} unique tags.`);
+
+  buildTagFilters([...tagSet].sort());
+  renderTable();
+});
+
+// ── Tag filters ──
+function buildTagFilters(tags) {
+  const wrap = document.getElementById('tag-filters');
+  wrap.innerHTML = '<span class="tag-filter-label">Filter</span>';
+  const mk = (label, tag, startActive) => {
+    const b = document.createElement('button');
+    b.className   = 'tf-btn' + (startActive ? ' active' : '');
+    b.textContent = label;
+    b.onclick     = () => setTagFilter(tag, b);
+    wrap.appendChild(b);
+  };
+  mk('all', null, true);
+  mk('(no tags)', '__none__', false);
+  tags.forEach(t => mk(t, t, false));
+}
+
+function setTagFilter(tag, el) {
+  activeTag = tag;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+// ── Sort ──
+function setSort(col, btn) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  updateSortHeaders();
+  renderTable();
+}
+
+function toggleDir() {
+  sortDir *= -1;
+  updateSortHeaders();
+  renderTable();
+}
+
+function updateSortHeaders() {
+  ['name','url','tags'].forEach(c => {
+    const th = document.getElementById('th-' + c);
+    if (!th) return;
+    th.classList.remove('sort-active');
+    th.textContent = c.charAt(0).toUpperCase() + c.slice(1);
+  });
+  if (sortCol !== 'none') {
+    const th = document.getElementById('th-' + sortCol);
+    if (th) {
+      th.classList.add('sort-active');
+      th.textContent = sortCol.charAt(0).toUpperCase() + sortCol.slice(1) + (sortDir === 1 ? ' ↑' : ' ↓');
+    }
+  }
+  document.getElementById('dir-btn').textContent = sortDir === 1 ? '↑' : '↓';
+}
+
+function getSorted(feeds) {
+  if (sortCol === 'none') return [...feeds].sort((a,b) => sortDir * (a._orig - b._orig));
+  return [...feeds].sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'name') {
+      av = (a.name || a.url).toLowerCase();
+      bv = (b.name || b.url).toLowerCase();
+    } else if (sortCol === 'url') {
+      const dom = u => { try { const x = new URL(u); return x.hostname.replace('www.','') + x.pathname; } catch { return u; } };
+      av = dom(a.url); bv = dom(b.url);
+    } else if (sortCol === 'tags') {
+      av = [...a.tags].sort().join(',');
+      bv = [...b.tags].sort().join(',');
+    }
+    if (av < bv) return -1 * sortDir;
+    if (av > bv) return  1 * sortDir;
+    return 0;
+  });
+}
+
+// ── Render ──
+function renderTable() {
+  const search = document.getElementById('search').value.toLowerCase();
+
+  const visible = allFeeds.filter(f => {
+    if      (activeTag === '__none__')  { if (f.tags.length > 0) return false; }
+    else if (activeTag != null)         { if (!f.tags.includes(activeTag)) return false; }
+    if (search) {
+      const hay = [(f.name||''), f.url, ...f.tags].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const sorted = getSorted(visible);
+  document.getElementById('no-results').style.display = sorted.length === 0 ? 'block' : 'none';
+
+  document.getElementById('table-body').innerHTML = sorted.map((f, i) => `
+    <tr>
+      <td class="td-idx">${i + 1}</td>
+      <td class="td-name${f.name ? '' : ' no-name'}" title="${f.name||''}">${f.name || '(no name)'}</td>
+      <td class="td-url"><a href="${f.url}" target="_blank" title="${f.url}">${f.url}</a></td>
+      <td class="td-tags">${f.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('')}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Export ──
+function exportConfig() {
+  const exportList = getSorted(allFeeds); // full list, current sort order
+
+  const lines = exportList.map(f => {
+    const parts = [];
+    if (f.name != null) parts.push(`name: ${JSON.stringify(f.name)}`);
+    parts.push(`url: ${JSON.stringify(f.url)}`);
+    if (f.tags.length) parts.push(`tags: [${f.tags.map(t => JSON.stringify(t)).join(', ')}]`);
+    Object.entries(f._extra || {}).forEach(([k,v]) => parts.push(`${k}: ${JSON.stringify(v)}`));
+    return `    { ${parts.join(', ')} }`;
+  });
+
+  const sortLabel = sortCol === 'none'
+    ? 'original order'
+    : `sorted by ${sortCol} (${sortDir === 1 ? 'asc' : 'desc'})`;
+
+  const out =
+`/**
+ * FEED_CONFIG - Centralized list of RSS/Atom feed sources.
+ * Each entry requires a name and url. 'tags' is optional.
+ *
+ * Generated by feed-sort — ${new Date().toISOString().slice(0,10)}
+ * ${exportList.length} feeds · ${sortLabel}
+ */
+const FEED_CONFIG = [
+${lines.join(',\n')}
+];
+
+// Export for different environments
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FEED_CONFIG;
+} else {
+    window.FEED_CONFIG = FEED_CONFIG;
+}`;
+
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([out], { type: 'text/javascript' }));
+  a.download = 'feed-config.js';
+  a.click();
+  setStatus(`<span class="ok">✓ Exported ${exportList.length} feeds</span> — ${sortLabel}.`);
+}
+
+function setStatus(html) {
+  document.getElementById('status-bar').innerHTML = html;
+}
+</script>
+</body>
+</html>

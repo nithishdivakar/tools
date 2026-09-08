@@ -516,13 +516,21 @@ const RSSEngine = {
         .meta {color: #01335b;font-size: x-small;}
         .seen { opacity: 0.5; }
         .btn_lnk{color:#0000ef;}
+        .logo{width:30px;}
     </style>
 </head>
 <body>
-    <div style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text x=%2250%22 y=%2265%22 font-family=%22monospace%22 font-size=%2248%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22black%22>r.</text></svg>'); width:20px; height:20px;"></div>
 <div id="app" class="rows" style="gap: 1rem 0;">
-    <h1>READ</h1>
-    <div>{{ status }} -- {{b0_out.length}} items injested</div>
+    <div class="logo">
+        <svg viewBox="0 0 100 100">
+            <rect width="100" height="100" fill="white"/>
+            <text x="0" y="75" font-family="serif" font-size="98" font-weight="bold" text-anchor="left" fill="black">
+                r
+            </text>
+            <circle cx="51" cy="68" r="11" fill="red" opacity="0.99" />
+        </svg>
+    </div>
+    <div><a class="btn_lnk" href="#" @click.prevent="refresh">[refresh]</a> {{ status }} -- {{b0_out.length}} items injested</div>
     <div class="rows gapy">
         <h2>Predicates</h3>
         <ul>
@@ -706,13 +714,17 @@ const app = createApp({
             }
         }
 
-        onMounted(async () => {
-            await CacheDB.cleanup();
+        async function refresh() {
             status.value = `fetching ${FEED_CONFIG.length} sources`;
-            set_date_preset(b1, 30);
-            set_date_preset(b2, 1);
             await Promise.allSettled(FEED_CONFIG.map(fetch_source));
             status.value = `done — ${b0.out.value.length} total, ${b2.out.value.length} filtered`;
+        }
+
+        onMounted(async () => {
+            await CacheDB.cleanup();
+            set_date_preset(b1, 30);
+            set_date_preset(b2, 1);
+            await refresh();
         });
 
         const all_tags     = tags_stats(b1);
@@ -720,6 +732,7 @@ const app = createApp({
 
         return {
             status,
+            refresh,
             b0_out: b0.out,
             b2_out: b2.out,
             b2,

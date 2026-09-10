@@ -530,7 +530,12 @@ const RSSEngine = {
             <circle cx="51" cy="68" r="11" fill="red" opacity="0.99" />
         </svg>
     </div>
-    <div><a class="btn_lnk" href="#" @click.prevent="refresh">[refresh]</a> {{ status }} -- {{b0_out.length}} items injested</div>
+    <div>
+        <ul>
+            <li> <a class="btn_lnk" href="#" @click.prevent="refresh">[reload]</a></li>
+            <li>{{ status }} -- {{b0_out.length}} items injested</li>
+        </ul>
+    </div>
     <div class="rows gapy">
         <h2>Predicates</h3>
         <ul>
@@ -627,7 +632,7 @@ function make_buffer(source = null, sort_fn = null) {
 
 const app = createApp({
     setup() {
-        const status = ref('loading...');
+        const status = ref('loading -- ');
 
         const b0 = make_buffer();
         const b1 = make_buffer(b0.out);
@@ -683,12 +688,17 @@ const app = createApp({
             b.has_predicate(key) ? b.remove_predicate(key) : b.set_predicate(key, tag_pred(tag, true));
         };
 
-        async function fetch_source(config) {
+        async function fetch_source(config, { force = false } = {}) {
             try {
-                let bundle = await CacheDB.get(config.url);
-                if (!bundle) {
+                let bundle;
+                if (force) {
+                    // Manual [refresh]: always hit the network, ignore any cached copy.
                     bundle = await RSSEngine.process({ url: config.url, name: config.name });
                     if (bundle.status === 'success') await CacheDB.set(config.url, bundle);
+                } else {
+                    // Silent load: only ever read from local cache, never touch the network.
+                    bundle = await CacheDB.get(config.url);
+                    if (!bundle) return; // nothing cached yet for this source -- skip until refresh
                 }
                 if (bundle.status === 'success') {
                     bundle.items.forEach(item => {
@@ -716,15 +726,23 @@ const app = createApp({
 
         async function refresh() {
             status.value = `fetching ${FEED_CONFIG.length} sources`;
-            await Promise.allSettled(FEED_CONFIG.map(fetch_source));
+            await Promise.allSettled(FEED_CONFIG.map(config => fetch_source(config, { force: true })));
             status.value = `done — ${b0.out.value.length} total, ${b2.out.value.length} filtered`;
+        }
+
+        // Silent load on app open / return-from-background: reads whatever is
+        // already in local cache with zero network calls, so the list looks
+        // exactly like it did before -- nothing is fetched until [refresh] is tapped.
+        async function load_from_cache() {
+            await Promise.allSettled(FEED_CONFIG.map(config => fetch_source(config, { force: false })));
+            status.value = `${b0.out.value.length} total, ${b2.out.value.length} filtered`;
         }
 
         onMounted(async () => {
             await CacheDB.cleanup();
             set_date_preset(b1, 30);
             set_date_preset(b2, 1);
-            await refresh();
+            await load_from_cache();
         });
 
         const all_tags     = tags_stats(b1);

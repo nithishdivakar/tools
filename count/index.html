@@ -174,38 +174,32 @@
 
   .hero {
     margin-top: 34px;
+  }
+  #recordBtn {
+    width: 100%;
+    display: block;
     text-align: center;
-    padding: 22px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-  .hero-number {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-size: 60px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 20px;
+    border-radius: 18px;
+    font-family: inherit;
+    font-size: 15px;
+    letter-spacing: 0.04em;
     font-weight: 600;
-    color: var(--green-dark);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    display: inline-block;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.1s ease;
   }
-  .hero-number.pulse { animation: pulse 0.4s ease; }
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-  }
-  .hero-caption {
-    font-size: 12px;
-    color: var(--ink-mute);
-    margin-top: 7px;
-  }
+  #recordBtn:active { background: var(--accent-dark); transform: scale(0.98); }
+  #recordBtn.err { background: var(--danger); }
 
   .reps-group {
     margin-top: 26px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 5px;
+    flex-direction: column;
   }
   .reps-group .field-label { margin-bottom: 0; }
   .stepper {
@@ -417,36 +411,7 @@
   .status-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
   .status-toast.err { background: var(--danger); }
 
-  .record-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, var(--background) 65%, rgba(250, 249, 246, 0));
-  }
-  #recordBtn {
-    width: 100%;
-    max-width: 440px;
-    margin: 0 auto;
-    display: block;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 17px;
-    border-radius: 15px;
-    font-family: inherit;
-    font-size: 14px;
-    letter-spacing: 0.04em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.1s ease, background 0.1s ease;
-  }
-  #recordBtn:active { background: var(--green-dark); transform: scale(0.98); }
-  #recordBtn.err { background: var(--red); }
-
   @media (prefers-reduced-motion: reduce) {
-    .hero-number.pulse { animation: none; }
     #recordBtn, .chip, .status-toast { transition: none; }
   }
 </style>
@@ -468,19 +433,18 @@
       <div class="chips" id="chipsRow"></div>
     </section>
 
-    <section class="hero">
-      <div class="hero-number" id="heroNumber">0</div>
-      <div class="hero-caption" id="heroCaption">nothing logged yet</div>
-    </section>
-
     <section class="reps-group">
-      <span class="field-label">reps for this entry</span>
       <div class="stepper">
         <button type="button" id="repsDown" aria-label="decrease reps">−</button>
         <input type="number" id="repsInput" value="1" min="1" step="1" inputmode="numeric">
         <button type="button" id="repsUp" aria-label="increase reps">+</button>
       </div>
+      <span class="field-label">reps for this entry</span>
     </section>
+    <section class="hero">
+      <button id="recordBtn" type="button">count</button>
+    </section>
+
 
     <section class="day-section">
       <div class="day-header-row">
@@ -512,10 +476,6 @@
   </main>
 
   <div id="status" class="status-toast" role="status" aria-live="polite"></div>
-
-  <div class="record-bar">
-    <button id="recordBtn" type="button">count</button>
-  </div>
 </div>
 
 <script>
@@ -535,8 +495,6 @@
   const importCsvBtn = document.getElementById('importCsvBtn');
   const copyCsvBtn = document.getElementById('copyCsvBtn');
   const clearAllBtn = document.getElementById('clearAllBtn');
-  const heroNumber = document.getElementById('heroNumber');
-  const heroCaption = document.getElementById('heroCaption');
 
   let records = loadRecords();
   let statusTimer = null;
@@ -558,16 +516,28 @@
     }
   }
 
-  function formatTime(iso) {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
+  // records store `time` as a plain "YYYY-MM-DD HH:MM:SS" string already
+  // rendered in the device's local time at the moment it was recorded.
+  // there is no ISO/UTC value anywhere - what's stored is exactly what
+  // gets shown, so there's no locale/timezone conversion happening on
+  // display or on sort (the zero-padded string sorts chronologically
+  // just fine with plain string comparison).
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  // formats a Date object into that local display string
+  function formatDateTime(d) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
-  function formatDay(iso) {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  // the string stored on a record IS the display string - nothing to convert
+  function formatTime(timeStr) {
+    return timeStr;
+  }
+
+  // the date portion is just the first 10 characters of that same string
+  function formatDay(timeStr) {
+    return timeStr.slice(0, 10);
   }
 
   function getRecentDistinctThings(n) {
@@ -603,7 +573,6 @@
         thingInput.value = thing;
         thingInput.focus();
         updateChipActiveStates();
-        updateHero();
       });
       chipsRow.appendChild(btn);
     });
@@ -614,28 +583,6 @@
     chipsRow.querySelectorAll('.chip').forEach(chip => {
       chip.classList.toggle('active', !chip.classList.contains('empty') && chip.textContent === current);
     });
-  }
-
-  function updateHero() {
-    const thing = thingInput.value.trim();
-    if (!thing) {
-      const totalReps = records.reduce((sum, r) => sum + r.reps, 0);
-      heroNumber.textContent = totalReps;
-      heroCaption.textContent = records.length === 0 ? 'nothing logged yet' : 'reps logged, all things';
-      return;
-    }
-    const matches = records.filter(r => r.thing === thing);
-    const totalReps = matches.reduce((sum, r) => sum + r.reps, 0);
-    heroNumber.textContent = totalReps;
-    heroCaption.textContent = matches.length === 0
-      ? `${thing} · not logged yet`
-      : `${thing} · ${matches.length} ${matches.length === 1 ? 'entry' : 'entries'}`;
-  }
-
-  function pulseHero() {
-    heroNumber.classList.remove('pulse');
-    void heroNumber.offsetWidth;
-    heroNumber.classList.add('pulse');
   }
 
   function renderDayView() {
@@ -677,7 +624,8 @@
   }
 
   function renderRecentLog() {
-    totalCountEl.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
+    const totalReps = records.reduce((sum, r) => sum + r.reps, 0);
+    totalCountEl.textContent = `${records.length} record${records.length === 1 ? '' : 's'}, ${totalReps} rep${totalReps === 1 ? '' : 's'}`;
     recentLog.innerHTML = '';
     if (records.length === 0) {
       const p = document.createElement('div');
@@ -789,18 +737,31 @@
 
       if (!thing) { skipped++; continue; }
 
-      let time = timeRaw ? new Date(timeRaw) : new Date();
-      if (isNaN(time.getTime())) time = new Date();
+      // if it's already in our "YYYY-MM-DD HH:MM:SS" display format, keep
+      // it exactly as-is - no parsing, no timezone conversion, no locale
+      // logic at all. otherwise fall back to Date parsing (for pasting in
+      // other formats/ISO strings) and re-render it as a local display
+      // string the same way a fresh recording would be.
+      let time;
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(timeRaw)) {
+        time = timeRaw;
+      } else {
+        let d = timeRaw ? new Date(timeRaw) : new Date();
+        if (isNaN(d.getTime())) d = new Date();
+        time = formatDateTime(d);
+      }
 
       let reps = parseInt(repsRaw, 10);
       if (isNaN(reps) || reps < 1) reps = 1;
 
-      parsed.push({ thing, time: time.toISOString(), reps });
+      parsed.push({ thing, time, reps });
     }
 
     // the rest of the app assumes records are in ascending chronological
-    // order (recent log and chips read from the end of the array)
-    parsed.sort((a, b) => new Date(a.time) - new Date(b.time));
+    // order (recent log and chips read from the end of the array). the
+    // stored strings are fixed-width and zero-padded, so plain string
+    // comparison sorts them chronologically with no date parsing needed.
+    parsed.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 
     return { records: parsed, skipped };
   }
@@ -819,7 +780,6 @@
     renderDayView();
     renderRecentLog();
     renderCsv();
-    updateHero();
   }
 
   function setStatus(text, isErr) {
@@ -848,7 +808,6 @@
 
   thingInput.addEventListener('input', () => {
     updateChipActiveStates();
-    updateHero();
   });
 
   function doRecord() {
@@ -863,11 +822,10 @@
     const reps = clampReps(repsInput.value);
     records.push({
       thing: thing,
-      time: new Date().toISOString(),
+      time: formatDateTime(new Date()),
       reps: reps
     });
     afterChange();
-    pulseHero();
     setStatus(`recorded "${thing}" ×${reps}`);
     repsInput.value = 1;
   }

@@ -1,6 +1,6 @@
 {
-  "name": "READ \u2014 RSS Reader",
-  "short_name": "READ",
+  "name": "READ",
+  "short_name": "r.",
   "start_url": "./reader.html",
   "display": "standalone",
   "background_color": "#ffffff",

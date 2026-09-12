@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>READ min</title>
+    <title>r.</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
     // ==================== feed-config.js ====================
@@ -598,6 +598,18 @@ const SeenStore = (() => {
     };
 })();
 
+// Deterministic hash (djb2) used to order articles. Same title -> same
+// position every time, so the feed order is stable across reloads/refreshes
+// and doesn't depend on fetch/ingestion timing (which is what caused
+// same-source articles to cluster together before).
+function hashString(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0; // hash * 33 + c
+    }
+    return hash;
+}
+
 const seen_observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
         if (e.intersectionRatio < 0.5) continue;
@@ -636,7 +648,7 @@ const app = createApp({
 
         const b0 = make_buffer();
         const b1 = make_buffer(b0.out);
-        const b2 = make_buffer(b1.out, (a, b) => a._salt - b._salt);
+        const b2 = make_buffer(b1.out, (a, b) => a._num - b._num);
 
         const tags_stats = (buffer) => computed(() => {
             const stats = {
@@ -707,10 +719,12 @@ const app = createApp({
                             orig_tags.push('seen');
                         }
                         const tags = [...new Set([...orig_tags])];
+                        const hash = hashString(item.title || item.link || '');
 
                         b0.ingest({
                             ...item,
-                            _salt:       Math.random(),
+                            _salt:       hash,
+                            _num:        Math.abs(hash) % 1117,
                             date:        new Date(item.date || Date.now()),
                             source_name: config.name || config.url,
                             source_id:   config.url,
@@ -783,7 +797,7 @@ app.component('art', {
     template: `
         <div :class="['rows', { seen: a.source.tags?.includes('seen') }]" ref="root">
             <span class="meta">
-                {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
+                {{ a._num.toString() }} | {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
             </span>
             <span style="font-size: larger;">
                 <a :href="a.link" class="btn_lnk" target="_blank">{{ a.title }}</a>

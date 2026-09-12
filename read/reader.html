@@ -622,13 +622,20 @@ function hashString(str) {
 
 const seen_observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
-        if (e.intersectionRatio < 0.5) continue;
         const article = e.target._article;
         if (!article || article.source.tags.includes('seen')) continue;
-        e.target._timer = setTimeout(() => {
-            // article.source.tags.push('seen');
+ 
+        if (e.isIntersecting) {
+            // Crossed into view past the threshold -- remember it, but
+            // don't mark seen yet.
+            e.target._wasVisible = true;
+        } else if (e.target._wasVisible) {
+            // It was visible and has now scrolled back out of view --
+            // that's the "seen" moment.
+            article.source.tags.push('seen');
             SeenStore.add(article.link);
-        }, 1000);
+            e.target._wasVisible = false;
+        }
     }
 }, { threshold: 0.5 });
 

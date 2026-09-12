@@ -577,7 +577,7 @@ const RSSEngine = {
     </div>
 </div>
 <script>
-const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
 
 const SeenStore = (() => {
     const KEY     = 'reader_seen_v2';
@@ -649,6 +649,49 @@ const app = createApp({
         const b0 = make_buffer();
         const b1 = make_buffer(b0.out);
         const b2 = make_buffer(b1.out, (a, b) => a._num - b._num);
+
+        // --- Resume where you left off -------------------------------------
+        // Covers two things that can otherwise make the list "reset":
+        // (1) the browser/OS threw away the page's JS state while you were
+        //     reading an article and reloads it fresh when you come back --
+        //     the scroll position is gone even though the same items get
+        //     reloaded from cache in the same order.
+        // (2) that reload race, or anything else, leaves the buffer empty --
+        //     self-heal instead of requiring a manual [refresh] tap.
+        const SCROLL_KEY = 'reader_scroll_y';
+        let scroll_restore_pending = true;
+
+        function save_scroll() {
+            try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); } catch {}
+        }
+
+        let scroll_ticking = false;
+        function on_scroll() {
+            if (scroll_ticking) return;
+            scroll_ticking = true;
+            requestAnimationFrame(() => { save_scroll(); scroll_ticking = false; });
+        }
+
+        // Once the (deterministically-ordered) list has real content again,
+        // jump back to the last scroll offset -- one-shot per page load.
+        const stop_scroll_watch = watch(b2.out, (list) => {
+            if (!scroll_restore_pending || list.length === 0) return;
+            scroll_restore_pending = false;
+            let y = 0;
+            try { y = parseInt(sessionStorage.getItem(SCROLL_KEY) || '0', 10); } catch {}
+            if (y > 0) nextTick(() => window.scrollTo(0, y));
+            stop_scroll_watch();
+        });
+
+        // If we come back to the tab and somehow have zero items (state got
+        // dropped without a full reload triggering onMounted again), quietly
+        // reload from cache instead of leaving the user staring at a blank
+        // list until they remember to hit [refresh].
+        async function handle_visibility() {
+            if (document.visibilityState === 'visible' && b0.out.value.length === 0) {
+                await load_from_cache();
+            }
+        }
 
         const tags_stats = (buffer) => computed(() => {
             const stats = {
@@ -724,7 +767,7 @@ const app = createApp({
                         b0.ingest({
                             ...item,
                             _salt:       hash,
-                            _num:        Math.abs(hash) % 1117,
+                            _num:        Math.abs(hash) % 8191,
                             date:        new Date(item.date || Date.now()),
                             source_name: config.name || config.url,
                             source_id:   config.url,
@@ -753,10 +796,17 @@ const app = createApp({
         }
 
         onMounted(async () => {
+            window.addEventListener('scroll', on_scroll, { passive: true });
+            document.addEventListener('visibilitychange', handle_visibility);
             await CacheDB.cleanup();
             set_date_preset(b1, 30);
             set_date_preset(b2, 1);
             await load_from_cache();
+        });
+
+        onUnmounted(() => {
+            window.removeEventListener('scroll', on_scroll);
+            document.removeEventListener('visibilitychange', handle_visibility);
         });
 
         const all_tags     = tags_stats(b1);
@@ -797,10 +847,11 @@ app.component('art', {
     template: `
         <div :class="['rows', { seen: a.source.tags?.includes('seen') }]" ref="root">
             <span class="meta">
-                {{ a._num.toString() }} | {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
+                {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
             </span>
             <span style="font-size: larger;">
-                <a :href="a.link" class="btn_lnk" target="_blank">{{ a.title }}</a>
+                <span class="meta">{{ a._num.toString()}}.</span>
+                <a :href="a.link" class="btn_lnk" target="_blank" rel="noopener">{{ a.title }}</a>
             </span>
             <div class="snippet">
                 {{ a.snippet.substring(0, 600) }}

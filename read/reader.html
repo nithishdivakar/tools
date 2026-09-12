@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>r.</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- iOS reads these directly; it doesn't fully honor the manifest for install/display behavior -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="r.">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text x=%2250%22 y=%2265%22 font-family=%22monospace%22 font-size=%2248%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22black%22>r%2E</text></svg>">
+
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
     // ==================== feed-config.js ====================
@@ -847,10 +857,10 @@ app.component('art', {
     template: `
         <div :class="['rows', { seen: a.source.tags?.includes('seen') }]" ref="root">
             <span class="meta">
-                {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
+                {{ a._num.toString()}}. {{a.sourceName}} | {{ a.date.toLocaleDateString('en-GB', {year: 'numeric', month: 'long', day: 'numeric' }) }} | {{ a.source.tags ? a.source.tags.join(', ') : 'none' }}
             </span>
             <span style="font-size: larger;">
-                <span class="meta">{{ a._num.toString()}}.</span>
+                <span class="meta"></span>
                 <a :href="a.link" class="btn_lnk" target="_blank" rel="noopener">{{ a.title }}</a>
             </span>
             <div class="snippet">
@@ -860,6 +870,9 @@ app.component('art', {
     `
 });
 
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
 app.mount('#app');
 </script>
 </body>

@@ -620,24 +620,48 @@ function hashString(str) {
     return hash;
 }
 
+
+
+const SEEN_DELAY_MS = 400; // tweak to taste
+
 const seen_observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
         const article = e.target._article;
         if (!article || article.source.tags.includes('seen')) continue;
- 
-        if (e.isIntersecting) {
-            // Crossed into view past the threshold -- remember it, but
-            // don't mark seen yet.
-            e.target._wasVisible = true;
-        } else if (e.target._wasVisible) {
-            // It was visible and has now scrolled back out of view --
-            // that's the "seen" moment.
-            article.source.tags.push('seen');
-            SeenStore.add(article.link);
-            e.target._wasVisible = false;
+
+        if (e.isIntersecting && e.intersectionRatio >= 0.90) {
+            // Started (or continuing) a >=90% dwell -- record when it began,
+            // and start a timer to confirm it lasted long enough.
+            if (e.target._visibleSince == null) {
+                e.target._visibleSince = performance.now();
+                e.target._seenTimer = setTimeout(() => {
+                    // Double-check elapsed time explicitly, don't just trust
+                    // that the timer firing means T ms really passed.
+                    const elapsed = performance.now() - e.target._visibleSince;
+                    if (elapsed >= SEEN_DELAY_MS) {
+                        e.target._wasVisible = true;
+                    }
+                    e.target._seenTimer = null;
+                }, SEEN_DELAY_MS);
+            }
+        } else {
+            // Dropped below 90% or left entirely -- dwell was interrupted.
+            if (e.target._seenTimer) {
+                clearTimeout(e.target._seenTimer);
+                e.target._seenTimer = null;
+            }
+            e.target._visibleSince = null;
+
+            if (!e.isIntersecting && e.target._wasVisible) {
+                article.source.tags.push('seen');
+                SeenStore.add(article.link);
+                e.target._wasVisible = false;
+                seen_observer.unobserve(e.target);
+            }
         }
     }
-}, { threshold: 0.5 });
+}, { threshold: [0.5, 0.90] });
+
 
 function make_buffer(source = null, sort_fn = null) {
     const _store     = source ? null : ref([]);

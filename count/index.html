@@ -126,6 +126,7 @@
     white-space: nowrap;
   }
   .thing-row .thing-field { flex: 1 1 auto; }
+  .custom-input-row { margin-top: 14px; }
   .thing-field {
     width: 100%;
     border: none;
@@ -139,7 +140,7 @@
     outline: none;
     transition: border-color 0.15s ease;
   }
-  .thing-field:focus { border-bottom-color: var(--green); }
+  .thing-field:focus { border-bottom-color: var(--accent); }
   .thing-field::placeholder { color: var(--ink-faint); }
 
   .chips {
@@ -163,13 +164,20 @@
   }
   .chip:active { transform: scale(0.96); }
   .chip.active {
-    border-color: var(--green);
-    color: var(--green-dark);
-    background: var(--green-wash);
+    border-color: var(--accent);
+    color: var(--accent-dark);
+    background: var(--accent-wash);
   }
   .chip.empty {
     color: var(--ink-faint);
     border-style: dashed;
+  }
+  .chip.chip-custom {
+    border-style: dashed;
+    color: var(--ink-mute);
+  }
+  .chip.chip-custom.active {
+    border-style: solid;
   }
 
   .hero {
@@ -246,39 +254,84 @@
     padding-bottom: 9px;
     border-bottom: 1px solid var(--line);
   }
-  .day-block {
-    padding: 7px 0;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 15px;
+
+  /* date column width sized to comfortably hold a count badge circle
+     while staying narrow relative to a full text column */
+  :root { --date-col-w: 30px; }
+
+  .grid-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .day-date {
+  table.thing-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    width: max-content;
+  }
+  .thing-grid th,
+  .thing-grid td {
+    padding: 0;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    text-align: center;
+    vertical-align: middle;
+  }
+  .thing-grid th:last-child,
+  .thing-grid td:last-child { border-right: none; }
+
+  .grid-corner {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--background);
+    border-bottom: 2px solid var(--line);
+    width: 108px;
+  }
+  .grid-date-th {
+    width: var(--date-col-w);
+    height: 92px;
+    border-bottom: 2px solid var(--line);
+    vertical-align: bottom;
+    padding-bottom: 8px;
+  }
+  .grid-date-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.02em;
+    display: inline-block;
+  }
+  .grid-thing-cell {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--background);
     font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--ink);
-    min-width: 100px;
+    text-align: left;
+    padding: 0 10px;
+    width: 108px;
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .day-things {
-    font-size: 12px;
-    color: var(--ink-mute);
-    line-height: 1.6;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 2px 5px;
-  }
-  .day-things .thing-name { color: var(--ink); }
-
-  .thing-name {
-    font-size:10px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--ink);
+  .grid-count-cell { width: var(--date-col-w); padding: 5px 0; }
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1;
   }
 
   .log-section { margin-top: 34px; }
@@ -311,15 +364,15 @@
   .log-reps {
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--green-dark);
-    background: var(--green-wash);
+    color: var(--accent-dark);
+    background: var(--accent-wash);
     padding: 3px 9px;
     border-radius: 999px;
   }
   .log-del {
     border: none;
     background: transparent;
-    color: var(--red);
+    color: var(--danger);
     font-size: 15px;
     width: 30px;
     height: 30px;
@@ -378,7 +431,7 @@
     color: var(--ink);
     cursor: pointer;
   }
-  .csv-actions button.danger { color: var(--red); border-color: rgba(178, 58, 46, 0.35); background: var(--red-wash); }
+  .csv-actions button.danger { color: var(--danger); border-color: rgba(178, 58, 46, 0.35); background: var(--danger-wash); }
 
   .sw-note {
     margin-top: 24px;
@@ -426,11 +479,11 @@
 
   <main>
     <section class="field-group">
-      <div class="thing-row">
-        <label class="field-label" for="thingInput">thing</label>
-        <input type="text" id="thingInput" class="thing-field" placeholder="..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
-      </div>
+      <span class="field-label">thing</span>
       <div class="chips" id="chipsRow"></div>
+      <div class="thing-row custom-input-row" id="customInputRow" hidden>
+        <input type="text" id="thingInput" class="thing-field" placeholder="type a new thing…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+      </div>
     </section>
 
     <section class="reps-group">
@@ -448,7 +501,7 @@
 
     <section class="day-section">
       <div class="day-header-row">
-        <span>by day</span>
+        <span>by thing</span>
       </div>
       <div id="dayView"></div>
     </section>
@@ -464,7 +517,7 @@
     <details class="csv-details" id="csvDetails">
       <summary>import / export csv</summary>
       <textarea id="csvOut" class="csv-out" spellcheck="false"></textarea>
-      <p class="csv-hint">paste csv data above (thing,time,reps) then tap import to load it. this replaces everything currently recorded.</p>
+      <p class="csv-hint">paste csv data above (time,thing,reps - any column order works if there's a header row) then tap import to load it. this replaces everything currently recorded.</p>
       <div class="csv-actions">
         <button id="importCsvBtn" type="button">import</button>
         <button id="copyCsvBtn" type="button">copy</button>
@@ -480,9 +533,13 @@
 
 <script>
   const STORAGE_KEY = 'smart-counter-records-v1';
+  const MAX_THING_ROWS = 8;
+  const MAX_DATE_COLUMNS = 30; // most recent N days shown in the by-thing grid
+  const MAX_THING_CHIPS = 12; // most-frequent things offered as chips
 
   const thingInput = document.getElementById('thingInput');
   const chipsRow = document.getElementById('chipsRow');
+  const customInputRow = document.getElementById('customInputRow');
   const repsInput = document.getElementById('repsInput');
   const repsUp = document.getElementById('repsUp');
   const repsDown = document.getElementById('repsDown');
@@ -540,49 +597,88 @@
     return timeStr.slice(0, 10);
   }
 
-  function getRecentDistinctThings(n) {
-    const seen = new Set();
-    const out = [];
-    for (let i = records.length - 1; i >= 0 && out.length < n; i--) {
-      const t = records[i].thing;
-      if (!seen.has(t)) {
-        seen.add(t);
-        out.push(t);
-      }
-    }
-    return out;
+  let customOpen = false;
+
+  function getThingFrequency() {
+    const counts = new Map();
+    records.forEach(rec => {
+      counts.set(rec.thing, (counts.get(rec.thing) || 0) + 1);
+    });
+    return counts;
+  }
+
+  function openCustomInput() {
+    customOpen = true;
+    thingInput.value = '';
+    customInputRow.hidden = false;
+    renderChips();
+    thingInput.focus();
+  }
+
+  function closeCustomInput() {
+    customOpen = false;
+    customInputRow.hidden = true;
+    renderChips();
   }
 
   function renderChips() {
-    const recent = getRecentDistinctThings(5);
+    // most-used things first, capped at MAX_THING_CHIPS
+    const counts = getThingFrequency();
+    const byFrequency = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([thing]) => thing)
+      .slice(0, MAX_THING_CHIPS);
+
+    // while the custom field is open, typed text filters this same list
+    const query = customOpen ? thingInput.value.trim().toLowerCase() : '';
+    const visible = query
+      ? byFrequency.filter(t => t.toLowerCase().includes(query))
+      : byFrequency;
+
     chipsRow.innerHTML = '';
-    if (recent.length === 0) {
+
+    if (visible.length === 0 && !query) {
       const span = document.createElement('span');
       span.className = 'chip empty';
       span.textContent = 'no things yet';
       chipsRow.appendChild(span);
-      return;
-    }
-    recent.forEach(thing => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'chip';
-      btn.textContent = thing;
-      if (thing === thingInput.value.trim()) btn.classList.add('active');
-      btn.addEventListener('click', () => {
-        thingInput.value = thing;
-        thingInput.focus();
-        updateChipActiveStates();
+    } else {
+      const current = thingInput.value.trim();
+      visible.forEach(thing => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.textContent = thing;
+        if (thing === current) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          thingInput.value = thing;
+          closeCustomInput();
+        });
+        chipsRow.appendChild(btn);
       });
-      chipsRow.appendChild(btn);
+    }
+
+    // trailing chip: toggles the free-typing input open/closed
+    const customBtn = document.createElement('button');
+    customBtn.type = 'button';
+    customBtn.className = 'chip chip-custom';
+    customBtn.textContent = customOpen ? 'typing…' : '+ custom';
+    if (customOpen) customBtn.classList.add('active');
+    customBtn.addEventListener('click', () => {
+      if (customOpen) closeCustomInput();
+      else openCustomInput();
     });
+    chipsRow.appendChild(customBtn);
   }
 
-  function updateChipActiveStates() {
-    const current = thingInput.value.trim();
-    chipsRow.querySelectorAll('.chip').forEach(chip => {
-      chip.classList.toggle('active', !chip.classList.contains('empty') && chip.textContent === current);
-    });
+  // returns { bg, fg } for a count badge - color intensity scales with
+  // how big the count is relative to the largest count shown in the grid
+  function countBadgeColor(count, maxCount) {
+    const t = maxCount > 0 ? count / maxCount : 0; // 0..1
+    const lightness = 92 - t * 52; // low counts: pale wash, high counts: deep accent
+    const bg = `hsl(var(--seed-hue), var(--seed-sat), ${lightness}%)`;
+    const fg = t > 0.5 ? '#fff' : 'var(--ink)';
+    return { bg, fg };
   }
 
   function renderDayView() {
@@ -595,32 +691,93 @@
       return;
     }
 
-    // group records by day, then sum reps by thing within each day
-    const byDay = new Map();
+    // sum reps per thing per day, and an overall total per thing
+    const byThingByDay = new Map();
+    const thingTotals = new Map();
+    const dayKeys = new Set();
+
     records.forEach(rec => {
       const day = formatDay(rec.time);
-      if (!byDay.has(day)) byDay.set(day, new Map());
-      const byThing = byDay.get(day);
-      byThing.set(rec.thing, (byThing.get(rec.thing) || 0) + rec.reps);
+      dayKeys.add(day);
+
+      if (!byThingByDay.has(rec.thing)) byThingByDay.set(rec.thing, new Map());
+      const byDay = byThingByDay.get(rec.thing);
+      byDay.set(day, (byDay.get(day) || 0) + rec.reps);
+
+      thingTotals.set(rec.thing, (thingTotals.get(rec.thing) || 0) + rec.reps);
     });
 
-    const days = Array.from(byDay.keys()).sort((a, b) => b.localeCompare(a));
+    // rows: things in order of highest total reps, capped at MAX_THING_ROWS
+    const things = Array.from(thingTotals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_THING_ROWS)
+      .map(([thing]) => thing);
 
+    // columns: dates newest to oldest, left to right, capped to the
+    // most recent MAX_DATE_COLUMNS days
+    const days = Array.from(dayKeys)
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, MAX_DATE_COLUMNS);
+
+    // color intensity is scaled against the single largest cell value
+    // shown anywhere in the grid, so darker badges really mean "the most"
+    let maxCount = 0;
+    things.forEach(thing => {
+      const byDay = byThingByDay.get(thing);
+      days.forEach(day => {
+        const v = byDay.get(day) || 0;
+        if (v > maxCount) maxCount = v;
+      });
+    });
+
+    const wrap = document.createElement('div');
+    wrap.className = 'grid-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'thing-grid';
+
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const corner = document.createElement('th');
+    corner.className = 'grid-corner';
+    headRow.appendChild(corner);
     days.forEach(day => {
-      const byThing = byDay.get(day);
-      const thingsText = Array.from(byThing.entries())
-        .sort(([thingA], [thingB]) => thingA.localeCompare(thingB))
-        .map(([thing, total]) => `<span class="thing-name">${escapeHtml(thing)} (${total})</span> `)
-        .join(' ');
-
-      const block = document.createElement('div');
-      block.className = 'day-block';
-      block.innerHTML = `
-        <div class="day-date">${escapeHtml(day)}</div>
-        <div class="day-things">${thingsText}</div>
-      `;
-      dayView.appendChild(block);
+      const th = document.createElement('th');
+      th.className = 'grid-date-th';
+      th.innerHTML = `<span class="grid-date-label">${escapeHtml(day)}</span>`;
+      headRow.appendChild(th);
     });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    things.forEach(thing => {
+      const byDay = byThingByDay.get(thing);
+      const tr = document.createElement('tr');
+
+      const nameCell = document.createElement('td');
+      nameCell.className = 'grid-thing-cell';
+      nameCell.textContent = thing;
+      nameCell.title = thing;
+      tr.appendChild(nameCell);
+
+      days.forEach(day => {
+        const count = byDay.get(day);
+        const td = document.createElement('td');
+        td.className = 'grid-count-cell';
+        if (count) {
+          const { bg, fg } = countBadgeColor(count, maxCount);
+          td.innerHTML = `<span class="count-badge" style="background:${bg};color:${fg}">${count}</span>`;
+        }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    wrap.appendChild(table);
+    dayView.appendChild(wrap);
   }
 
   function renderRecentLog() {
@@ -715,14 +872,18 @@
     if (rows.length === 0) return { records: [], skipped: 0 };
 
     let start = 0;
-    let thingIdx = 0, timeIdx = 1, repsIdx = 2;
+    // default column order (used only if no header row is found) is
+    // time, thing, reps - matching what this app now exports
+    let timeIdx = 0, thingIdx = 1, repsIdx = 2;
     const firstRow = rows[0].map(c => c.trim().toLowerCase());
     if (firstRow.includes('thing') || firstRow.includes('time') || firstRow.includes('reps')) {
+      // header present - go strictly by its column names, so csv pasted
+      // in any column order works correctly
       thingIdx = firstRow.indexOf('thing');
       timeIdx = firstRow.indexOf('time');
       repsIdx = firstRow.indexOf('reps');
-      if (thingIdx === -1) thingIdx = 0;
-      if (timeIdx === -1) timeIdx = 1;
+      if (thingIdx === -1) thingIdx = 1;
+      if (timeIdx === -1) timeIdx = 0;
       if (repsIdx === -1) repsIdx = 2;
       start = 1;
     }
@@ -767,9 +928,9 @@
   }
 
   function renderCsv() {
-    const lines = ['thing,time,reps'];
+    const lines = ['time,thing,reps'];
     records.forEach(rec => {
-      lines.push(`${csvEscape(rec.thing)},${csvEscape(rec.time)},${rec.reps}`);
+      lines.push(`${csvEscape(rec.time)},${csvEscape(rec.thing)},${rec.reps}`);
     });
     csvOut.value = lines.join('\n');
   }
@@ -807,7 +968,7 @@
   });
 
   thingInput.addEventListener('input', () => {
-    updateChipActiveStates();
+    if (customOpen) renderChips();
   });
 
   function doRecord() {
@@ -815,7 +976,8 @@
     if (!thing) {
       recordBtn.classList.add('err');
       setStatus('type a thing first', true);
-      thingInput.focus();
+      if (!customOpen) openCustomInput();
+      else thingInput.focus();
       setTimeout(() => recordBtn.classList.remove('err'), 400);
       return;
     }
@@ -825,6 +987,7 @@
       time: formatDateTime(new Date()),
       reps: reps
     });
+    if (customOpen) closeCustomInput();
     afterChange();
     setStatus(`recorded "${thing}" ×${reps}`);
     repsInput.value = 1;
